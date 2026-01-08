@@ -1,0 +1,383 @@
+{
+  "lists": [
+    {
+      "id": "643431c7-e660-47b1-a44b-4e799b536d19",
+      "title": "BACKLOG",
+      "cards": [
+        {
+          "id": "b6474dcc-f9ea-4d89-bf3e-788e4a4773e1",
+          "listId": "643431c7-e660-47b1-a44b-4e799b536d19",
+          "title": "Raid group header advanced sort",
+          "description": "player always first\nranged / melee dps",
+          "labels": [],
+          "checkboxes": [],
+          "comments": []
+        },
+        {
+          "id": "1f5eaefd-76a3-48eb-a1ba-12844a302d3e",
+          "listId": "643431c7-e660-47b1-a44b-4e799b536d19",
+          "title": "Spotlight groups",
+          "description": "",
+          "labels": [],
+          "checkboxes": [],
+          "comments": []
+        },
+        {
+          "id": "96f7a5fd-3b3e-434e-bd14-9cb0b483b608",
+          "listId": "643431c7-e660-47b1-a44b-4e799b536d19",
+          "title": "Add RaidDebuffs to QuickAssist",
+          "description": "",
+          "labels": [],
+          "checkboxes": [],
+          "comments": []
+        },
+        {
+          "id": "ebbee63f-809d-4ede-b96f-2378a88f1391",
+          "listId": "643431c7-e660-47b1-a44b-4e799b536d19",
+          "title": "Animation OnApplied",
+          "description": "",
+          "labels": [],
+          "checkboxes": [],
+          "comments": []
+        },
+        {
+          "id": "156adfb0-8f70-4f1d-92e4-da39405f5746",
+          "listId": "643431c7-e660-47b1-a44b-4e799b536d19",
+          "title": "Quick Assist sharing feature",
+          "description": "",
+          "labels": [],
+          "checkboxes": [],
+          "comments": []
+        },
+        {
+          "id": "b7c2be9a-ade0-40a3-8b5f-a8c25e9d97c1",
+          "listId": "643431c7-e660-47b1-a44b-4e799b536d19",
+          "title": "Reversed health bar",
+          "description": "",
+          "labels": [],
+          "checkboxes": [],
+          "comments": []
+        },
+        {
+          "id": "d784577e-950e-49b7-acec-f27449b994a4",
+          "listId": "643431c7-e660-47b1-a44b-4e799b536d19",
+          "title": "Indicator advanced conditions",
+          "description": "",
+          "labels": [],
+          "checkboxes": [],
+          "comments": []
+        },
+        {
+          "id": "bc577257-a0cc-462b-be1e-aba159d828d6",
+          "listId": "643431c7-e660-47b1-a44b-4e799b536d19",
+          "title": "Indicator load conditions",
+          "description": "combat\nspec\nclass\n...",
+          "labels": [],
+          "checkboxes": [],
+          "comments": []
+        },
+        {
+          "id": "7d616cba-3918-493c-a164-edd96bafd21b",
+          "listId": "643431c7-e660-47b1-a44b-4e799b536d19",
+          "title": "Show if not found (custom indicator)",
+          "description": "",
+          "labels": [],
+          "checkboxes": [],
+          "comments": []
+        },
+        {
+          "id": "49fa23b6-7197-45c5-b107-97210fb53fde",
+          "listId": "643431c7-e660-47b1-a44b-4e799b536d19",
+          "title": "Use ObjectPool to make indicators reusable",
+          "description": "",
+          "labels": [],
+          "checkboxes": [],
+          "comments": []
+        },
+        {
+          "id": "b63ab311-f807-459d-a2b8-175925502476",
+          "listId": "643431c7-e660-47b1-a44b-4e799b536d19",
+          "title": "Add class options for TankActiveMitigation",
+          "description": "",
+          "labels": [],
+          "checkboxes": [],
+          "comments": []
+        },
+        {
+          "id": "18bf4c6e-0ed2-4d30-84b0-b7bf1b2cac9a",
+          "listId": "643431c7-e660-47b1-a44b-4e799b536d19",
+          "title": "More profile for clickcastings",
+          "description": "",
+          "labels": [],
+          "checkboxes": [],
+          "comments": []
+        }
+      ]
+    },
+    {
+      "id": "7915d51e-5603-44aa-aa3a-8dff734ea7c6",
+      "title": "TODO",
+      "cards": [
+        {
+          "id": "1dbfa8df-937c-4b15-879c-09794547b4ff",
+          "listId": "7915d51e-5603-44aa-aa3a-8dff734ea7c6",
+          "title": "New auras handler",
+          "description": "",
+          "labels": [],
+          "checkboxes": [],
+          "comments": []
+        },
+        {
+          "id": "ae214679-bcb6-421c-9c20-10dbcf09ab3d",
+          "listId": "7915d51e-5603-44aa-aa3a-8dff734ea7c6",
+          "title": "Refactor all indicators",
+          "description": "",
+          "labels": [],
+          "checkboxes": [],
+          "comments": []
+        },
+        {
+          "id": "e1a2eb68-e06b-4aa0-a7eb-2591594bc38b",
+          "listId": "7915d51e-5603-44aa-aa3a-8dff734ea7c6",
+          "title": "Mark locking enhancement",
+          "description": "",
+          "labels": [],
+          "checkboxes": [],
+          "comments": []
+        }
+      ]
+    },
+    {
+      "id": "fc9baa7c-c3e7-49a4-8526-816c794e5ed9",
+      "title": "IN PROGRESS",
+      "cards": []
+    },
+    {
+      "id": "7b0c4654-92fe-4b4e-9566-15e8c706d9c9",
+      "title": "DONE",
+      "cards": [
+        {
+          "id": "4184180c-7ab0-4c97-b54d-cefab5d6386c",
+          "listId": "7b0c4654-92fe-4b4e-9566-15e8c706d9c9",
+          "title": "Remove global name of indicators",
+          "description": "",
+          "labels": [],
+          "checkboxes": [],
+          "comments": []
+        }
+      ]
+    }
+  ],
+  "archive": {
+    "lists": [],
+    "cards": [
+      {
+        "id": "20898e44-20c9-463c-ad57-c206aaf9fe2c",
+        "listId": "643431c7-e660-47b1-a44b-4e799b536d19",
+        "title": "Global scaling of indicators",
+        "description": "",
+        "labels": [],
+        "checkboxes": [],
+        "comments": []
+      },
+      {
+        "id": "65017c0e-525a-42ed-adf7-7a396547406c",
+        "listId": "7b0c4654-92fe-4b4e-9566-15e8c706d9c9",
+        "title": "Bars and max duration option",
+        "description": "",
+        "labels": [],
+        "checkboxes": [],
+        "comments": []
+      },
+      {
+        "id": "dd2e1868-482f-4f16-9755-ab54c171f9b3",
+        "listId": "7b0c4654-92fe-4b4e-9566-15e8c706d9c9",
+        "title": "\"Show Raid\" option",
+        "description": "",
+        "labels": [],
+        "checkboxes": [],
+        "comments": []
+      },
+      {
+        "id": "41a10cb7-15c8-4c33-82f9-19a6d9988b2c",
+        "listId": "7b0c4654-92fe-4b4e-9566-15e8c706d9c9",
+        "title": "Replace all WHITE8x8",
+        "description": "",
+        "labels": [],
+        "checkboxes": [],
+        "comments": []
+      },
+      {
+        "id": "f9342937-2a2d-424a-a5e3-cd9147d2ecbd",
+        "listId": "7b0c4654-92fe-4b4e-9566-15e8c706d9c9",
+        "title": "Fix Targeted Spells",
+        "description": "",
+        "labels": [],
+        "checkboxes": [],
+        "comments": []
+      },
+      {
+        "id": "1cac7da6-3787-4e5c-9176-548a8a8199f0",
+        "listId": "7b0c4654-92fe-4b4e-9566-15e8c706d9c9",
+        "title": "Add \"existing time\" option to Raid Debuffs",
+        "description": "",
+        "labels": [],
+        "checkboxes": [],
+        "comments": []
+      },
+      {
+        "id": "4ac8d40c-fb52-4873-857c-cd6985729cdf",
+        "listId": "7b0c4654-92fe-4b4e-9566-15e8c706d9c9",
+        "title": "Cata raid debuffs",
+        "description": "",
+        "labels": [],
+        "checkboxes": [],
+        "comments": []
+      },
+      {
+        "id": "f0d002c6-9b6c-41fd-8abb-65b9944479ab",
+        "listId": "7b0c4654-92fe-4b4e-9566-15e8c706d9c9",
+        "title": "\"Block\" indicator",
+        "description": "",
+        "labels": [],
+        "checkboxes": [],
+        "comments": []
+      },
+      {
+        "id": "7abeed76-478d-4313-b46d-550f537ede54",
+        "listId": "7b0c4654-92fe-4b4e-9566-15e8c706d9c9",
+        "title": "Add spacing for Icons",
+        "description": "",
+        "labels": [],
+        "checkboxes": [],
+        "comments": []
+      },
+      {
+        "id": "c13fce13-d498-4940-b821-f4c6b87459e7",
+        "listId": "7b0c4654-92fe-4b4e-9566-15e8c706d9c9",
+        "title": "Add \"Duration\" for Bar/Rect",
+        "description": "",
+        "labels": [],
+        "checkboxes": [],
+        "comments": []
+      },
+      {
+        "id": "21c940ed-e054-4a05-90e0-0eee83d45004",
+        "listId": "7b0c4654-92fe-4b4e-9566-15e8c706d9c9",
+        "title": "Add \"Frame Level\" for Role Icon",
+        "description": "",
+        "labels": [],
+        "checkboxes": [],
+        "comments": []
+      },
+      {
+        "id": "eb44ccc2-c069-453b-ad4a-22585fd420bb",
+        "listId": "7b0c4654-92fe-4b4e-9566-15e8c706d9c9",
+        "title": "Add alphas",
+        "description": "",
+        "labels": [],
+        "checkboxes": [],
+        "comments": []
+      },
+      {
+        "id": "15b5c350-b9ad-406f-aa4f-5e9d6b8eae2f",
+        "listId": "7b0c4654-92fe-4b4e-9566-15e8c706d9c9",
+        "title": "Ordered Icons",
+        "description": "",
+        "labels": [],
+        "checkboxes": [],
+        "comments": []
+      },
+      {
+        "id": "f6206d8c-0f21-43d0-9c68-6bb246d030ed",
+        "listId": "7b0c4654-92fe-4b4e-9566-15e8c706d9c9",
+        "title": "Power Text indicator",
+        "description": "",
+        "labels": [],
+        "checkboxes": [],
+        "comments": []
+      },
+      {
+        "id": "441d8a86-8d1c-4abd-aad2-a5f46525cc48",
+        "listId": "7b0c4654-92fe-4b4e-9566-15e8c706d9c9",
+        "title": "Disable all snippets dialog",
+        "description": "",
+        "labels": [],
+        "checkboxes": [],
+        "comments": []
+      },
+      {
+        "id": "aad84564-27cd-468d-83e9-39cf05279d5e",
+        "listId": "7b0c4654-92fe-4b4e-9566-15e8c706d9c9",
+        "title": "Fix NPC anchor for combined groups",
+        "description": "",
+        "labels": [],
+        "checkboxes": [],
+        "comments": []
+      },
+      {
+        "id": "ee770a8f-4488-46b0-98d1-33f54e4fc7b0",
+        "listId": "7b0c4654-92fe-4b4e-9566-15e8c706d9c9",
+        "title": "Add 30% tp \"Show duration text\"",
+        "description": "",
+        "labels": [],
+        "checkboxes": [],
+        "comments": []
+      },
+      {
+        "id": "74db46a2-542e-4495-87b2-f81745a77572",
+        "listId": "7b0c4654-92fe-4b4e-9566-15e8c706d9c9",
+        "title": "Clear/Import/Export for indicator aura list",
+        "description": "",
+        "labels": [],
+        "checkboxes": [],
+        "comments": []
+      },
+      {
+        "id": "faa7ea53-8b3c-4343-b1b2-d25cdeff49b8",
+        "listId": "7b0c4654-92fe-4b4e-9566-15e8c706d9c9",
+        "title": "\"Overlay\" indicator",
+        "description": "",
+        "labels": [],
+        "checkboxes": [],
+        "comments": []
+      },
+      {
+        "id": "6ed00584-0cb8-4aca-a222-2b9562a57d47",
+        "listId": "7b0c4654-92fe-4b4e-9566-15e8c706d9c9",
+        "title": "Fix NPC health colors in Follower Dungeons",
+        "description": "",
+        "labels": [],
+        "checkboxes": [],
+        "comments": []
+      },
+      {
+        "id": "8a463907-8852-4603-9b9f-1557fd53d8d3",
+        "listId": "7b0c4654-92fe-4b4e-9566-15e8c706d9c9",
+        "title": "Single raid group header",
+        "description": "",
+        "labels": [],
+        "checkboxes": [],
+        "comments": []
+      },
+      {
+        "id": "a2e14915-e925-48b3-af23-cd6a5e38248c",
+        "listId": "7b0c4654-92fe-4b4e-9566-15e8c706d9c9",
+        "title": "Increase button nums for Spotlight",
+        "description": "",
+        "labels": [],
+        "checkboxes": [],
+        "comments": []
+      }
+    ]
+  },
+  "settings": {
+    "labels": [
+      {
+        "id": "f1ef5e9f-9424-47a8-b441-cf1f2ba54b8a",
+        "title": "22233",
+        "color": "#ff9f1a"
+      }
+    ]
+  }
+}

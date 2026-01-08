@@ -1,3 +1,9 @@
+# ignored
+.vscode/
+.release/*
+.resources/
+.utils/*.csv
+
 # Compiled Lua sources
 luac.out
 

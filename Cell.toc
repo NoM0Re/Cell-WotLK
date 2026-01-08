@@ -1,0 +1,52 @@
+## Interface: 110207
+## Title: Cell
+## Version: r273-release
+## Author: enderneko
+## X-Flavor: Mainline
+## SavedVariables: CellDB, CellDBBackup
+## AddonCompartmentFunc: Cell_OnAddonCompartmentClick
+## IconTexture: Interface\AddOns\Cell\Media\icon.tga
+
+## X-Curse-Project-ID: 409666
+## X-Wago-ID: qv63LLKb
+## X-WoWI-ID: 26244
+
+Locales\LoadLocales.xml
+
+Libs\LoadLibs.xml
+
+Core.lua
+Utils.lua
+Revise.lua
+Comm\LoadComm.xml
+Widgets\LoadWidgets.xml
+Defaults\LoadDefaults.xml
+
+HideBlizzard.lua
+
+Indicators\Base.lua
+Indicators\Built-in.lua
+Indicators\StatusIcon.lua
+Indicators\AoEHealing.lua
+Indicators\TargetCounter.lua
+Indicators\TargetedSpells.lua
+Indicators\Actions.lua
+Indicators\Custom.lua
+Indicators\Supporter.lua
+
+RaidFrames\MainFrame.lua
+
+Modules\LoadModules.xml
+Utilities\LoadUtilities.xml
+RaidDebuffs\LoadRaidDebuffs.xml
+
+RaidFrames\UnitButton.lua
+RaidFrames\UnitButton.xml
+RaidFrames\Groups\SoloFrame.lua
+RaidFrames\Groups\PartyFrame.lua
+RaidFrames\Groups\RaidFrame.lua
+RaidFrames\Groups\PetFrame.lua
+RaidFrames\Groups\NPCFrame.lua
+RaidFrames\Groups\SpotlightFrame.lua
+
+Supporters.lua
