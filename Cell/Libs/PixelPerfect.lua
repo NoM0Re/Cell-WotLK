@@ -29,8 +29,7 @@ local Clamp = Clamp
 local P = addon.pixelPerfectFuncs
 
 function P.GetResolution()
-    -- return string.match(({GetScreenResolutions()})[GetCurrentResolution()], "(%d+)x(%d+)")
-    return GetPhysicalScreenSize()
+    return string.match(({GetScreenResolutions()})[GetCurrentResolution()], "(%d+)x(%d+)")
 end
 
 -- The UI P.Scale goes from 1 to 0.64.
@@ -150,7 +149,32 @@ end
 --     end
 -- end
 
-local GetNearestPixelSize = PixelUtil.GetNearestPixelSize
+local function GetPixelToUIUnitFactor()
+	local physicalWidth, physicalHeight = P.GetResolution();
+	return 768.0 / physicalHeight
+end
+
+local function GetNearestPixelSize(uiUnitSize, layoutScale, minPixels)
+	if uiUnitSize == 0 and (not minPixels or minPixels == 0) then
+		return 0
+	end
+
+	local uiUnitFactor = GetPixelToUIUnitFactor();
+	local numPixels = Round((uiUnitSize * layoutScale) / uiUnitFactor)
+	if minPixels then
+		if uiUnitSize < 0.0 then
+			if numPixels > -minPixels then
+				numPixels = -minPixels
+			end
+		else
+			if numPixels < minPixels then
+				numPixels = minPixels
+			end
+		end
+	end
+
+	return numPixels * uiUnitFactor / layoutScale
+end
 
 function P.Scale(desiredPixels)
     return GetNearestPixelSize(desiredPixels, CellParent:GetEffectiveScale())
@@ -332,50 +356,3 @@ function P.CalcPoint(frame)
 
     return point, x, y
 end
-
----------------------------------------------------------------------
--- pixel perfect (ElvUI)
----------------------------------------------------------------------
-local function CheckPixelSnap(frame, snap)
-    if (frame and not frame:IsForbidden()) and frame.PixelSnapDisabled and snap then
-        frame.PixelSnapDisabled = nil
-    end
-end
-
-local function DisablePixelSnap(frame)
-    if (frame and not frame:IsForbidden()) and not frame.PixelSnapDisabled then
-        if frame.SetSnapToPixelGrid then
-            frame:SetSnapToPixelGrid(false)
-            frame:SetTexelSnappingBias(0)
-            frame.PixelSnapDisabled = true
-        elseif frame.GetStatusBarTexture then
-            local texture = frame:GetStatusBarTexture()
-            if type(texture) == "table" and texture.SetSnapToPixelGrid then
-                texture:SetSnapToPixelGrid(false)
-                texture:SetTexelSnappingBias(0)
-                frame.PixelSnapDisabled = true
-            end
-        end
-    end
-end
-
-local function UpdateMetatable(obj)
-    local t = getmetatable(obj).__index
-
-    if not obj.DisabledPixelSnap and (t.SetSnapToPixelGrid or t.SetStatusBarTexture or t.SetColorTexture or t.SetVertexColor or t.CreateTexture or t.SetTexCoord or t.SetTexture) then
-        if t.SetSnapToPixelGrid then hooksecurefunc(t, "SetSnapToPixelGrid", CheckPixelSnap) end
-        if t.SetStatusBarTexture then hooksecurefunc(t, "SetStatusBarTexture", DisablePixelSnap) end
-        if t.SetColorTexture then hooksecurefunc(t, "SetColorTexture", DisablePixelSnap) end
-        if t.SetVertexColor then hooksecurefunc(t, "SetVertexColor", DisablePixelSnap) end
-        if t.CreateTexture then hooksecurefunc(t, "CreateTexture", DisablePixelSnap) end
-        if t.SetTexCoord then hooksecurefunc(t, "SetTexCoord", DisablePixelSnap) end
-        if t.SetTexture then hooksecurefunc(t, "SetTexture", DisablePixelSnap) end
-
-        t.DisabledPixelSnap = true
-    end
-end
-
-local obj = CreateFrame("Frame")
-UpdateMetatable(CreateFrame("StatusBar"))
-UpdateMetatable(obj:CreateTexture())
-UpdateMetatable(obj:CreateMaskTexture())
