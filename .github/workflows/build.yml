@@ -1,0 +1,134 @@
+name: build
+
+on:
+  push:
+    tags:
+      - "*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      RELEASE_WEBHOOK_URL: ${{ secrets.RELEASE_WEBHOOK_URL }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Fetch tags
+        run: git fetch --tags --force
+
+      - name: Prepare changelog
+        shell: bash
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          changelog=".release-changelog.md"
+          changelog_section=".release-changelog-section.md"
+          release_date="$(git log -1 --format=%cs "${GITHUB_REF_NAME}")"
+          previous_tag=""
+
+          if [[ "$version" == *-release ]]; then
+            previous_tag="$(git describe --tags --abbrev=0 --match "r[0-9]*-release" HEAD^ 2>/dev/null || true)"
+          else
+            previous_tag="$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || true)"
+          fi
+
+          if [[ -f CHANGELOG.md ]]; then
+            awk -v version="$version" '
+              BEGIN { capture = 0 }
+              /^## / {
+                heading = $0
+                gsub(/^## +/, "", heading)
+                gsub(/^\[/, "", heading)
+                gsub(/\].*$/, "", heading)
+                gsub(/^v/, "", heading)
+                split(heading, parts, /[ (]/)
+                heading = parts[1]
+                if (heading == version) {
+                  capture = 1
+                  next
+                }
+                if (capture) {
+                  exit
+                }
+              }
+              capture { print }
+            ' CHANGELOG.md > "$changelog_section"
+            sed -i '1{/^$/d;}' "$changelog_section"
+          fi
+
+          {
+            echo "## [${version}](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/releases/tag/${GITHUB_REF_NAME}) (${release_date})"
+            echo
+            if [[ -n "$previous_tag" ]]; then
+              echo "[Full Changelog](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/compare/${previous_tag}...${GITHUB_REF_NAME}) [Previous Version](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/releases/tag/${previous_tag})"
+              commit_range="${previous_tag}..${GITHUB_REF_NAME}"
+            else
+              echo "[Full Changelog](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/commits/${GITHUB_REF_NAME}) [Previous Version](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/releases)"
+              commit_range="${GITHUB_REF_NAME}"
+            fi
+            echo
+            if [[ -s "$changelog_section" ]]; then
+              cat "$changelog_section"
+            fi
+            echo "## Commits"
+            echo
+
+            git shortlog --no-merges --reverse "$commit_range" | sed -e '/^\w/G' -e 's/^      /- /'
+          } > "$changelog"
+
+          python3 - <<'PY'
+          from pathlib import Path
+
+          text = Path(".release-changelog.md").read_text(encoding="utf-8")
+          if len(text) > 2000:
+              text = text[:1996] + "\n..."
+          Path(".discord-release.md").write_text(text, encoding="utf-8")
+          PY
+
+      - name: Read Discord changelog
+        id: discord_changelog
+        shell: bash
+        run: |
+          {
+            echo "text<<DISCORD_CHANGELOG_EOF"
+            cat ".discord-release.md"
+            printf "\n"
+            echo "DISCORD_CHANGELOG_EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Prepare Discord webhook URL
+        id: discord_webhook
+        if: env.RELEASE_WEBHOOK_URL != ''
+        shell: bash
+        run: |
+          webhook_url="${RELEASE_WEBHOOK_URL%/github}"
+          {
+            echo "url<<DISCORD_WEBHOOK_URL_EOF"
+            echo "$webhook_url"
+            echo "DISCORD_WEBHOOK_URL_EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Create release package
+        uses: BigWigsMods/packager@v2
+        with:
+          args: -l -g 3.3.5 -n "Cell"
+        env:
+          GITHUB_OAUTH: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Send Discord Notification
+        uses: tsickert/discord-webhook@v7.0.0
+        if: success() && env.RELEASE_WEBHOOK_URL != ''
+        continue-on-error: true
+        with:
+          webhook-url: ${{ steps.discord_webhook.outputs.url }}
+          username: Cell
+          avatar-url: https://media.forgecdn.net/avatars/thumbnails/302/26/256/256/637365498585337836.png
+          embed-title: New Cell Release
+          embed-url: https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }}
+          embed-description: ${{ steps.discord_changelog.outputs.text }}

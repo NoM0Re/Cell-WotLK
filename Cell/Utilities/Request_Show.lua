@@ -54,7 +54,7 @@ local function ShowGlow(glowFrame, glowType, glowOptions, timeout, callback)
     if glowFrame.timer then
         glowFrame.timer:Cancel()
     end
-    glowFrame.timer = C_Timer.NewTimer(timeout, function()
+    glowFrame.timer = F.C_Timer.NewTimer(timeout, function()
         glowFrame.timer = nil
         HideGlow(glowFrame)
         if callback then
@@ -83,7 +83,7 @@ local function ShowIcon(icon, tex, iconColor, timeout, callback)
     if icon.timer then
         icon.timer:Cancel()
     end
-    icon.timer = C_Timer.NewTimer(timeout, function()
+    icon.timer = F.C_Timer.NewTimer(timeout, function()
         icon.timer = nil
         HideIcon(icon)
         if callback then
@@ -112,7 +112,7 @@ local function ShowText(text, timeout, callback)
     if text.timer then
         text.timer:Cancel()
     end
-    text.timer = C_Timer.NewTimer(timeout, function()
+    text.timer = F.C_Timer.NewTimer(timeout, function()
         text.timer = nil
         HideText(text)
         if callback then
@@ -136,7 +136,7 @@ local SR = CreateFrame("Frame")
 local COOLDOWN_TIME = _G.ITEM_COOLDOWN_TIME
 local IsSpellReady = F.IsSpellReady
 
-local GetSpellLink = C_Spell.GetSpellLink or GetSpellLink
+local GetSpellLink = GetSpellLink
 
 local function CheckSRConditions(spellId, unit, sender)
     F.Debug("|cffcdb4dbCheckSRConditions:|r", spellId, unit, sender)
@@ -155,7 +155,7 @@ local function CheckSRConditions(spellId, unit, sender)
             --     SendChatMessage(srDeadMsg, "WHISPER", nil, sender)
             -- end
 
-            local isReady, cdLeft = IsSpellReady(spellId)
+            local isReady, cdLeft = F.IsSpellReady(spellId)
 
             if srFreeCD then -- NOTE: require free cd
                 if isReady then
@@ -243,7 +243,7 @@ function SR:CHAT_MSG_WHISPER(text, playerName, languageName, channelName, player
 end
 
 --! hide on applied
-function SR:COMBAT_LOG_EVENT_UNFILTERED(_, event, _, sourceGUID, sourceName, sourceFlags, _, destGUID, destName, destFlags, _, buffId)
+function SR:COMBAT_LOG_EVENT_UNFILTERED(_, event, sourceGUID, sourceName, sourceFlags, destGUID, destName, destFlags, buffId)
     if event == "SPELL_AURA_APPLIED" or event == "SPELL_AURA_REFRESH" then
         local unit = Cell.vars.guids[destGUID]
         if unit and srUnits[unit] == buffId then
@@ -263,11 +263,7 @@ function SR:COMBAT_LOG_EVENT_UNFILTERED(_, event, _, sourceGUID, sourceName, sou
 end
 
 SR:SetScript("OnEvent", function(self, event, ...)
-    if event == "COMBAT_LOG_EVENT_UNFILTERED" then
-        self:COMBAT_LOG_EVENT_UNFILTERED(CombatLogGetCurrentEventInfo())
-    else
-        self[event](self, ...)
-    end
+    self[event](self, ...)
 end)
 
 local function SR_UpdateRequests(which)
@@ -340,7 +336,7 @@ local DR = CreateFrame("Frame")
 local function HideAllDRGlows()
     -- NOTE: hide all
     for unit in pairs(drUnits) do
-        F.HandleUnitButton("guid", destGUID, function(b)
+        F.HandleUnitButton("unit", unit, function(b)
             HideGlow(b.widgets.drGlowFrame)
             HideText(b.widgets.drText)
         end)
@@ -349,9 +345,9 @@ local function HideAllDRGlows()
 end
 
 -- hide glow if removed
-DR:SetScript("OnEvent", function(self, event)
+DR:SetScript("OnEvent", function(self, event, ...)
     if event == "COMBAT_LOG_EVENT_UNFILTERED" then
-        local timestamp, subEvent, _, sourceGUID, sourceName, sourceFlags, sourceRaidFlags, destGUID, destName, destFlags, destRaidFlags, spellID = CombatLogGetCurrentEventInfo()
+        local timestamp, subEvent, sourceGUID, sourceName, sourceFlags, destGUID, destName, destFlags, spellID = ...
         if subEvent == "SPELL_AURA_REMOVED" then
             local unit = Cell.vars.guids[destGUID]
             if unit and drUnits[unit] and drUnits[unit][spellID] then
@@ -423,10 +419,12 @@ local function DR_UpdateRequests(which)
             drDisplayType = CellDB["dispelRequest"]["type"]
 
             DR:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
-            DR:RegisterEvent("ENCOUNTER_START")
-            DR:RegisterEvent("ENCOUNTER_END")
+            Cell.RegisterCallback("EncounterStart", "DispelRequest_EncounterStart", HideAllDRGlows)
+            Cell.RegisterCallback("EncounterEnd", "DispelRequest_EncounterEnd", HideAllDRGlows)
         else
             DR:UnregisterAllEvents()
+            Cell.UnregisterCallback("EncounterStart", "DispelRequest_EncounterStart")
+            Cell.UnregisterCallback("EncounterEnd", "DispelRequest_EncounterEnd")
         end
         -- texplore(drUnits)
         -- texplore(drDebuffs)

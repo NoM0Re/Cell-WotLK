@@ -13,7 +13,7 @@ Cell.frames.petFrame = petFrame
 -------------------------------------------------
 -- anchor
 -------------------------------------------------
-local anchorFrame = CreateFrame("Frame", "CellPetAnchorFrame", petFrame, "BackdropTemplate")
+local anchorFrame = CreateFrame("Frame", "CellPetAnchorFrame", petFrame)
 Cell.frames.petFrameAnchor = anchorFrame
 anchorFrame:SetPoint("TOPLEFT", CellParent, "CENTER")
 anchorFrame:SetMovable(true)
@@ -99,7 +99,7 @@ end
 
 header:SetAttribute("_initialAttributeNames", "refreshUnitChange")
 header:SetAttribute("_initialAttribute-refreshUnitChange", [[
-    self:GetParent():CallMethod("UpdateButtonUnit", self:GetName(), self:GetAttribute("unit"))
+    self:SetAttribute("cellUpdateUnit", self:GetAttribute("unit"))
 ]])
 
 header:SetAttribute("template", "CellUnitButtonTemplate")
@@ -108,30 +108,51 @@ header:SetAttribute("columnAnchorPoint", "LEFT")
 header:SetAttribute("unitsPerColumn", 5)
 header:SetAttribute("showPlayer", true) -- show player pet while not in a raid
 
-if Cell.isRetail then
-    header:SetAttribute("maxColumns", 4)
-    --! make needButtons == 20
-    header:SetAttribute("startingIndex", -19)
-else
-    header:SetAttribute("maxColumns", 5)
-    --! make needButtons == 25
-    header:SetAttribute("startingIndex", -24)
-end
+header:SetAttribute("maxColumns", 5)
+--! make needButtons == 25
+header:SetAttribute("startingIndex", -24)
 header:Show()
 header:SetAttribute("startingIndex", 1)
 
-for i, b in ipairs(header) do
-    Cell.unitButtons.pet[i] = b
-    -- b.type = "pet" -- layout setup
+local function SyncHeaderChildren()
+    local children = {header:GetChildren()}
+    table.sort(children, function(a, b)
+        return (a:GetName() or "") < (b:GetName() or "")
+    end)
+
+    for i, child in ipairs(children) do
+        header[i] = child
+        Cell.unitButtons.pet[i] = child
+        -- child.type = "pet" -- layout setup
+
+        if not child.cellUpdateUnitHooked then
+            child.cellUpdateUnitHooked = true
+            child:HookScript("OnAttributeChanged", function(self, name, value)
+                if name == "cellUpdateUnit" then
+                    header:UpdateButtonUnit(self:GetName(), value)
+                end
+            end)
+        end
+
+        local unit = child:GetAttribute("unit")
+        if unit then
+            header:UpdateButtonUnit(child:GetName(), unit)
+        end
+    end
+    return #children
 end
 
+SyncHeaderChildren()
+
 -- update mover
-header[1]:HookScript("OnShow", function()
-    UpdateAnchor()
-end)
-header[1]:HookScript("OnHide", function()
-    UpdateAnchor()
-end)
+if header[1] then
+    header[1]:HookScript("OnShow", function()
+        UpdateAnchor()
+    end)
+    header[1]:HookScript("OnHide", function()
+        UpdateAnchor()
+    end)
+end
 
 -------------------------------------------------
 -- functions
@@ -209,11 +230,12 @@ Cell.RegisterCallback("UpdateMenu", "PetFrame_UpdateMenu", UpdateMenu)
 local function PetFrame_UpdateLayout(layout, which)
     -- visibility
     if Cell.vars.groupType == "solo" or Cell.vars.isHidden then
-        UnregisterAttributeDriver(petFrame, "state-visibility")
+        UnregisterStateDriver(petFrame, "visibility")
         petFrame:Hide()
         return
     end
-    RegisterAttributeDriver(petFrame, "state-visibility", "[@raid1,exists] show;[@party1,exists] show;hide")
+    RegisterStateDriver(petFrame, "visibility", "[@raid1,exists] show;[@party1,exists] show;hide")
+    SyncHeaderChildren()
 
     -- update
     layout = CellDB["layouts"][layout]
@@ -331,16 +353,11 @@ local function PetFrame_UpdateLayout(layout, which)
     end
 
     if not which or which == "pet" then
-        if (Cell.vars.groupType == "party" or Cell.vars.inBattleground == 5) and layout["pet"]["partyEnabled"] and layout["pet"]["partyDetached"] then
-            if Cell.vars.inBattleground == 5 then -- arena
-                header:SetAttribute("showParty", false)
-                header:SetAttribute("showRaid", true)
-            else
-                header:SetAttribute("showParty", true)
-                header:SetAttribute("showRaid", false)
-            end
+        if Cell.vars.groupType == "party" and layout["pet"]["partyEnabled"] and layout["pet"]["partyDetached"] then
+            header:SetAttribute("showParty", true)
+            header:SetAttribute("showRaid", false)
             petFrame:Show()
-        elseif Cell.vars.groupType == "raid" and layout["pet"]["raidEnabled"] and Cell.vars.inBattleground ~= 5 then
+        elseif Cell.vars.groupType == "raid" and layout["pet"]["raidEnabled"] then
             header:SetAttribute("showParty", false)
             header:SetAttribute("showRaid", true)
             petFrame:Show()

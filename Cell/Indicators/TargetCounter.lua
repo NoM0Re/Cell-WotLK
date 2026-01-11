@@ -7,7 +7,8 @@ local I = Cell.iFuncs
 
 local UnitGUID = UnitGUID
 local UnitCanAttack = UnitCanAttack
-local UnitIsOtherPlayersPet = UnitIsOtherPlayersPet
+local UnitIsOtherPlayersPet = F.UnitIsOtherPlayersPet
+local GetNamePlates = C_NamePlate and C_NamePlate.GetNamePlates
 
 -------------------------------------------------
 -- events
@@ -22,6 +23,10 @@ local nameplateTargets = {
 
 local counter = {
     -- friendGUID = {enemyGUID=true, ...},
+}
+
+local knownEnemies = {
+    -- enemyGUID = unitId,
 }
 
 local eventFrame = CreateFrame("Frame")
@@ -41,8 +46,46 @@ function eventFrame:NAME_PLATE_UNIT_ADDED(unit)
 end
 
 local function ScanNameplates()
-    for _, nameplate in pairs(C_NamePlate.GetNamePlates()) do
-        eventFrame:NAME_PLATE_UNIT_ADDED(nameplate.namePlateUnitToken)
+    for _, nameplate in pairs(GetNamePlates()) do
+        eventFrame:NAME_PLATE_UNIT_ADDED(nameplate.unit)
+    end
+end
+
+local function AddKnownEnemy(unit)
+    if not unit
+        or not UnitCanAttack(unit, "player")
+        or UnitIsOtherPlayersPet(unit)
+    then
+        return
+    end
+
+    local guid = UnitGUID(unit)
+    if guid and not knownEnemies[guid] then
+        knownEnemies[guid] = unit
+    end
+end
+
+local function ScanKnownEnemies()
+    wipe(knownEnemies)
+
+    AddKnownEnemy("target")
+    AddKnownEnemy("focus")
+    AddKnownEnemy("mouseover")
+
+    for i = 1, 4 do
+        AddKnownEnemy("boss"..i)
+    end
+
+    for i = 1, 5 do
+        AddKnownEnemy("arena"..i)
+    end
+
+    for unit in F.IterateGroupMembers() do
+        AddKnownEnemy(unit == "player" and "target" or unit.."target")
+    end
+
+    for unit in F.IterateGroupPets() do
+        AddKnownEnemy(unit.."target")
     end
 end
 
@@ -53,29 +96,40 @@ end
 local ticker
 local function StartTicker()
     if ticker then ticker:Cancel() end
-    ticker = C_Timer.NewTicker(0.25, function()
+    ticker = F.C_Timer.NewTicker(0.25, function()
         -- reset
         for _, ct in pairs(counter) do
             wipe(ct)
         end
 
         -- check & calculate
-        for unit in pairs(nameplates) do
-            local target = UnitGUID(unit.."target")
+        if GetNamePlates then
+            for unit in pairs(nameplates) do
+                local target = UnitGUID(unit.."target")
 
-            if not target then -- no target
-                nameplateTargets[unit] = nil
-            elseif not Cell.vars.guids[target] then -- target doesn't exists in player's group
-                nameplateTargets[unit] = nil
-                counter[target] = nil
-            else
-                nameplateTargets[unit] = target
+                if not target then -- no target
+                    nameplateTargets[unit] = nil
+                elseif not Cell.vars.guids[target] then -- target doesn't exists in player's group
+                    nameplateTargets[unit] = nil
+                    counter[target] = nil
+                else
+                    nameplateTargets[unit] = target
+                end
+
+                target = nameplateTargets[unit]
+                if target and Cell.vars.guids[target] then -- valid target exists
+                    if not counter[target] then counter[target] = {} end -- init
+                    counter[target][unit] = true
+                end
             end
-
-            target = nameplateTargets[unit]
-            if target and Cell.vars.guids[target] then -- valid target exists
-                if not counter[target] then counter[target] = {} end -- init
-                counter[target][unit] = true
+        else
+            ScanKnownEnemies()
+            for enemyGUID, unit in pairs(knownEnemies) do
+                local target = UnitGUID(unit.."target")
+                if target and Cell.vars.guids[target] then
+                    if not counter[target] then counter[target] = {} end
+                    counter[target][enemyGUID] = true
+                end
             end
         end
 
@@ -107,18 +161,22 @@ function eventFrame:PLAYER_ENTERING_WORLD()
         isValidZone = zoneFilters["outdoor"]
     elseif iType == "pvp" or iType == "arena" then
         isValidZone = zoneFilters["pvp"]
-    else -- party, raid, scenario
+    else -- party, raid
         isValidZone = zoneFilters["pve"]
     end
 
     if counterEnabled and isValidZone then
-        eventFrame:RegisterEvent("NAME_PLATE_UNIT_ADDED")
-        eventFrame:RegisterEvent("NAME_PLATE_UNIT_REMOVED")
-        ScanNameplates()
+        if GetNamePlates then
+            eventFrame:RegisterEvent("NAME_PLATE_UNIT_ADDED")
+            eventFrame:RegisterEvent("NAME_PLATE_UNIT_REMOVED")
+            ScanNameplates()
+        end
         StartTicker()
     else
-        eventFrame:UnregisterEvent("NAME_PLATE_UNIT_ADDED")
-        eventFrame:UnregisterEvent("NAME_PLATE_UNIT_REMOVED")
+        if GetNamePlates then
+            eventFrame:UnregisterEvent("NAME_PLATE_UNIT_ADDED")
+            eventFrame:UnregisterEvent("NAME_PLATE_UNIT_REMOVED")
+        end
         StopTicker()
     end
 end

@@ -15,7 +15,7 @@ local ShowData
 local importExportFrame, importBtn, title, instance, boss, whichBossesBtn, textArea
 
 local function CreateDebuffsImportExportFrame()
-    importExportFrame = CreateFrame("Frame", "CellOptionsFrame_RaidDebuffsImportExport", Cell.frames.raidDebuffsTab, "BackdropTemplate")
+    importExportFrame = CreateFrame("Frame", "CellOptionsFrame_RaidDebuffsImportExport", Cell.frames.raidDebuffsTab)
     importExportFrame:Hide()
     Cell.StylizeFrame(importExportFrame, nil, Cell.GetAccentColorTable())
     importExportFrame:EnableMouse(true)
@@ -134,7 +134,7 @@ local function CreateDebuffsImportExportFrame()
                                 imported["instanceId"] = instanceId
                                 imported["bossId"] = bossId
                                 imported["data"] = data
-                                importBtn:SetEnabled(true)
+                                F.SetEnabled(importBtn, true)
                             else
                                 error = L["Error"]
                             end
@@ -152,7 +152,7 @@ local function CreateDebuffsImportExportFrame()
                     title:SetText(L["Import"]..": |cffff2222"..error)
                     instance:SetText(L["Instance Name"]..": |cffff2222"..L["Error"])
                     boss:SetText(L["Boss Name"]..": |cffff2222"..L["Error"])
-                    importBtn:SetEnabled(false)
+                    F.SetEnabled(importBtn, false)
                 end
             else
                 eb:SetText(exported)
@@ -198,7 +198,7 @@ function F.ShowRaidDebuffsImportFrame()
     importExportFrame:Show()
     isImport = true
     importBtn:Show()
-    importBtn:SetEnabled(false)
+    F.SetEnabled(importBtn, false)
     whichBossesBtn:Hide()
 
     exported = ""

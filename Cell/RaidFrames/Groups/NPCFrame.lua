@@ -16,7 +16,9 @@ local anchors = {
 }
 
 for k, v in pairs(anchors) do
-    npcFrame:SetFrameRef(k, v)
+    if v then
+        npcFrame:SetFrameRef(k, v)
+    end
 end
 
 -------------------------------------------------
@@ -24,12 +26,12 @@ end
 -------------------------------------------------
 local tooltipPoint, tooltipRelativePoint, tooltipX, tooltipY
 
-local separateAnchor = CreateFrame("Frame", "CellSeparateNPCFrameAnchor", Cell.frames.mainFrame, "BackdropTemplate")
+local separateAnchor = CreateFrame("Frame", "CellSeparateNPCFrameAnchor", Cell.frames.mainFrame)
 Cell.frames.separateNpcFrameAnchor = separateAnchor
 separateAnchor:SetMovable(true)
 separateAnchor:SetClampedToScreen(true)
 P.Size(separateAnchor, 20, 10)
-PixelUtil.SetPoint(separateAnchor, "TOPLEFT", CellParent, "CENTER", 1, -1)
+F.PixelUtil.SetPoint(separateAnchor, "TOPLEFT", CellParent, "CENTER", 1, -1)
 -- Cell.StylizeFrame(separateAnchor, {0, 1, 0, 0.4})
 
 local hoverFrame = CreateFrame("Frame", nil, npcFrame)
@@ -91,36 +93,36 @@ end
 -------------------------------------------------
 -- NOTE: update each npc unit button
 -------------------------------------------------
-local pointUpdater = [[
-    local orientation, point, anchorPoint, unitSpacing = ...
-    -- print(orientation, point, anchorPoint, unitSpacing)
+local helperPointUpdater = [[
+    local npcFrame = self:GetFrameRef("npcFrame")
+    local orientation = npcFrame:GetAttribute("orientation")
+    local point = npcFrame:GetAttribute("point")
+    local anchorPoint = npcFrame:GetAttribute("anchorPoint")
+    local unitSpacing = npcFrame:GetAttribute("unitSpacing")
     local last
-    for i = 1, 8 do
-        local button = self:GetFrameRef("button"..i)
+    for i = 1, 4 do
+        local button = npcFrame:GetFrameRef("button"..i)
         button:ClearAllPoints()
         if button:IsVisible() then
             if last then
-                -- NOTE: anchor to last
                 if orientation == "vertical" then
                     button:SetPoint(point, last, anchorPoint, 0, unitSpacing)
                 else
                     button:SetPoint(point, last, anchorPoint, unitSpacing, 0)
                 end
             else
-                button:SetPoint("TOPLEFT", self)
+                button:SetPoint("TOPLEFT", npcFrame)
             end
             last = button
         end
     end
 
-    self:CallMethod("UpdateSeparateAnchor")
 ]]
-npcFrame:SetAttribute("pointUpdater", pointUpdater)
 
 -------------------------------------------------
 -- create buttons
 -------------------------------------------------
-for i = 1, 8 do
+for i = 1, 4 do
     local button = CreateFrame("Button", npcFrame:GetName().."Button"..i, npcFrame, "CellUnitButtonTemplate")
     tinsert(Cell.unitButtons.npc, button)
     -- Cell.unitButtons.npc.units["boss"..i] = button
@@ -128,9 +130,11 @@ for i = 1, 8 do
 
     button:HookScript("OnShow", function()
         Cell.unitButtons.npc.units["boss"..i] = button
+        npcFrame:UpdateSeparateAnchor()
     end)
     button:HookScript("OnHide", function()
         Cell.unitButtons.npc.units["boss"..i] = nil
+        npcFrame:UpdateSeparateAnchor()
     end)
 
     button:SetAttribute("unit", "boss"..i)
@@ -179,98 +183,8 @@ for i = 1, 8 do
     -- NOTE: update each npc unitbutton's point on show/hide
     button.helper = CreateFrame("Frame", nil, button, "SecureHandlerShowHideTemplate")
     button.helper:SetFrameRef("npcFrame", npcFrame)
-    button.helper:SetAttribute("pointUpdater", [[
-        local orientation = self:GetAttribute("orientation")
-        local point = self:GetAttribute("point")
-        local anchorPoint = self:GetAttribute("anchorPoint")
-        local unitSpacing = self:GetAttribute("unitSpacing")
-
-        local npcFrame = self:GetFrameRef("npcFrame")
-        self:RunFor(npcFrame, npcFrame:GetAttribute("pointUpdater"), orientation, point, anchorPoint, unitSpacing)
-    ]])
-    button.helper:SetAttribute("_onshow", [[ self:RunAttribute("pointUpdater") ]])
-    button.helper:SetAttribute("_onhide", [[ self:RunAttribute("pointUpdater") ]])
-end
-
--------------------------------------------------
--- FIXME: fix health updating boss678
--- ! BLIZZARD, FIX IT!
--------------------------------------------------
-local boss678_guidToButton = {}
-local boss678_buttonToGuid = {}
-
-local cleu = CreateFrame("Frame")
-cleu:SetScript("OnEvent", function()
-    local timestamp, subEvent, _, sourceGUID, sourceName, sourceFlags, sourceRaidFlags, destGUID, destName, destFlags, destRaidFlags = CombatLogGetCurrentEventInfo()
-    if boss678_guidToButton[destGUID] then
-        if subEvent == "SPELL_HEAL" or subEvent == "SPELL_PERIODIC_HEAL" or subEvent == "SPELL_DAMAGE" or subEvent == "SPELL_PERIODIC_DAMAGE" then
-            -- print("UpdateHealth:", boss678_guidToButton[destGUID]:GetName())
-            B.UpdateHealth(boss678_guidToButton[destGUID])
-        elseif subEvent == "SPELL_AURA_REFRESH" or subEvent == "SPELL_AURA_APPLIED" or subEvent == "SPELL_AURA_REMOVED" or subEvent == "SPELL_AURA_APPLIED_DOSE" or subEvent == "SPELL_AURA_REMOVED_DOSE" then
-            B.UpdateAuras(boss678_guidToButton[destGUID])
-        end
-    end
-end)
-
-for i = 6, 8 do
-    local button = Cell.unitButtons.npc[i]
-    button.helper:HookScript("OnShow", function()
-        local guid = UnitGUID(button.states.unit)
-        if not guid then return end
-
-        boss678_buttonToGuid[i] = guid
-        boss678_guidToButton[guid] = button
-
-        -- update now
-        B.UpdateAll(button)
-    end)
-
-    button.helper:HookScript("OnHide", function()
-        boss678_guidToButton[boss678_buttonToGuid[i] or ""] = nil
-        boss678_buttonToGuid[i] = nil
-
-        button.helper.elapsed = nil
-        button.helper.elapsed2 = nil
-        button.helper.elapsed3 = nil
-
-        if F.Getn(boss678_buttonToGuid) == 0 then
-            cleu:UnregisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
-        end
-    end)
-
-    button.helper:HookScript("OnUpdate", function(self, elapsed)
-        button.helper.elapsed = (button.helper.elapsed or 0) + elapsed
-        button.helper.elapsed2 = (button.helper.elapsed2 or 0) + elapsed
-        button.helper.elapsed3 = (button.helper.elapsed3 or 0) + elapsed
-
-        if button.helper.elapsed >= 0.25 then
-            local guid = UnitGUID(button.states.unit)
-            -- check old guid
-            if guid and boss678_buttonToGuid[i] ~= guid then --! unit changed
-                -- remove old
-                boss678_guidToButton[boss678_buttonToGuid[i] or ""] = nil
-                -- add new
-                boss678_buttonToGuid[i] = guid
-                boss678_guidToButton[guid] = button
-                -- update now
-                B.UpdateAll(button)
-            end
-            button.helper.elapsed = 0
-        end
-
-        if button.helper.elapsed2 >= 1 then
-            if not cleu:IsEventRegistered("COMBAT_LOG_EVENT_UNFILTERED") then
-                cleu:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
-            end
-            button.helper.elapsed2 = 0
-        end
-
-        if button.helper.elapsed3 >= 5 then
-            B.UpdateHealth(button)
-            B.UpdateHealthMax(button)
-            button.helper.elapsed3 = 0
-        end
-    end)
+    button.helper:SetAttribute("_onshow", helperPointUpdater)
+    button.helper:SetAttribute("_onhide", helperPointUpdater)
 end
 
 -------------------------------------------------
@@ -324,7 +238,24 @@ npcFrame:SetAttribute("_onstate-groupstate", [[
     end
 
     -- NOTE: update each npc button
-    self:RunAttribute("pointUpdater", orientation, point, anchorPoint, unitSpacing)
+    local last
+    for i = 1, 4 do
+        local button = self:GetFrameRef("button"..i)
+        button:ClearAllPoints()
+        if button:IsVisible() then
+            if last then
+                if orientation == "vertical" then
+                    button:SetPoint(point, last, anchorPoint, 0, unitSpacing)
+                else
+                    button:SetPoint(point, last, anchorPoint, unitSpacing, 0)
+                end
+            else
+                button:SetPoint("TOPLEFT", self)
+            end
+            last = button
+        end
+    end
+
 ]])
 
 -------------------------------------------------
@@ -441,11 +372,11 @@ Cell.RegisterCallback("UpdateMenu", "NPCFrame_UpdateMenu", UpdateMenu)
 local function NPCFrame_UpdateLayout(layout, which)
     -- visibility
     if Cell.vars.isHidden then
-        UnregisterAttributeDriver(npcFrame, "state-visibility")
+        UnregisterStateDriver(npcFrame, "visibility")
         npcFrame:Hide()
         return
     end
-    RegisterAttributeDriver(npcFrame, "state-visibility", "[@raid1,exists] show;[@party1,exists] show;show")
+    RegisterStateDriver(npcFrame, "visibility", "[@raid1,exists] show;[@party1,exists] show;show")
 
     -- update
     layout = Cell.vars.currentLayoutTable
@@ -484,11 +415,15 @@ local function NPCFrame_UpdateLayout(layout, which)
 
     if not which or which == "pet" then
         if not layout["pet"]["partyEnabled"] or layout["pet"]["partyDetached"] then
-            npcFrame:SetFrameRef("party", CellPartyFrameHeaderUnitButton1)
-            anchors["party"] = CellPartyFrameHeaderUnitButton1
+            if CellPartyFrameHeaderUnitButton1 then
+                npcFrame:SetFrameRef("party", CellPartyFrameHeaderUnitButton1)
+                anchors["party"] = CellPartyFrameHeaderUnitButton1
+            end
         else
-            npcFrame:SetFrameRef("party", CellPartyFrameHeaderUnitButton1Pet)
-            anchors["party"] = CellPartyFrameHeaderUnitButton1Pet
+            if CellPartyFrameHeaderUnitButton1Pet then
+                npcFrame:SetFrameRef("party", CellPartyFrameHeaderUnitButton1Pet)
+                anchors["party"] = CellPartyFrameHeaderUnitButton1Pet
+            end
         end
     end
 
@@ -591,13 +526,8 @@ local function NPCFrame_UpdateLayout(layout, which)
         npcFrame:SetAttribute("groupSpacing", P.Scale(groupSpacing))
 
         local last
-        for i = 1, 8 do
+        for i = 1, 4 do
             local button = Cell.unitButtons.npc[i]
-            button.helper:SetAttribute("orientation", orientation)
-            button.helper:SetAttribute("point", point)
-            button.helper:SetAttribute("anchorPoint", anchorPoint)
-            button.helper:SetAttribute("unitSpacing", P.Scale(unitSpacing))
-
             -- update each npc button now
             if button:IsVisible() then
                 button:ClearAllPoints()
@@ -621,10 +551,10 @@ local function NPCFrame_UpdateLayout(layout, which)
 
     if not which or which == "npc" then
         if layout["npc"]["enabled"] then
-            -- NOTE: RegisterAttributeDriver
+            -- NOTE: RegisterStateDriver visibility
             for i, b in ipairs(Cell.unitButtons.npc) do
-                RegisterAttributeDriver(b, "state-visibility", "[@boss"..i..", help] show; hide")
-                -- RegisterAttributeDriver(b, "state-visibility", "[@player, help] show; hide")
+                RegisterStateDriver(b, "visibility", "[@boss"..i..", help] show; hide")
+                -- RegisterStateDriver(b, "visibility", "[@player, help] show; hide")
             end
             if layout["npc"]["separate"] then
                 UnregisterStateDriver(npcFrame, "groupstate")
@@ -637,9 +567,9 @@ local function NPCFrame_UpdateLayout(layout, which)
                 RegisterStateDriver(npcFrame, "petstate", "[@pet,exists] pet; [@partypet1,exists] pet1; [@partypet2,exists] pet2; [@partypet3,exists] pet3; [@partypet4,exists] pet4; nopet")
             end
         else
-            -- NOTE: RegisterAttributeDriver
+            -- NOTE: RegisterStateDriver visibility
             for _, b in ipairs(Cell.unitButtons.npc) do
-                UnregisterAttributeDriver(b, "state-visibility")
+                UnregisterStateDriver(b, "visibility")
                 b:Hide()
             end
         end

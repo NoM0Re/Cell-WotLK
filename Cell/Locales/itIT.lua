@@ -2,6 +2,9 @@ if not LOCALE_itIT then return end
 
 local L = select( 2, ...).L
 
+L["|cffeda55fLeft-Click|r to toggle showing the options window."] = "|cffeda55fClick sinistro|r per mostrare o nascondere la finestra delle opzioni."
+L["Show Minimap Button"] = "Mostra pulsante della minimappa"
+
 L["%s in Utilities must be enabled to make this indicator work."] = "%s in Utilità deve essere abilitato per far funzionare questo indicatore"
 --[[Translation missing --]]
 --[[ L["%s is required"] = ""--]]
@@ -9,7 +12,6 @@ L["%s in Utilities must be enabled to make this indicator work."] = "%s in Utili
 --[[ L["%s lock %s on %s."] = "%s lock %s on %s."--]]
 --[[Translation missing --]]
 --[[ L["%s unlock %s from %s."] = "%s unlock %s from %s."--]]
-L["[Alt+Left-Click] to edit"] = "[Alt+Click-Sinistro] per modificare"
 L["[Ctrl+Left-Click] to reset these settings"] = "[Ctrl+Click-Sinistro] per resettare queste impostazioni"
 L["|cff1Aff1AYes|r - Overwrite"] = [=[|cff1Aff1ASi|r - Sovrascrivi
 
@@ -20,7 +22,6 @@ L["|cffffb5c5Right-Click:|r report unaffected"] = "|cffffb5c5Click Destro:|r com
 L["+ Stack"] = "+ Stack"
 L["+ Stack & Duration"] = "+ Stack e Durata"
 L["A 0-40 integer is required."] = "È necessario un numero intero 0-40."
-L["A positive integer is required."] = "È necessario un numero intero positivo"
 L["A UI reload is required.\nDo it now?"] = "È necessario un reload dell'UI.\nVuoi farlo ora?"
 L["About"] = "Informazioni"
 L["ABOUT"] = "INFORMAZIONI"
@@ -69,7 +70,6 @@ L["Arena"] = "Arena"
 --[[Translation missing --]]
 --[[ L["Aura Icon Options"] = "Aura Icon Options"--]]
 L["Author"] = "Autore"
-L["Autorun will be disabled for all code snippets"] = "L'esecuzione automatica sarà disabilitata per tutti gli snippet di codice"
 L["Available slash commands"] = "Comandi slash disponibili"
 L["Background Alpha"] = "Trasparenza dello sfondo"
 L["Background Color"] = "Colore dello sfondo"
@@ -104,14 +104,12 @@ L["Bleed"] = "Sanguinamento"
 --[[ L["Border Color"] = ""--]]
 L["Boss Name"] = "Nome del Boss"
 L["Boss1 Target"] = "Target del Boss 1"
-L["Both"] = "Entrambi"
 L["BOTTOM"] = "BOTTOM"
 L["BOTTOMLEFT"] = "BOTTOMLEFT"
 L["BOTTOMRIGHT"] = "BOTTOMRIGHT"
 --[[Translation missing --]]
 --[[ L["bottom-to-top"] = "Bottom-to-Top"--]]
 L["Bounce"] = "Rimbalza"
-L["BR"] = "CR"
 L["Buff"] = "Buff"
 --[[Translation missing --]]
 --[[ L["Buff List"] = "Buff List"--]]
@@ -119,8 +117,6 @@ L["Buff"] = "Buff"
 --[[ L["Buff Tracker"] = "Buff Tracker"--]]
 --[[Translation missing --]]
 --[[ L["Buff Tracker icon size is set to %d."] = "Buff Tracker icon size is set to %d."--]]
-L["buffByMe"] = "Mostra solo buff che posso applicare"
-L["Buffs"] = "Buff"
 --[[Translation missing --]]
 --[[ L["Buffs Tracker"] = ""--]]
 --[[Translation missing --]]
@@ -140,7 +136,6 @@ L["Cast By"] = "Lanciato da"
 --[[ L["cast Inner spell"] = ""--]]
 --[[Translation missing --]]
 --[[ L["cast Outer spell"] = ""--]]
-L["castByMe"] = "Mostra solo buff lanciati da me"
 --[[Translation missing --]]
 --[[ L["Casts"] = ""--]]
 --[[Translation missing --]]
@@ -192,7 +187,6 @@ L["Color"] = "Colore"
 L["Color By"] = "Colora per"
 L["Color Duration Text"] = "Colora testo della durata"
 L["Color Thresholds"] = "Soglie per il colore"
-L["Columns"] = "Colonne"
 --[[Translation missing --]]
 --[[ L["Combat Icon"] = ""--]]
 --[[Translation missing --]]
@@ -204,7 +198,6 @@ L["Columns"] = "Colonne"
 L["Confirm"] = "Conferma"
 --[[Translation missing --]]
 --[[ L["Conflicts Detected!"] = "Conflicts Detected!"--]]
-L["Consumables"] = "Consumabili"
 --[[Translation missing --]]
 --[[ L["Contains"] = "Contains"--]]
 L["Copy"] = "Copia"
@@ -222,7 +215,6 @@ L["Create new indicator"] = "Crea nuovo indicatore"
 L["Create new layout"] = "Crea nuovo layout"
 --[[Translation missing --]]
 --[[ L["Create several buttons for quick casting and buff monitoring"] = ""--]]
-L["Crowd Controls"] = "Effetti di controllo"
 --[[Translation missing --]]
 --[[ L["Current"] = " Current"--]]
 --[[Translation missing --]]
@@ -279,7 +271,6 @@ L["Delete spell?"] = "Elimina spell?"
 --[[ L["Detached"] = ""--]]
 L["Disabled"] = "Disabilitato"
 L["Disabled in battlegrounds and arenas"] = "Disabilitato in campi di battaglie e arene"
-L["Discard"] = "Annullare"
 L["discard changes"] = "annullare le modifiche"
 L["Disease"] = "Malattia"
 L["DISPEL"] = "DISPEL"
@@ -297,7 +288,6 @@ L["Displayed Per Line"] = "Mostrati Per Linea"
 --[[ L["Do nothing if requested spell/buff already exists on requester"] = "Do nothing if requested spell/buff already exists on requester"--]]
 L["DRINKING"] = "BEVENDO"
 --[[Translation missing --]]
---[[ L["Due to restrictions of the private aura system, this indicator can only use Blizzard style."] = "Due to restrictions of the private aura system, this indicator can only use Blizzard style."--]]
 L["durationFont"] = "Font Durata"
 L["Edit"] = "Modifica"
 L["Edit spell"] = "Modifica spell"
@@ -305,7 +295,6 @@ L["Edit spell"] = "Modifica spell"
 --[[ L["Effective"] = "Effective"--]]
 --[[Translation missing --]]
 --[[ L["En"] = "En"--]]
-L["Enable"] = "Abilita"
 --[[Translation missing --]]
 --[[ L["Enable Color Gradient"] = ""--]]
 --[[Translation missing --]]
@@ -646,7 +635,6 @@ L["MODERATE CPU USAGE"] = "UTILIZZO DI CPU MODERATO"
 --[[ L["New version found (%s). Please visit %s to get the latest version."] = "New version found (%s). Please visit %s to get the latest version."--]]
 L["Nickname"] = "Soprannome"
 L["Nickname Blacklist"] = "Blacklist Soprannomi"
-L["Nickname Options"] = "Opzioni Soprannomi"
 L["Nickname Sync"] = "Sincronizza Soprannomi"
 L["No"] = "No"
 --[[Translation missing --]]
@@ -671,7 +659,6 @@ L["OFF"] = "OFF"
 --[[Translation missing --]]
 --[[ L["Offensives Tracker"] = ""--]]
 L["OFFLINE"] = "OFFLINE"
-L["ON"] = "ON"
 --[[Translation missing --]]
 --[[ L["Only affects duration text"] = ""--]]
 --[[Translation missing --]]
@@ -765,7 +752,6 @@ L["Poison"] = "Veleno"
 --[[Translation missing --]]
 --[[ L["Primary Talents"] = "Primary Talents"--]]
 --[[Translation missing --]]
---[[ L["Private Auras"] = "Private Auras"--]]
 --[[Translation missing --]]
 --[[ L["Profile imported successfully."] = ""--]]
 --[[Translation missing --]]
@@ -831,7 +817,6 @@ L["Request"] = "Richiesta"
 --[[Translation missing --]]
 --[[ L["Require font support"] = "Require font support"--]]
 L["Require reload of the UI"] = "Richiede il reload dell'UI"
-L["Reset"] = "Reset"
 --[[Translation missing --]]
 --[[ L["RESET"] = "Cell requires a full reset after updating from a very old version"--]]
 --[[Translation missing --]]
@@ -945,18 +930,14 @@ L["Show All"] = "Mostra tutto"
 --[[Translation missing --]]
 --[[ L["show Cell options frame"] = "show Cell options frame"--]]
 --[[Translation missing --]]
---[[ L["Show countdown number"] = "Show countdown number"--]]
 --[[Translation missing --]]
---[[ L["Show countdown swipe"] = "Show countdown swipe"--]]
 --[[Translation missing --]]
 --[[ L["Show Current Instance"] = "Show Current Instance"--]]
 L["Show friendly NPCs in a separate frame"] = "Mostra NPC amichevoli in un frame separato"
 L["Show NPC Frame"] = "Mostra Frame NPC"
-L["Show Party"] = "Mostra Gruppo"
 L["Show Party/Arena Pets"] = "Mostra Pet Gruppo/Arena"
 --[[Translation missing --]]
 --[[ L["Show pets in a separate frame"] = ""--]]
-L["Show Raid"] = "Mostra Raid"
 L["Show Raid Pets"] = "Mostra Pet Raid"
 L["Show Solo"] = "Mostra in solo"
 --[[Translation missing --]]
@@ -1030,7 +1011,6 @@ L["Spells"] = "Spell"
 --[[ L["Status Text Position"] = "Status Text Position"--]]
 --[[Translation missing --]]
 --[[ L["Strata"] = "Strata"--]]
-L["Style"] = "Stile"
 --[[Translation missing --]]
 --[[ L["Supporters"] = "Supporters"--]]
 --[[Translation missing --]]
@@ -1038,8 +1018,6 @@ L["Style"] = "Stile"
 L["Sync With"] = "Sincronizza con"
 --[[Translation missing --]]
 --[[ L["syncTips"] = "Set the master layout here\nAll indicators of slave layout are fully in-sync with the master\nIt's a two-way sync, but all indicators of slave layout will be lost when set a master"--]]
-L["T"] = "Talento"
-L["Tank Active Mitigation"] = "Riduzione danni attiva del Tank"
 --[[Translation missing --]]
 --[[ L["Target"] = "Target"--]]
 --[[Translation missing --]]
@@ -1090,7 +1068,6 @@ L["Text Width"] = "Larghezza Testo"
 --[[Translation missing --]]
 --[[ L["Timeout"] = "Timeout"--]]
 L["Tip: Every layout has its own position setting"] = "Suggerimento: Ogni layout ha le prorprie impostazioni di posizione"
-L["Tip: right-click to delete"] = "Suggerimento: click destro per eliminare"
 L["To"] = "A"
 --[[Translation missing --]]
 --[[ L["To HealthBar's"] = "To HealthBar's"--]]
@@ -1184,9 +1161,7 @@ L["Vertical"] = "Verticale"
 L["Vertical Gradient"] = "Gradiente Verticale"
 L["Visibility"] = "Visibilità"
 L["Waiting for combat to end..."] = "In attesa della fine del combattimento..."
-L["Want to help improve Raid Debuffs?"] = "Vuoi contribuire a migliorare i Debuff Raid?"
 L["Width"] = "Larghezza"
-L["World Marks"] = "Marchi sul Terreno"
 L["Would you like Cell to create a \"Healers\" indicator (icons)?"] = "Vuoi che Cell crei degli indicatori (icone) per i \"guaritori\"?"
 L["X Offset"] = "X Offset"
 L["Y Offset"] = "Y Offset"
@@ -1194,5 +1169,4 @@ L["Yes"] = "Si"
 L["You"] = "Tu"
 L["You can config debuffs in %s"] = "Puoi configurare i debuff in %s"
 L["You can move it in Preview mode"] = "Puoi spostarlo in modalità Anteprima"
-L["You can't do that while in combat."] = "Non puoi farlo durante il combattimento"
 L["You don't have permission to do this"] = "Non hai il permesso di farlo"

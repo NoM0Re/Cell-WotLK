@@ -9,7 +9,7 @@ local LoadList
 local customs = {}
 
 local function CreateNicknameBlacklistFrame()
-    nicknameBlacklistFrame = CreateFrame("Frame", "CellOptionsFrame_Nicknames", Cell.frames.generalTab, "BackdropTemplate")
+    nicknameBlacklistFrame = CreateFrame("Frame", "CellOptionsFrame_Nicknames", Cell.frames.generalTab)
     Cell.StylizeFrame(nicknameBlacklistFrame, nil, Cell.GetAccentColorTable())
     nicknameBlacklistFrame:SetFrameLevel(Cell.frames.generalTab:GetFrameLevel() + 50)
     nicknameBlacklistFrame:Hide()

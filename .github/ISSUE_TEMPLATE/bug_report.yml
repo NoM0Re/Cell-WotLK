@@ -1,0 +1,123 @@
+name: "Bug Report"
+description: Create a report to help us improve
+labels: ['🐛 Bug']
+body:
+- type: checkboxes
+  attributes:
+    label: Is there an existing issue for this?
+    description: Please [search for existing issues](https://github.com/NoM0Re/Cell-WotLK/issues) to see if an open or closed one already exists for the bug you encountered. If a bug exists and it is closed as complete it may not yet be in a stable release.
+    options:
+    - label: I have searched the existing open and closed issues.
+      required: true
+
+- type: textarea
+  attributes:
+    label: Description
+    description: What did you expect to happen and what happened instead?
+  validations:
+    required: true
+
+- type: input
+  attributes:
+    label: Cell Version
+    description: |
+      You can see the current version in the title bar of the options window. If the options do not open, check the `## Version:` field in `Cell.toc`.
+    placeholder: "Cell r274"
+  validations:
+    required: true
+
+- type: dropdown
+  id: flavor
+  attributes:
+    label: World of Warcraft Flavor
+    description: What version of World of Warcraft are are you running?
+    options:
+      - WotLK 3.3.5a
+  validations:
+    required: true
+
+- type: dropdown
+  id: language
+  attributes:
+    label: World of Warcraft Language
+    description: In which language do you play World of Warcraft?
+    options:
+      - enGB/enUS
+      - deDE
+      - frFR
+      - itIT
+      - esES
+      - esMX
+      - koKR
+      - ptBR
+      - ruRU
+      - zhCN
+      - zhTW
+  validations:
+    required: true
+
+- type: input
+  id: server
+  attributes:
+    label: Server
+    description: On which server/realm are you playing?
+    placeholder: Warmane-Icecrown
+  validations:
+    required: true
+
+- type: dropdown
+  id: testing
+  attributes:
+    label: Tested with only Cell
+    description: Sometimes, other addons can interfere with Cell. We recommend testing with only Cell enabled to see if the issue persists.
+    options:
+      - I got this issue with only Cell enabled
+  validations:
+    required: true
+
+- type: textarea
+  attributes:
+    label: Lua Error
+    description: |
+      Do you have an error log of what happened? If you don't see any errors, make sure that error reporting is enabled (`/console scriptErrors 1`) or install [BugSack](https://www.curseforge.com/wow/addons/bugsack) & [BugGrabber](https://www.curseforge.com/wow/addons/bug-grabber), yes both are needed.
+    render: Text
+  validations:
+    required: false
+
+- type: textarea
+  attributes:
+    label: Reproduction Steps
+    description: Please list out the steps to reproduce your bug. Please verify that your reproduction steps are enough to reproduce the problem.
+    placeholder: |
+      1. Go to '...'
+      2. Click on '....'
+      3. Scroll down to '....'
+      4. See error
+  validations:
+    required: true
+
+- type: input
+  attributes:
+    label: Last Good Version
+    description: |
+      Was it working in a previous version? If yes, which was the last good one?
+    placeholder: "Cell r273"
+  validations:
+    required: false
+
+- type: textarea
+  attributes:
+    label: Screenshots
+    description: If applicable, add screenshots to help explain your problem.
+    placeholder: Click here to attach your screenshots via the editor button in the top right.
+  validations:
+    required: false
+
+- type: textarea
+  attributes:
+    label: Profile or SavedVariables
+    description: If the issue depends on your configuration, paste a Cell profile export or attach the file `WTF\Account\YOUR_ACCOUNT\SavedVariables\Cell.lua`.
+    placeholder: Paste your Cell profile export here.
+    render: Text
+  validations:
+    required: false

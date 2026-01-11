@@ -1,8 +1,11 @@
-# ignored
+# Local environment
 .vscode/
 .release/*
 .resources/
 .utils/*.csv
+
+# Local agent/reference cache
+.agents-cache/
 
 # Compiled Lua sources
 luac.out

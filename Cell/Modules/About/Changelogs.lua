@@ -4,6 +4,7 @@ local F = Cell.funcs
 local P = Cell.pixelPerfectFuncs
 
 local changelogsFrame
+local init
 
 local function CreateChangelogsFrame()
     changelogsFrame = Cell.CreateMovableFrame("Cell "..L["Changelogs"], "CellChangelogsFrame", 400, 450, "DIALOG", 1, true)
@@ -30,31 +31,75 @@ local function CreateChangelogsFrame()
     end
     content:SetPoint("TOP", 0, -10)
     content:SetWidth(changelogsFrame:GetWidth() - 30)
+    content:SetHeight(1)
     content:SetHyperlinkFormat("|H%s|h|cFFFFD100%s|r|h")
 
-    changelogsFrame:SetScript("OnShow", function()
-        content:SetText("<html><body>" .. L["CHANGELOGS"] .. "</body></html>")
-        C_Timer.After(0, function()
-            local height = content:GetContentHeight()
+    local measureFonts = {
+        h1 = changelogsFrame:CreateFontString(nil, "ARTWORK", "CELL_FONT_CLASS_TITLE"),
+        h2 = changelogsFrame:CreateFontString(nil, "ARTWORK", "CELL_FONT_CLASS"),
+        p = changelogsFrame:CreateFontString(nil, "ARTWORK", LOCALE_zhCN and "CELL_FONT_WIDGET" or "CELL_FONT_CHINESE"),
+    }
+    local spacings = {h1 = 9, h2 = 7, p = 5}
+    for tag, fontString in pairs(measureFonts) do
+        fontString:SetWidth(content:GetWidth())
+        fontString:SetSpacing(spacings[tag])
+        fontString:SetAlpha(0)
+    end
+
+    local function GetTextHeight(fontString, text)
+        text = string.gsub(text, "<[^>]+>", "")
+        text = string.gsub(text, "&amp;", "&")
+        text = string.gsub(text, "&lt;", "<")
+        text = string.gsub(text, "&gt;", ">")
+        fontString:SetText(text)
+        return fontString:GetStringHeight()
+    end
+
+    local function GetChangelogHeight(text)
+        local height = 0
+        for tag, fontString in pairs(measureFonts) do
+            for block in string.gmatch(text, "<"..tag..">(.-)</"..tag..">") do
+                height = height + GetTextHeight(fontString, block) + spacings[tag]
+            end
+        end
+
+        local _, breaks = string.gsub(text, "<br%s*/>", "")
+        measureFonts.p:SetText(" ")
+        return math.ceil(height + breaks * (measureFonts.p:GetStringHeight() + spacings.p))
+    end
+
+    local function UpdateContentHeight(text, padding, resetScroll)
+        F.C_Timer.After(0, function()
+            local height = GetChangelogHeight(text)
             content:SetHeight(height)
-            changelogsFrame.scrollFrame.content:SetHeight(height + 100)
+            changelogsFrame.scrollFrame:SetContentHeight(height + padding)
+            if resetScroll then
+                changelogsFrame.scrollFrame:ResetScroll()
+            end
+        end)
+    end
+
+    changelogsFrame:SetScript("OnShow", function()
+        local text = L["CHANGELOGS"]
+        content:SetText("<html><body>" .. text .. "</body></html>")
+        UpdateContentHeight(text, 100)
+        F.C_Timer.After(0, function()
             P.PixelPerfectPoint(changelogsFrame)
         end)
     end)
 
     content:SetScript("OnHyperlinkClick", function(self, linkData, link, button)
+        local text
         if linkData == "older" then
-            content:SetText("<html><body>" .. L["OLDER_CHANGELOGS"] .. "</body></html>")
+            text = L["OLDER_CHANGELOGS"]
         elseif linkData == "recent" then
-            content:SetText("<html><body>" .. L["CHANGELOGS"] .. "</body></html>")
+            text = L["CHANGELOGS"]
         end
 
-        C_Timer.After(0, function()
-            local height = content:GetContentHeight()
-            content:SetHeight(height)
-            changelogsFrame.scrollFrame.content:SetHeight(height + 30)
-            changelogsFrame.scrollFrame:ResetScroll()
-        end)
+        if text then
+            content:SetText("<html><body>" .. text .. "</body></html>")
+            UpdateContentHeight(text, 30, true)
+        end
     end)
 end
 

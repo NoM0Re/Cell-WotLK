@@ -14,6 +14,40 @@ layoutsTab:Hide()
 
 local selectedLayout, selectedLayoutTable
 local selectedPage = "main"
+local LoadPageDB
+
+local PREVIEW_FRAME_LEVEL = 30
+
+local function SetFrameStrataAndLevel(frame, strata, frameLevel)
+    frame:SetFrameStrata(strata)
+    frame:SetFrameLevel(frameLevel)
+end
+
+local function SetPreviewButtonFrameLevel(button, frameLevel)
+    SetFrameStrataAndLevel(button, "DIALOG", frameLevel)
+
+    SetFrameStrataAndLevel(button.widgets.healthBar, "DIALOG", frameLevel+1)
+    SetFrameStrataAndLevel(button.widgets.powerBar, "DIALOG", frameLevel+2)
+    SetFrameStrataAndLevel(button.widgets.targetHighlight, "DIALOG", frameLevel+3)
+    SetFrameStrataAndLevel(button.widgets.mouseoverHighlight, "DIALOG", frameLevel+4)
+    SetFrameStrataAndLevel(button.widgets.midLevelFrame, "DIALOG", frameLevel+20)
+    SetFrameStrataAndLevel(button.widgets.highLevelFrame, "DIALOG", frameLevel+30)
+    SetFrameStrataAndLevel(button.widgets.tsGlowFrame, "DIALOG", frameLevel+40)
+    SetFrameStrataAndLevel(button.widgets.srGlowFrame, "DIALOG", frameLevel+40)
+    SetFrameStrataAndLevel(button.widgets.drGlowFrame, "DIALOG", frameLevel+40)
+    SetFrameStrataAndLevel(button.widgets.indicatorFrame, "DIALOG", frameLevel+50)
+
+    if button.actions then
+        SetFrameStrataAndLevel(button.actions, "DIALOG", frameLevel+60)
+    end
+    if button.indicators.actions then
+        SetFrameStrataAndLevel(button.indicators.actions, "DIALOG", frameLevel+60)
+    end
+    if button.indicators.healthThresholds then
+        SetFrameStrataAndLevel(button.indicators.healthThresholds, "DIALOG", frameLevel+60)
+    end
+end
+
 -------------------------------------------------
 -- preview frame
 -------------------------------------------------
@@ -21,6 +55,7 @@ local previewButton
 
 local function CreatePreviewButton()
     previewButton = CreateFrame("Button", "CellLayoutsPreviewButton", layoutsTab, "CellPreviewButtonTemplate")
+    SetPreviewButtonFrameLevel(previewButton, PREVIEW_FRAME_LEVEL)
     B.UpdateBackdrop(previewButton)
     previewButton:SetPoint("TOPRIGHT", layoutsTab, "TOPLEFT", -5, -20)
     previewButton:UnregisterAllEvents()
@@ -38,6 +73,7 @@ local function CreatePreviewButton()
     previewButton.isPreview = true
 
     local previewButtonBG = Cell.CreateFrame("CellLayoutsPreviewButtonBG", layoutsTab)
+    SetFrameStrataAndLevel(previewButtonBG, "DIALOG", PREVIEW_FRAME_LEVEL-1)
     previewButtonBG:SetPoint("TOPLEFT", previewButton, 0, 20)
     previewButtonBG:SetPoint("BOTTOMRIGHT", previewButton, "TOPRIGHT")
     Cell.StylizeFrame(previewButtonBG, {0.1, 0.1, 0.1, 0.77}, {0, 0, 0, 0})
@@ -48,6 +84,7 @@ local function CreatePreviewButton()
     previewText:SetText(Cell.GetAccentColorString()..L["Preview"])
 
     Cell.Fire("CreatePreview", previewButton)
+    SetPreviewButtonFrameLevel(previewButton, PREVIEW_FRAME_LEVEL)
 end
 
 local function UpdatePreviewButton(which, value)
@@ -78,7 +115,9 @@ local function UpdatePreviewButton(which, value)
 
     if not which or which == "appearance" then
         previewButton.widgets.healthBar:SetStatusBarTexture(Cell.vars.texture)
+        F.SetStatusBarRotatesTexture(previewButton.widgets.healthBar, previewButton.widgets.healthBar.rotatesTexture)
         previewButton.widgets.powerBar:SetStatusBarTexture(Cell.vars.texture)
+        F.SetStatusBarRotatesTexture(previewButton.widgets.powerBar, previewButton.widgets.powerBar.rotatesTexture)
 
         -- health color
         local r, g, b = F.GetHealthBarColor(1, false, F.GetClassColor(Cell.vars.playerClass))
@@ -128,7 +167,7 @@ local function CreateLayoutPreview()
     layoutPreview:SetToplevel(true)
     layoutPreview:Hide()
 
-    layoutPreviewAnchor = CreateFrame("Frame", "CellLayoutPreviewAnchorFrame", layoutPreview, "BackdropTemplate")
+    layoutPreviewAnchor = CreateFrame("Frame", "CellLayoutPreviewAnchorFrame", layoutPreview)
     -- layoutPreviewAnchor:SetPoint("TOPLEFT", CellParent, "CENTER")
     P.Size(layoutPreviewAnchor, 20, 10)
     layoutPreviewAnchor:SetMovable(true)
@@ -161,8 +200,7 @@ local function CreateLayoutPreview()
     -- init raid preview
     layoutPreview.fadeIn = layoutPreview:CreateAnimationGroup()
     local fadeIn = layoutPreview.fadeIn:CreateAnimation("alpha")
-    fadeIn:SetFromAlpha(0)
-    fadeIn:SetToAlpha(1)
+    F.AlphaSetFromTo(fadeIn, 0, 1)
     fadeIn:SetDuration(0.5)
     fadeIn:SetSmoothing("OUT")
     fadeIn:SetScript("OnPlay", function()
@@ -171,8 +209,7 @@ local function CreateLayoutPreview()
 
     layoutPreview.fadeOut = layoutPreview:CreateAnimationGroup()
     local fadeOut = layoutPreview.fadeOut:CreateAnimation("alpha")
-    fadeOut:SetFromAlpha(1)
-    fadeOut:SetToAlpha(0)
+    F.AlphaSetFromTo(fadeOut, 1, 0)
     fadeOut:SetDuration(0.5)
     fadeOut:SetSmoothing("IN")
     fadeOut:SetScript("OnFinished", function()
@@ -187,7 +224,7 @@ local function CreateLayoutPreview()
 
         for j = 1, 5 do
             header[j] = header:CreateTexture(nil, "BACKGROUND")
-            header[j]:SetColorTexture(0, 0, 0)
+            header[j]:SetTexture(0, 0, 0)
             header[j]:SetAlpha(0.555)
             -- header[j]:SetSize(30, 20)
 
@@ -228,7 +265,7 @@ local function CreateLayoutPreview()
         local f = layoutPreview.combinedHeader:CreateTexture(nil, "BACKGROUND")
         layoutPreview.combinedHeader[i] = f
 
-        f:SetColorTexture(0, 0, 0)
+        f:SetTexture(0, 0, 0)
         f:SetAlpha(0.555)
 
         f.tex = layoutPreview.combinedHeader:CreateTexture(nil, "ARTWORK")
@@ -469,7 +506,7 @@ local function UpdateLayoutPreview()
     end
 
     if previewMode == 0 then
-        layoutPreview.timer = C_Timer.NewTimer(1, function()
+        layoutPreview.timer = F.C_Timer.NewTimer(1, function()
             layoutPreview.fadeOut:Play()
             layoutPreview.timer = nil
         end)
@@ -487,7 +524,7 @@ local function CreateNPCPreview()
     npcPreview:SetToplevel(true)
     npcPreview:Hide()
 
-    npcPreviewAnchor = CreateFrame("Frame", "CellNPCPreviewAnchorFrame", npcPreview, "BackdropTemplate")
+    npcPreviewAnchor = CreateFrame("Frame", "CellNPCPreviewAnchorFrame", npcPreview)
     P.Size(npcPreviewAnchor, 20, 10)
     npcPreviewAnchor:SetMovable(true)
     npcPreviewAnchor:EnableMouse(true)
@@ -508,8 +545,7 @@ local function CreateNPCPreview()
 
     npcPreview.fadeIn = npcPreview:CreateAnimationGroup()
     local fadeIn = npcPreview.fadeIn:CreateAnimation("alpha")
-    fadeIn:SetFromAlpha(0)
-    fadeIn:SetToAlpha(1)
+    F.AlphaSetFromTo(fadeIn, 0, 1)
     fadeIn:SetDuration(0.5)
     fadeIn:SetSmoothing("OUT")
     fadeIn:SetScript("OnPlay", function()
@@ -518,8 +554,7 @@ local function CreateNPCPreview()
 
     npcPreview.fadeOut = npcPreview:CreateAnimationGroup()
     local fadeOut = npcPreview.fadeOut:CreateAnimation("alpha")
-    fadeOut:SetFromAlpha(1)
-    fadeOut:SetToAlpha(0)
+    F.AlphaSetFromTo(fadeOut, 1, 0)
     fadeOut:SetDuration(0.5)
     fadeOut:SetSmoothing("IN")
     fadeOut:SetScript("OnFinished", function()
@@ -529,7 +564,7 @@ local function CreateNPCPreview()
     npcPreview.header = CreateFrame("Frame", "CellNPCPreviewFrameHeader", npcPreview)
     for i = 1, 5 do
         npcPreview.header[i] = npcPreview.header:CreateTexture(nil, "BACKGROUND")
-        npcPreview.header[i]:SetColorTexture(0, 0, 0)
+        npcPreview.header[i]:SetTexture(0, 0, 0)
         npcPreview.header[i]:SetAlpha(0.555)
 
         npcPreview.header[i].tex = npcPreview.header:CreateTexture(nil, "ARTWORK")
@@ -716,7 +751,7 @@ local function UpdateNPCPreview()
     end
 
     if previewMode == 0 then
-        npcPreview.timer = C_Timer.NewTimer(1, function()
+        npcPreview.timer = F.C_Timer.NewTimer(1, function()
             npcPreview.fadeOut:Play()
             npcPreview.timer = nil
         end)
@@ -727,7 +762,7 @@ end
 -- pet preview
 -------------------------------------------------
 local petPreview, petPreviewAnchor, petPreviewName
-local petNums = Cell.isRetail and 20 or 25
+local petNums = 25
 local function CreatePetPreview()
     petPreview = Cell.CreateFrame("CellPetPreviewFrame", Cell.frames.mainFrame, nil, nil, true)
     petPreview:EnableMouse(false)
@@ -735,7 +770,7 @@ local function CreatePetPreview()
     petPreview:SetToplevel(true)
     petPreview:Hide()
 
-    petPreviewAnchor = CreateFrame("Frame", "CellPetPreviewAnchorFrame", petPreview, "BackdropTemplate")
+    petPreviewAnchor = CreateFrame("Frame", "CellPetPreviewAnchorFrame", petPreview)
     P.Size(petPreviewAnchor, 20, 10)
     petPreviewAnchor:SetMovable(true)
     petPreviewAnchor:EnableMouse(true)
@@ -756,8 +791,7 @@ local function CreatePetPreview()
 
     petPreview.fadeIn = petPreview:CreateAnimationGroup()
     local fadeIn = petPreview.fadeIn:CreateAnimation("alpha")
-    fadeIn:SetFromAlpha(0)
-    fadeIn:SetToAlpha(1)
+    F.AlphaSetFromTo(fadeIn, 0, 1)
     fadeIn:SetDuration(0.5)
     fadeIn:SetSmoothing("OUT")
     fadeIn:SetScript("OnPlay", function()
@@ -766,8 +800,7 @@ local function CreatePetPreview()
 
     petPreview.fadeOut = petPreview:CreateAnimationGroup()
     local fadeOut = petPreview.fadeOut:CreateAnimation("alpha")
-    fadeOut:SetFromAlpha(1)
-    fadeOut:SetToAlpha(0)
+    F.AlphaSetFromTo(fadeOut, 1, 0)
     fadeOut:SetDuration(0.5)
     fadeOut:SetSmoothing("IN")
     fadeOut:SetScript("OnFinished", function()
@@ -778,7 +811,7 @@ local function CreatePetPreview()
 
     for i = 1, petNums do
         petPreview.header[i] = petPreview.header:CreateTexture(nil, "BACKGROUND")
-        petPreview.header[i]:SetColorTexture(0, 0, 0)
+        petPreview.header[i]:SetTexture(0, 0, 0)
         petPreview.header[i]:SetAlpha(0.555)
 
         petPreview.header[i].tex = petPreview.header:CreateTexture(nil, "ARTWORK")
@@ -997,7 +1030,7 @@ local function UpdatePetPreview()
     end
 
     if previewMode == 0 then
-        petPreview.timer = C_Timer.NewTimer(1, function()
+        petPreview.timer = F.C_Timer.NewTimer(1, function()
             petPreview.fadeOut:Play()
             petPreview.timer = nil
         end)
@@ -1015,7 +1048,7 @@ local function CreateSpotlightPreview()
     spotlightPreview:SetToplevel(true)
     spotlightPreview:Hide()
 
-    spotlightPreviewAnchor = CreateFrame("Frame", "CellSpotlightPreviewAnchorFrame", spotlightPreview, "BackdropTemplate")
+    spotlightPreviewAnchor = CreateFrame("Frame", "CellSpotlightPreviewAnchorFrame", spotlightPreview)
     P.Size(spotlightPreviewAnchor, 20, 10)
     spotlightPreviewAnchor:SetMovable(true)
     spotlightPreviewAnchor:EnableMouse(true)
@@ -1036,8 +1069,7 @@ local function CreateSpotlightPreview()
 
     spotlightPreview.fadeIn = spotlightPreview:CreateAnimationGroup()
     local fadeIn = spotlightPreview.fadeIn:CreateAnimation("alpha")
-    fadeIn:SetFromAlpha(0)
-    fadeIn:SetToAlpha(1)
+    F.AlphaSetFromTo(fadeIn, 0, 1)
     fadeIn:SetDuration(0.5)
     fadeIn:SetSmoothing("OUT")
     fadeIn:SetScript("OnPlay", function()
@@ -1046,8 +1078,7 @@ local function CreateSpotlightPreview()
 
     spotlightPreview.fadeOut = spotlightPreview:CreateAnimationGroup()
     local fadeOut = spotlightPreview.fadeOut:CreateAnimation("alpha")
-    fadeOut:SetFromAlpha(1)
-    fadeOut:SetToAlpha(0)
+    F.AlphaSetFromTo(fadeOut, 1, 0)
     fadeOut:SetDuration(0.5)
     fadeOut:SetSmoothing("IN")
     fadeOut:SetScript("OnFinished", function()
@@ -1057,7 +1088,7 @@ local function CreateSpotlightPreview()
     spotlightPreview.header = CreateFrame("Frame", "CellSpotlightPreviewFrameHeader", spotlightPreview)
     for i = 1, 15 do
         spotlightPreview.header[i] = spotlightPreview.header:CreateTexture(nil, "BACKGROUND")
-        spotlightPreview.header[i]:SetColorTexture(0, 0, 0)
+        spotlightPreview.header[i]:SetTexture(0, 0, 0)
         spotlightPreview.header[i]:SetAlpha(0.555)
 
         spotlightPreview.header[i].tex = spotlightPreview.header:CreateTexture(nil, "ARTWORK")
@@ -1253,7 +1284,7 @@ local function UpdateSpotlightPreview()
     end
 
     if previewMode == 0 then
-        spotlightPreview.timer = C_Timer.NewTimer(1, function()
+        spotlightPreview.timer = F.C_Timer.NewTimer(1, function()
             spotlightPreview.fadeOut:Play()
             spotlightPreview.timer = nil
         end)
@@ -1317,10 +1348,8 @@ end
 -- layout
 -------------------------------------------------
 local autoSwitchFrame
-local typeSwitch, currentProfileBox
-local layoutDropdown, soloDropdown, partyDropdown, raidOutdoorDropdown, raidInstanceDropdown, raidMythicDropdown, arenaDropdown, bg15Dropdown, bg40Dropdown
-local raid10Dropdown, raid25Dropdown -- wrath
-local bgDropdown -- vanilla
+local currentProfileBox
+local layoutDropdown, soloDropdown, partyDropdown, raidOutdoorDropdown, raid10Dropdown, raid25Dropdown, arenaDropdown, bg15Dropdown, bg40Dropdown
 local LoadLayoutDropdown, LoadAutoSwitchDropdowns
 local LoadLayoutDB, UpdateButtonStates, LoadLayoutAutoSwitchDB
 
@@ -1438,10 +1467,6 @@ local function CreateLayoutPane()
                             partyDropdown:SetSelected(name)
                         elseif groupType == "raid_outdoor" then
                             raidOutdoorDropdown:SetSelected(name)
-                        elseif groupType == "raid_instance" then
-                            raidInstanceDropdown:SetSelected(name)
-                        elseif groupType == "raid_mythic" then
-                            raidMythicDropdown:SetSelected(name)
                         elseif groupType == "raid10" then
                             raid10Dropdown:SetSelected(name)
                         elseif groupType == "raid25" then
@@ -1452,8 +1477,6 @@ local function CreateLayoutPane()
                             bg15Dropdown:SetSelected(name)
                         elseif groupType == "battleground40" then
                             bg40Dropdown:SetSelected(name)
-                        elseif groupType == "battleground" then
-                            bgDropdown:SetSelected(name)
                         end
                     end
                 end
@@ -1516,10 +1539,6 @@ local function CreateLayoutPane()
                         partyDropdown:SetSelectedValue("default")
                     elseif groupType == "raid_outdoor" then
                         raidOutdoorDropdown:SetSelectedValue("default")
-                    elseif groupType == "raid_instance" then
-                        raidInstanceDropdown:SetSelectedValue("default")
-                    elseif groupType == "raid_mythic" then
-                        raidMythicDropdown:SetSelectedValue("default")
                     elseif groupType == "raid10" then
                         raid10Dropdown:SetSelectedValue("default")
                     elseif groupType == "raid25" then
@@ -1530,8 +1549,6 @@ local function CreateLayoutPane()
                         bg15Dropdown:SetSelectedValue("default")
                     elseif groupType == "battleground40" then
                         bg40Dropdown:SetSelectedValue("default")
-                    elseif groupType == "battleground" then
-                        bgDropdown:SetSelectedValue("default")
                     end
                 end
             end
@@ -1583,11 +1600,11 @@ local function CreateLayoutPane()
 
     UpdateButtonStates = function()
         if selectedLayout == "default" then
-            deleteBtn:SetEnabled(false)
-            renameBtn:SetEnabled(false)
+            F.SetEnabled(deleteBtn, false)
+            F.SetEnabled(renameBtn, false)
         else
-            deleteBtn:SetEnabled(true)
-            renameBtn:SetEnabled(true)
+            F.SetEnabled(deleteBtn, true)
+            F.SetEnabled(renameBtn, true)
         end
     end
 
@@ -1598,7 +1615,7 @@ local function CreateLayoutPane()
     shareBtn:SetScript("OnClick", function()
         local editbox = ChatEdit_ChooseBoxForSend()
         ChatEdit_ActivateChat(editbox)
-        editbox:SetText("[Cell.Layout: "..selectedLayout.." - "..Cell.vars.playerNameFull.."]")
+        editbox:SetText("[Cell:Layout: "..selectedLayout.." - "..Cell.vars.playerNameFull.."]")
     end)
 end
 
@@ -1630,14 +1647,11 @@ end
 -------------------------------------------------
 -- layout auto switch
 -------------------------------------------------
-local soloText, partyText, raidOutdoorText, raidInstanceText, raidMythicText
+local soloText, partyText, raidOutdoorText
 local arenaText, bg15Text, bg40Text
-local raid10Text, raid25Text -- wrath
-local bgText -- vanilla
+local raid10Text, raid25Text
 
 local raidOutdoor = L["Raid"].." "..L["Outdoor"]
-local raidInstance = L["Raid"].." ".._G.BATTLEGROUND_INSTANCE
-local raidMythic = L["Raid"].." ".._G.PLAYER_DIFFICULTY6
 
 local function CreateAutoSwitchPane()
     autoSwitchFrame = Cell.CreateFrame("CellLayoutAutoSwitchFrame", layoutsTab, 160, 465)
@@ -1647,39 +1661,9 @@ local function CreateAutoSwitchPane()
     local autoSwitchPane = Cell.CreateTitledPane(autoSwitchFrame, L["Layout Auto Switch"], 150, 400)
     autoSwitchPane:SetPoint("TOPLEFT", 5, -5)
 
-    if Cell.isRetail or Cell.isMists then
-        -- type switch
-        typeSwitch = Cell.CreateSwitch(autoSwitchPane, {140, 20}, L["Role"], "role", L["Spec"], "spec", function(value)
-            if value == "role" then
-                CellDB["layoutAutoSwitch"][Cell.vars.playerClass][Cell.vars.playerSpecID] = nil
-            else
-                CellDB["layoutAutoSwitch"][Cell.vars.playerClass][Cell.vars.playerSpecID] = F.Copy(CellDB["layoutAutoSwitch"]["role"][Cell.vars.playerSpecRole])
-            end
-            Cell.Fire("LayoutAutoSwitchChanged")
-            LoadLayoutAutoSwitchDB()
-        end)
-        typeSwitch:SetPoint("TOPLEFT", 5, -27)
-
-        typeSwitch:HookScript("OnEnter", function()
-            CellTooltip:SetOwner(typeSwitch, "ANCHOR_NONE")
-            CellTooltip:SetPoint("TOPLEFT", typeSwitch, "TOPRIGHT", 15, 0)
-            CellTooltip:AddLine(L["Layout Auto Switch"])
-            CellTooltip:AddLine(L["Role"]..": |cffffffff"..strlower(L["Use common profile"]) .. " " ..
-                F.GetDefaultRoleIconEscapeSequence("TANK", 12) .. " " ..
-                F.GetDefaultRoleIconEscapeSequence("HEALER", 12) .. " " ..
-                F.GetDefaultRoleIconEscapeSequence("DAMAGER", 12)
-            )
-            CellTooltip:AddLine(L["Spec"]..": |cffffffff"..L["use separate profile for current spec"])
-            CellTooltip:Show()
-        end)
-
-        typeSwitch:HookScript("OnLeave", function()
-            CellTooltip:Hide()
-        end)
-    end
-
     -- current profile box
-    currentProfileBox = CreateFrame("Frame", nil, autoSwitchPane, "BackdropTemplate")
+    currentProfileBox = CreateFrame("Frame", nil, autoSwitchPane)
+    currentProfileBox:SetFrameLevel(autoSwitchPane:GetFrameLevel()+1)
     Cell.StylizeFrame(currentProfileBox, {0.115, 0.115, 0.115, 1})
     P.Size(currentProfileBox, 140, 20)
 
@@ -1688,12 +1672,8 @@ local function CreateAutoSwitchPane()
     currentProfileBox.text:SetPoint("RIGHT", P.Scale(-5), 0)
     currentProfileBox.text:SetJustifyH("LEFT")
 
-    if Cell.isRetail or Cell.isMists then
-        currentProfileBox:SetPoint("TOPLEFT", typeSwitch, "BOTTOMLEFT", 0, -30)
-    else
-        currentProfileBox:SetPoint("TOPLEFT", 5, -42)
-        P.Height(autoSwitchFrame, 430)
-    end
+    currentProfileBox:SetPoint("TOPLEFT", 5, -42)
+    P.Height(autoSwitchFrame, 430)
 
     local currentProfileText = autoSwitchPane:CreateFontString(nil, "OVERLAY", "CELL_FONT_WIDGET")
     currentProfileText:SetPoint("BOTTOMLEFT", currentProfileBox, "TOPLEFT", 0, 1)
@@ -1724,89 +1704,45 @@ local function CreateAutoSwitchPane()
     raidOutdoorText:SetPoint("BOTTOMLEFT", raidOutdoorDropdown, "TOPLEFT", 0, 1)
     raidOutdoorText.text = raidOutdoor
 
-    if Cell.isRetail then
-        -- instance
-        raidInstanceDropdown = Cell.CreateDropdown(autoSwitchPane, 140)
-        raidInstanceDropdown:SetPoint("TOPLEFT", raidOutdoorDropdown, "BOTTOMLEFT", 0, -30)
+    -- raid10
+    raid10Dropdown = Cell.CreateDropdown(autoSwitchPane, 140)
+    raid10Dropdown:SetPoint("TOPLEFT", raidOutdoorDropdown, "BOTTOMLEFT", 0, -30)
 
-        raidInstanceText = autoSwitchPane:CreateFontString(nil, "OVERLAY", "CELL_FONT_WIDGET")
-        raidInstanceText:SetPoint("BOTTOMLEFT", raidInstanceDropdown, "TOPLEFT", 0, 1)
-        raidInstanceText.text = raidInstance
+    raid10Text = autoSwitchPane:CreateFontString(nil, "OVERLAY", "CELL_FONT_WIDGET")
+    raid10Text:SetPoint("BOTTOMLEFT", raid10Dropdown, "TOPLEFT", 0, 1)
+    raid10Text.text = L["Raid"].." 10"
 
-        -- mythic
-        raidMythicDropdown = Cell.CreateDropdown(autoSwitchPane, 140)
-        raidMythicDropdown:SetPoint("TOPLEFT", raidInstanceDropdown, "BOTTOMLEFT", 0, -30)
+    -- raid25
+    raid25Dropdown = Cell.CreateDropdown(autoSwitchPane, 140)
+    raid25Dropdown:SetPoint("TOPLEFT", raid10Dropdown, "BOTTOMLEFT", 0, -30)
 
-        raidMythicText = autoSwitchPane:CreateFontString(nil, "OVERLAY", "CELL_FONT_WIDGET")
-        raidMythicText:SetPoint("BOTTOMLEFT", raidMythicDropdown, "TOPLEFT", 0, 1)
-        raidMythicText.text = raidMythic
-
-    elseif Cell.isMists or Cell.isCata or Cell.isWrath then
-        -- raid10
-        raid10Dropdown = Cell.CreateDropdown(autoSwitchPane, 140)
-        raid10Dropdown:SetPoint("TOPLEFT", raidOutdoorDropdown, "BOTTOMLEFT", 0, -30)
-
-        raid10Text = autoSwitchPane:CreateFontString(nil, "OVERLAY", "CELL_FONT_WIDGET")
-        raid10Text:SetPoint("BOTTOMLEFT", raid10Dropdown, "TOPLEFT", 0, 1)
-        raid10Text.text = L["Raid"].." 10"
-
-        -- raid25
-        raid25Dropdown = Cell.CreateDropdown(autoSwitchPane, 140)
-        raid25Dropdown:SetPoint("TOPLEFT", raid10Dropdown, "BOTTOMLEFT", 0, -30)
-
-        raid25Text = autoSwitchPane:CreateFontString(nil, "OVERLAY", "CELL_FONT_WIDGET")
-        raid25Text:SetPoint("BOTTOMLEFT", raid25Dropdown, "TOPLEFT", 0, 1)
-        raid25Text.text = L["Raid"].." 25"
-
-    elseif Cell.isTBC or Cell.isVanilla then
-        -- instance
-        raidInstanceDropdown = Cell.CreateDropdown(autoSwitchPane, 140)
-        raidInstanceDropdown:SetPoint("TOPLEFT", raidOutdoorDropdown, "BOTTOMLEFT", 0, -30)
-
-        raidInstanceText = autoSwitchPane:CreateFontString(nil, "OVERLAY", "CELL_FONT_WIDGET")
-        raidInstanceText:SetPoint("BOTTOMLEFT", raidInstanceDropdown, "TOPLEFT", 0, 1)
-        raidInstanceText.text = raidInstance
-    end
+    raid25Text = autoSwitchPane:CreateFontString(nil, "OVERLAY", "CELL_FONT_WIDGET")
+    raid25Text:SetPoint("BOTTOMLEFT", raid25Dropdown, "TOPLEFT", 0, 1)
+    raid25Text.text = L["Raid"].." 25"
 
     -- arena
     arenaDropdown = Cell.CreateDropdown(autoSwitchPane, 140)
-    if Cell.isRetail then
-        arenaDropdown:SetPoint("TOPLEFT", raidMythicDropdown, "BOTTOMLEFT", 0, -30)
-    elseif Cell.isMists or Cell.isCata or Cell.isWrath then
-        arenaDropdown:SetPoint("TOPLEFT", raid25Dropdown, "BOTTOMLEFT", 0, -30)
-    elseif Cell.isTBC or Cell.isVanilla then
-        arenaDropdown:SetPoint("TOPLEFT", raidInstanceDropdown, "BOTTOMLEFT", 0, -30)
-    end
+    arenaDropdown:SetPoint("TOPLEFT", raid25Dropdown, "BOTTOMLEFT", 0, -30)
 
     arenaText = autoSwitchPane:CreateFontString(nil, "OVERLAY", "CELL_FONT_WIDGET")
     arenaText:SetPoint("BOTTOMLEFT", arenaDropdown, "TOPLEFT", 0, 1)
     arenaText.text = L["Arena"]
 
-    if Cell.isTBC or Cell.isVanilla then
-        -- battleground (vanilla)
-        bgDropdown = Cell.CreateDropdown(autoSwitchPane, 140)
-        bgDropdown:SetPoint("TOPLEFT", arenaDropdown, "BOTTOMLEFT", 0, -30)
+    -- battleground 15
+    bg15Dropdown = Cell.CreateDropdown(autoSwitchPane, 140)
+    bg15Dropdown:SetPoint("TOPLEFT", arenaDropdown, "BOTTOMLEFT", 0, -30)
 
-        bgText = autoSwitchPane:CreateFontString(nil, "OVERLAY", "CELL_FONT_WIDGET")
-        bgText:SetPoint("BOTTOMLEFT", bgDropdown, "TOPLEFT", 0, 1)
-        bgText.text = _G.BATTLEGROUND
-    else
-        -- battleground 15
-        bg15Dropdown = Cell.CreateDropdown(autoSwitchPane, 140)
-        bg15Dropdown:SetPoint("TOPLEFT", arenaDropdown, "BOTTOMLEFT", 0, -30)
+    bg15Text = autoSwitchPane:CreateFontString(nil, "OVERLAY", "CELL_FONT_WIDGET")
+    bg15Text:SetPoint("BOTTOMLEFT", bg15Dropdown, "TOPLEFT", 0, 1)
+    bg15Text.text = L["BG 1-15"]
 
-        bg15Text = autoSwitchPane:CreateFontString(nil, "OVERLAY", "CELL_FONT_WIDGET")
-        bg15Text:SetPoint("BOTTOMLEFT", bg15Dropdown, "TOPLEFT", 0, 1)
-        bg15Text.text = L["BG 1-15"]
+    -- battleground 40
+    bg40Dropdown = Cell.CreateDropdown(autoSwitchPane, 140)
+    bg40Dropdown:SetPoint("TOPLEFT", bg15Dropdown, "BOTTOMLEFT", 0, -30)
 
-        -- battleground 40
-        bg40Dropdown = Cell.CreateDropdown(autoSwitchPane, 140)
-        bg40Dropdown:SetPoint("TOPLEFT", bg15Dropdown, "BOTTOMLEFT", 0, -30)
-
-        bg40Text = autoSwitchPane:CreateFontString(nil, "OVERLAY", "CELL_FONT_WIDGET")
-        bg40Text:SetPoint("BOTTOMLEFT", bg40Dropdown, "TOPLEFT", 0, 1)
-        bg40Text.text = L["BG 16-40"]
-    end
+    bg40Text = autoSwitchPane:CreateFontString(nil, "OVERLAY", "CELL_FONT_WIDGET")
+    bg40Text:SetPoint("BOTTOMLEFT", bg40Dropdown, "TOPLEFT", 0, 1)
+    bg40Text.text = L["BG 16-40"]
 end
 
 local function GetDropdownItems(indices, groupType)
@@ -1856,35 +1792,18 @@ LoadAutoSwitchDropdowns = function()
     -- raidOutdoorDropdown
     raidOutdoorDropdown:SetItems(GetDropdownItems(indices, "raid_outdoor"))
 
-    if Cell.isRetail then
-        -- raidInstanceDropdown
-        raidInstanceDropdown:SetItems(GetDropdownItems(indices, "raid_instance"))
-        -- raidMythicDropdown
-        raidMythicDropdown:SetItems(GetDropdownItems(indices, "raid_mythic"))
-
-    elseif Cell.isMists or Cell.isCata or Cell.isWrath then
-        -- raid10Dropdown
-        raid10Dropdown:SetItems(GetDropdownItems(indices, "raid10"))
-        -- raid25Dropdown
-        raid25Dropdown:SetItems(GetDropdownItems(indices, "raid25"))
-
-    elseif Cell.isTBC or Cell.isVanilla then
-        -- raidInstanceDropdown
-        raidInstanceDropdown:SetItems(GetDropdownItems(indices, "raid_instance"))
-    end
+    -- raid10Dropdown
+    raid10Dropdown:SetItems(GetDropdownItems(indices, "raid10"))
+    -- raid25Dropdown
+    raid25Dropdown:SetItems(GetDropdownItems(indices, "raid25"))
 
     -- arenaDropdown
     arenaDropdown:SetItems(GetDropdownItems(indices, "arena"))
 
-    if Cell.isTBC or Cell.isVanilla then
-        -- bgDropdown
-        bgDropdown:SetItems(GetDropdownItems(indices, "battleground"))
-    else
-        -- bg15Dropdown
-        bg15Dropdown:SetItems(GetDropdownItems(indices, "battleground15"))
-        -- bg40Dropdown
-        bg40Dropdown:SetItems(GetDropdownItems(indices, "battleground40"))
-    end
+    -- bg15Dropdown
+    bg15Dropdown:SetItems(GetDropdownItems(indices, "battleground15"))
+    -- bg40Dropdown
+    bg40Dropdown:SetItems(GetDropdownItems(indices, "battleground40"))
 end
 
 -------------------------------------------------
@@ -2052,15 +1971,16 @@ local function UpdateSliderStatus()
     end
 
     if selectedLayoutTable["main"]["maxColumns"] == 8 then
-        groupSpacingSlider:SetEnabled(false)
+        F.SetEnabled(groupSpacingSlider, false)
     else
-        groupSpacingSlider:SetEnabled(true)
+        F.SetEnabled(groupSpacingSlider, true)
     end
 end
 
 -- TODO: move to Widgets.lua
 local function CreateRoleOrderWidget(parent)
     local f = CreateFrame("Frame", nil, parent)
+    f:SetFrameLevel(parent:GetFrameLevel()+1)
     P.Size(f, 66, 20)
 
     local buttons = {}
@@ -2081,9 +2001,9 @@ local function CreateRoleOrderWidget(parent)
         buttons[role]:SetScript("OnDragStop", function(self)
             self:StopMovingOrSizing()
             self:SetFrameStrata("LOW")
-            -- self:Hide() --! Hide() will cause OnDragStop trigger TWICE!!!
-            C_Timer.After(0.05, function()
-                local b = F.GetMouseFocus()
+            self:Hide()
+            F.C_Timer.After(0.05, function()
+                local b = GetMouseFocus()
                 if b ~= self and b and b._role then
                     local roleToIndex = F.ConvertTable(selectedLayoutTable["main"]["roleOrder"])
                     -- print(self._role, "->", b._role)
@@ -2137,9 +2057,9 @@ local function CreateLayoutSetupPane()
     -- same size as main
     sameSizeAsMainCB = Cell.CreateCheckButton(layoutSetupPane, L["Use Same Size As Main"], function(checked, self)
         selectedLayoutTable[selectedPage]["sameSizeAsMain"] = checked
-        widthSlider:SetEnabled(not checked)
-        heightSlider:SetEnabled(not checked)
-        powerSizeSlider:SetEnabled(not checked)
+        F.SetEnabled(widthSlider, not checked)
+        F.SetEnabled(heightSlider, not checked)
+        F.SetEnabled(powerSizeSlider, not checked)
         -- update size and power
         UpdateSize()
         if selectedLayout == Cell.vars.currentLayout then
@@ -2152,13 +2072,13 @@ local function CreateLayoutSetupPane()
     sameArrangementAsMainCB = Cell.CreateCheckButton(layoutSetupPane, L["Use Same Arrangement As Main"], function(checked, self)
         selectedLayoutTable[selectedPage]["sameArrangementAsMain"] = checked
         if selectedPage == "spotlight" then
-            spotlightOrientationDropdown:SetEnabled(not checked)
+            F.SetEnabled(spotlightOrientationDropdown, not checked)
         else
-            orientationDropdown:SetEnabled(not checked)
+            F.SetEnabled(orientationDropdown, not checked)
         end
-        anchorDropdown:SetEnabled(not checked)
-        spacingXSlider:SetEnabled(not checked)
-        spacingYSlider:SetEnabled(not checked)
+        F.SetEnabled(anchorDropdown, not checked)
+        F.SetEnabled(spacingXSlider, not checked)
+        F.SetEnabled(spacingYSlider, not checked)
         UpdateArrangement()
     end)
     sameArrangementAsMainCB:SetPoint("TOPLEFT", sameSizeAsMainCB, "BOTTOMLEFT", 0, -8)
@@ -2297,6 +2217,7 @@ local function CreateLayoutSetupPane()
 
     --* main ------------------------------------
     pages.main = CreateFrame("Frame", nil, layoutsTab)
+    pages.main:SetFrameLevel(layoutSetupPane:GetFrameLevel()+1)
     pages.main:SetAllPoints(layoutSetupPane)
     pages.main:Hide()
 
@@ -2343,9 +2264,9 @@ local function CreateLayoutSetupPane()
             selectedLayoutTable["main"]["maxColumns"] = value
         end
         if value == 8 then
-            groupSpacingSlider:SetEnabled(false)
+            F.SetEnabled(groupSpacingSlider, false)
         else
-            groupSpacingSlider:SetEnabled(true)
+            F.SetEnabled(groupSpacingSlider, true)
         end
         if selectedLayout == Cell.vars.currentLayout then
             Cell.Fire("UpdateLayout", selectedLayout, "rows_columns")
@@ -2367,7 +2288,7 @@ local function CreateLayoutSetupPane()
     groupSpacingSlider:SetPoint("TOPLEFT", spacingYSlider, 0, -55)
 
     -- unitsPerColumn
-    unitsSlider = Cell.CreateSlider(L["Units Per Column"], pages.main, 2, Cell.isRetail and 20 or 25, 117, 1, function(value)
+    unitsSlider = Cell.CreateSlider(L["Units Per Column"], pages.main, 2, 25, 117, 1, function(value)
         selectedLayoutTable["main"]["unitsPerColumn"] = value
         if selectedLayout == Cell.vars.currentLayout then
             Cell.Fire("UpdateLayout", selectedLayout, "unitsPerColumn")
@@ -2379,6 +2300,7 @@ local function CreateLayoutSetupPane()
 
     --* pet -------------------------------------
     pages.pet = CreateFrame("Frame", nil, layoutsTab)
+    pages.pet:SetFrameLevel(layoutSetupPane:GetFrameLevel()+1)
     pages.pet:SetAllPoints(layoutSetupPane)
     pages.pet:Hide()
 
@@ -2392,7 +2314,7 @@ local function CreateLayoutSetupPane()
 
     partyPetsCB = Cell.CreateCheckButton(pages.pet, L["Show Party/Arena Pets"], function(checked)
         selectedLayoutTable["pet"]["partyEnabled"] = checked
-        partyPetsDetachedCB:SetEnabled(checked)
+        F.SetEnabled(partyPetsDetachedCB, checked)
         if checked and selectedLayoutTable["pet"]["partyDetached"] then
             UpdatePetPreview()
         else
@@ -2438,6 +2360,7 @@ local function CreateLayoutSetupPane()
 
     --* npc -------------------------------------
     pages.npc = CreateFrame("Frame", nil, layoutsTab)
+    pages.npc:SetFrameLevel(layoutSetupPane:GetFrameLevel()+1)
     pages.npc:SetAllPoints(layoutSetupPane)
     pages.npc:Hide()
 
@@ -2450,7 +2373,7 @@ local function CreateLayoutSetupPane()
                 UpdateNPCPreview()
             end
         end
-        separateNpcCB:SetEnabled(checked)
+        F.SetEnabled(separateNpcCB, checked)
         if selectedLayout == Cell.vars.currentLayout then
             Cell.Fire("UpdateLayout", selectedLayout, "npc")
         end
@@ -2474,6 +2397,7 @@ local function CreateLayoutSetupPane()
 
     --* spotlight -------------------------------
     pages.spotlight = CreateFrame("Frame", nil, layoutsTab)
+    pages.spotlight:SetFrameLevel(layoutSetupPane:GetFrameLevel()+1)
     pages.spotlight:SetAllPoints(layoutSetupPane)
     pages.spotlight:Hide()
 
@@ -2718,30 +2642,30 @@ LoadPageDB = function(page)
     end
 
     if page == "main" then
-        widthSlider:SetEnabled(true)
-        heightSlider:SetEnabled(true)
-        powerSizeSlider:SetEnabled(true)
-        orientationDropdown:SetEnabled(true)
-        anchorDropdown:SetEnabled(true)
-        spacingXSlider:SetEnabled(true)
-        spacingYSlider:SetEnabled(true)
+        F.SetEnabled(widthSlider, true)
+        F.SetEnabled(heightSlider, true)
+        F.SetEnabled(powerSizeSlider, true)
+        F.SetEnabled(orientationDropdown, true)
+        F.SetEnabled(anchorDropdown, true)
+        F.SetEnabled(spacingXSlider, true)
+        F.SetEnabled(spacingYSlider, true)
     else
-        widthSlider:SetEnabled(not selectedLayoutTable[page]["sameSizeAsMain"])
-        heightSlider:SetEnabled(not selectedLayoutTable[page]["sameSizeAsMain"])
-        powerSizeSlider:SetEnabled(not selectedLayoutTable[page]["sameSizeAsMain"])
-        anchorDropdown:SetEnabled(not selectedLayoutTable[page]["sameArrangementAsMain"])
-        spacingXSlider:SetEnabled(not selectedLayoutTable[page]["sameArrangementAsMain"])
-        spacingYSlider:SetEnabled(not selectedLayoutTable[page]["sameArrangementAsMain"])
+        F.SetEnabled(widthSlider, not selectedLayoutTable[page]["sameSizeAsMain"])
+        F.SetEnabled(heightSlider, not selectedLayoutTable[page]["sameSizeAsMain"])
+        F.SetEnabled(powerSizeSlider, not selectedLayoutTable[page]["sameSizeAsMain"])
+        F.SetEnabled(anchorDropdown, not selectedLayoutTable[page]["sameArrangementAsMain"])
+        F.SetEnabled(spacingXSlider, not selectedLayoutTable[page]["sameArrangementAsMain"])
+        F.SetEnabled(spacingYSlider, not selectedLayoutTable[page]["sameArrangementAsMain"])
     end
 
     if page == "spotlight" then
         orientationDropdown:Hide()
         spotlightOrientationDropdown:Show()
-        spotlightOrientationDropdown:SetEnabled(not selectedLayoutTable[page]["sameArrangementAsMain"])
+        F.SetEnabled(spotlightOrientationDropdown, not selectedLayoutTable[page]["sameArrangementAsMain"])
     else
         orientationDropdown:Show()
         spotlightOrientationDropdown:Hide()
-        orientationDropdown:SetEnabled(not selectedLayoutTable[page]["sameArrangementAsMain"])
+        F.SetEnabled(orientationDropdown, not selectedLayoutTable[page]["sameArrangementAsMain"])
     end
 end
 
@@ -2785,12 +2709,12 @@ LoadLayoutDB = function(layout, dontShowPreview)
     hideSelfCB:SetChecked(selectedLayoutTable["main"]["hideSelf"])
     soloPetCB:SetChecked(selectedLayoutTable["pet"]["soloEnabled"])
     partyPetsCB:SetChecked(selectedLayoutTable["pet"]["partyEnabled"])
-    partyPetsDetachedCB:SetEnabled(selectedLayoutTable["pet"]["partyEnabled"])
+    F.SetEnabled(partyPetsDetachedCB, selectedLayoutTable["pet"]["partyEnabled"])
     partyPetsDetachedCB:SetChecked(selectedLayoutTable["pet"]["partyDetached"])
     raidPetsCB:SetChecked(selectedLayoutTable["pet"]["raidEnabled"])
     showNpcCB:SetChecked(selectedLayoutTable["npc"]["enabled"])
     separateNpcCB:SetChecked(selectedLayoutTable["npc"]["separate"])
-    separateNpcCB:SetEnabled(selectedLayoutTable["npc"]["enabled"])
+    F.SetEnabled(separateNpcCB, selectedLayoutTable["npc"]["enabled"])
     spotlightCB:SetChecked(selectedLayoutTable["spotlight"]["enabled"])
     hidePlaceholderCB:SetChecked(selectedLayoutTable["spotlight"]["hidePlaceholder"])
 
@@ -2805,56 +2729,16 @@ LoadLayoutDB = function(layout, dontShowPreview)
 end
 
 LoadLayoutAutoSwitchDB = function()
-    if Cell.isRetail then
-        P.Height(autoSwitchFrame, 513)
-        if Cell.vars.layoutAutoSwitchBy == "spec" then
-            currentProfileBox.text:SetText("|T"..Cell.vars.playerSpecIcon..":12:12:0:0:12:12:1:11:1:11|t "..Cell.vars.playerSpecName)
-        else
-            currentProfileBox.text:SetText(F.GetDefaultRoleIconEscapeSequence(Cell.vars.playerSpecRole, 12).." ".._G[Cell.vars.playerSpecRole])
-        end
-
-        typeSwitch:SetSelected(Cell.vars.layoutAutoSwitchBy)
-        raidInstanceDropdown:SetSelectedValue(Cell.vars.layoutAutoSwitch["raid_instance"])
-        raidMythicDropdown:SetSelectedValue(Cell.vars.layoutAutoSwitch["raid_mythic"])
-        bg15Dropdown:SetSelectedValue(Cell.vars.layoutAutoSwitch["battleground15"])
-        bg40Dropdown:SetSelectedValue(Cell.vars.layoutAutoSwitch["battleground40"])
-
-    elseif Cell.isMists then
-        P.Height(autoSwitchFrame, 513)
-         if Cell.vars.layoutAutoSwitchBy == "spec" then
-            currentProfileBox.text:SetText("|T"..Cell.vars.playerSpecIcon..":12:12:0:0:12:12:1:11:1:11|t "..Cell.vars.playerSpecName)
-        else
-            currentProfileBox.text:SetText(F.GetDefaultRoleIconEscapeSequence(Cell.vars.playerSpecRole, 12).." ".._G[Cell.vars.playerSpecRole])
-        end
-
-        typeSwitch:SetSelected(Cell.vars.layoutAutoSwitchBy)
-        raid10Dropdown:SetSelectedValue(Cell.vars.layoutAutoSwitch["raid10"])
-        raid25Dropdown:SetSelectedValue(Cell.vars.layoutAutoSwitch["raid25"])
-        bg15Dropdown:SetSelectedValue(Cell.vars.layoutAutoSwitch["battleground15"])
-        bg40Dropdown:SetSelectedValue(Cell.vars.layoutAutoSwitch["battleground40"])
-
-    elseif Cell.isCata or Cell.isWrath then
-        P.Height(autoSwitchFrame, 478)
-        if Cell.vars.activeTalentGroup == 1 then
-            currentProfileBox.text:SetText("|TInterface\\AddOns\\Cell\\Media\\Icons\\1:13|t "..L["Primary Talents"])
-        else
-            currentProfileBox.text:SetText("|TInterface\\AddOns\\Cell\\Media\\Icons\\2:13|t "..L["Secondary Talents"])
-        end
-        raid10Dropdown:SetSelectedValue(Cell.vars.layoutAutoSwitch["raid10"])
-        raid25Dropdown:SetSelectedValue(Cell.vars.layoutAutoSwitch["raid25"])
-        bg15Dropdown:SetSelectedValue(Cell.vars.layoutAutoSwitch["battleground15"])
-        bg40Dropdown:SetSelectedValue(Cell.vars.layoutAutoSwitch["battleground40"])
-
-    elseif Cell.isTBC or Cell.isVanilla then
-        P.Height(autoSwitchFrame, 378)
-        if Cell.vars.activeTalentGroup == 1 then
-            currentProfileBox.text:SetText("|TInterface\\AddOns\\Cell\\Media\\Icons\\1:13|t "..L["Primary Talents"])
-        else
-            currentProfileBox.text:SetText("|TInterface\\AddOns\\Cell\\Media\\Icons\\2:13|t "..L["Secondary Talents"])
-        end
-        raidInstanceDropdown:SetSelectedValue(Cell.vars.layoutAutoSwitch["raid_instance"])
-        bgDropdown:SetSelectedValue(Cell.vars.layoutAutoSwitch["battleground"])
+    P.Height(autoSwitchFrame, 478)
+    if Cell.vars.activeTalentGroup == 1 then
+        currentProfileBox.text:SetText("|TInterface\\AddOns\\Cell\\Media\\Icons\\1:13|t "..L["Primary Talents"])
+    else
+        currentProfileBox.text:SetText("|TInterface\\AddOns\\Cell\\Media\\Icons\\2:13|t "..L["Secondary Talents"])
     end
+    raid10Dropdown:SetSelectedValue(Cell.vars.layoutAutoSwitch["raid10"])
+    raid25Dropdown:SetSelectedValue(Cell.vars.layoutAutoSwitch["raid25"])
+    bg15Dropdown:SetSelectedValue(Cell.vars.layoutAutoSwitch["battleground15"])
+    bg40Dropdown:SetSelectedValue(Cell.vars.layoutAutoSwitch["battleground40"])
 
     soloDropdown:SetSelectedValue(Cell.vars.layoutAutoSwitch["solo"])
     partyDropdown:SetSelectedValue(Cell.vars.layoutAutoSwitch["party"])
@@ -2877,13 +2761,10 @@ local function UpdateLayoutAutoSwitch(layout, which)
     partyText:SetText(partyText.text)
     raidOutdoorText:SetText(raidOutdoorText.text)
     arenaText:SetText(arenaText.text)
-    if raidInstanceText then raidInstanceText:SetText(raidInstanceText.text) end
-    if raidMythicText then raidMythicText:SetText(raidMythicText.text) end
-    if raid10Text then raid10Text:SetText(raid10Text.text) end
-    if raid25Text then raid25Text:SetText(raid25Text.text) end
-    if bg15Text then bg15Text:SetText(bg15Text.text) end
-    if bg40Text then bg40Text:SetText(bg40Text.text) end
-    if bgText then bgText:SetText(bgText.text) end
+    raid10Text:SetText(raid10Text.text)
+    raid25Text:SetText(raid25Text.text)
+    bg15Text:SetText(bg15Text.text)
+    bg40Text:SetText(bg40Text.text)
 
     if Cell.vars.inBattleground then
         if Cell.vars.inBattleground == 15 then
@@ -2892,8 +2773,6 @@ local function UpdateLayoutAutoSwitch(layout, which)
             bg40Text:SetText(Cell.GetAccentColorString()..bg40Text.text.."*")
         elseif Cell.vars.inBattleground == 5 then -- arena
             arenaText:SetText(Cell.GetAccentColorString()..arenaText.text.."*")
-        else
-            bgText:SetText(Cell.GetAccentColorString()..bgText.text.."*")
         end
     else
         if Cell.vars.groupType == "solo" then
@@ -2902,20 +2781,10 @@ local function UpdateLayoutAutoSwitch(layout, which)
             partyText:SetText(Cell.GetAccentColorString()..partyText.text.."*")
         else
             if Cell.vars.inInstance then
-                if Cell.isRetail then
-                    if Cell.vars.inMythic then
-                        raidMythicText:SetText(Cell.GetAccentColorString()..raidMythicText.text.."*")
-                    else
-                        raidInstanceText:SetText(Cell.GetAccentColorString()..raidInstanceText.text.."*")
-                    end
-                elseif Cell.isMists or Cell.isCata or Cell.isWrath then
-                    if Cell.vars.raidType == "raid10" then
-                        raid10Text:SetText(Cell.GetAccentColorString()..raid10Text.text.."*")
-                    else
-                        raid25Text:SetText(Cell.GetAccentColorString()..raid25Text.text.."*")
-                    end
-                elseif Cell.isTBC or Cell.isVanilla then
-                    raidInstanceText:SetText(Cell.GetAccentColorString()..raidInstanceText.text.."*")
+                if Cell.vars.raidType == "raid10" then
+                    raid10Text:SetText(Cell.GetAccentColorString()..raid10Text.text.."*")
+                else
+                    raid25Text:SetText(Cell.GetAccentColorString()..raid25Text.text.."*")
                 end
             else
                 raidOutdoorText:SetText(Cell.GetAccentColorString()..raidOutdoorText.text.."*")
@@ -3008,8 +2877,18 @@ local function ShowTab(tab)
 
         UpdateButtonStates()
 
+        if layoutsTab.mask then
+            layoutsTab.mask:Hide()
+        end
+
         layoutsTab:Show()
     else
+        if init then
+            F.HidePowerFilters()
+            if layoutsTab.mask then
+                layoutsTab.mask:Hide()
+            end
+        end
         layoutsTab:Hide()
     end
 end

@@ -128,12 +128,12 @@ local function LoadGlowOptions()
     glowTypeDropdown:SetSelectedValue(glowType)
     glowColor:SetColor(glowOptions[1])
 
-    glowOffsetX:SetEnabled(glowType ~= "normal")
-    glowOffsetY:SetEnabled(glowType ~= "normal")
-    glowLines:SetEnabled(glowType ~= "normal")
-    glowFrequency:SetEnabled(glowType ~= "normal")
-    glowLength:SetEnabled(glowType ~= "normal")
-    glowThickness:SetEnabled(glowType ~= "normal")
+    F.SetEnabled(glowOffsetX, glowType ~= "normal")
+    F.SetEnabled(glowOffsetY, glowType ~= "normal")
+    F.SetEnabled(glowLines, glowType ~= "normal")
+    F.SetEnabled(glowFrequency, glowType ~= "normal")
+    F.SetEnabled(glowLength, glowType ~= "normal")
+    F.SetEnabled(glowThickness, glowType ~= "normal")
 
     if glowType == "normal" then
         glowLines:Show()

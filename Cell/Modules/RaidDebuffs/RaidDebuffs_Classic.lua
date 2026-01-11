@@ -64,6 +64,10 @@ local function LoadList()
 
     end
 
+    for localizedName, instanceName in pairs(F.GetLocalizedInstanceNames()) do
+        instanceNameMapping[localizedName] = instanceNameMapping[instanceName]
+    end
+
 end
 
 local LoadExpansion = function(eName)
@@ -265,7 +269,7 @@ local function OpenInstanceBoss(instanceName, bossName)
         end
 
         if bIndex then
-            C_Timer.After(0.25, function()
+            F.C_Timer.After(0.25, function()
                 if bIndex == 0 then
                     if loadedBoss == iId then -- general already shown, just reload
                         ShowDebuffs(bossButtons[bIndex].id, 1)
@@ -309,7 +313,7 @@ local function CreateWidgets()
     local showCurrentBtn = Cell.CreateButton(debuffsTab, "", "accent-hover", {46, 20}, nil, nil, nil, nil, nil, L["Show Current Instance"])
     showCurrentBtn:SetPoint("TOPRIGHT", -5, -7)
     showCurrentBtn.tex = showCurrentBtn:CreateTexture(nil, "ARTWORK")
-    showCurrentBtn:SetTexture("DungeonSkull", {18, 18}, {"CENTER", 0, 0}, true)
+    showCurrentBtn:SetTexture("Interface\\AddOns\\Cell\\Media\\Icons\\ObjectIconsAtlas", {18, 18}, {"CENTER", 0, 0}, nil, nil, {0.907227, 0.938477, 0.407227, 0.438477})
 
     showCurrentBtn:SetScript("OnClick", function()
         if IsInInstance() then
@@ -321,14 +325,14 @@ local function CreateWidgets()
     -- import/export button
     local exportBtn = Cell.CreateButton(debuffsTab, "", "accent-hover", {46, 20}, nil, nil, nil, nil, nil, L["Export"])
     exportBtn:SetPoint("TOPRIGHT", showCurrentBtn, "TOPLEFT", P.Scale(-5), 0)
-    exportBtn:SetTexture("Interface\\AddOns\\Cell\\Media\\Icons\\export.blp", {16, 16}, {"CENTER", 0, 0})
+    exportBtn:SetTexture("Interface\\AddOns\\Cell\\Media\\Icons\\export.tga", {16, 16}, {"CENTER", 0, 0})
     exportBtn:SetScript("OnClick", function()
         F.ShowRaidDebuffsExportFrame(loadedInstance, loadedInstance == loadedBoss and "general" or loadedBoss)
     end)
 
     local importBtn = Cell.CreateButton(debuffsTab, "", "accent-hover", {46, 20}, nil, nil, nil, nil, nil, L["Import"])
     importBtn:SetPoint("TOPRIGHT", exportBtn, "TOPLEFT", P.Scale(-5), 0)
-    importBtn:SetTexture("Interface\\AddOns\\Cell\\Media\\Icons\\import.blp", {16, 16}, {"CENTER", 0, 0})
+    importBtn:SetTexture("Interface\\AddOns\\Cell\\Media\\Icons\\import.tga", {16, 16}, {"CENTER", 0, 0})
     importBtn:SetScript("OnClick", function()
         F.ShowRaidDebuffsImportFrame()
     end)
@@ -373,7 +377,7 @@ local function CreateInstanceFrame()
     local imageFrame = Cell.CreateFrame("RaidDebuffsTab_InstanceImage", debuffsTab, 128, 64, true)
     imageFrame.bg = imageFrame:CreateTexture(nil, "BACKGROUND")
     imageFrame.bg:SetTexture(Cell.vars.whiteTexture)
-    imageFrame.bg:SetGradient("HORIZONTAL", CreateColor(0.1, 0.1, 0.1, 0), CreateColor(0.1, 0.1, 0.1, 1))
+    imageFrame.bg:SetGradientAlpha("HORIZONTAL", 0.1, 0.1, 0.1, 0, 0.1, 0.1, 0.1, 1)
 
     imageFrame.tex = imageFrame:CreateTexture(nil, "ARTWORK")
     imageFrame.tex:SetSize(121, 64)
@@ -445,7 +449,7 @@ ShowInstances = function(eName)
             local editbox = GetCurrentKeyBoardFocus()
             if editbox then
                 local iId, iIndex = F.SplitToNumber("-", id)
-                editbox:SetText("[Cell.Debuffs: "..instanceIdToName[iId].." - "..Cell.vars.playerNameFull.."]")
+                editbox:SetText("[Cell:Debuffs: "..instanceIdToName[iId].." - "..Cell.vars.playerNameFull.."]")
             end
         elseif IsAltKeyDown() and b:IsMouseOver() then -- NOTE: reset
             local iId, iIndex = F.SplitToNumber("-", id)
@@ -453,7 +457,7 @@ ShowInstances = function(eName)
                 -- update
                 F.UpdateRaidDebuffs(iId, nil, nil, instanceIdToName[iId])
                 -- reload
-                C_Timer.After(0.25, function()
+                F.C_Timer.After(0.25, function()
                     ShowBosses(id, true)
                 end)
             end, nil, true)
@@ -492,7 +496,7 @@ local function CreateBossesFrame()
     local imageFrame = Cell.CreateFrame("RaidDebuffsTab_BossImage", debuffsTab, 128, 64, true)
     imageFrame.bg = imageFrame:CreateTexture(nil, "BACKGROUND")
     imageFrame.bg:SetTexture(Cell.vars.whiteTexture)
-    imageFrame.bg:SetGradient("HORIZONTAL", CreateColor(0.1, 0.1, 0.1, 0), CreateColor(0.1, 0.1, 0.1, 1))
+    imageFrame.bg:SetGradientAlpha("HORIZONTAL", 0.1, 0.1, 0.1, 0, 0.1, 0.1, 0.1, 1)
     -- imageFrame.bg:SetAllPoints(imageFrame)
 
     imageFrame.tex = imageFrame:CreateTexture(nil, "ARTWORK")
@@ -571,10 +575,10 @@ ShowBosses = function(instanceId, forceRefresh)
             local editbox = GetCurrentKeyBoardFocus()
             if editbox then
                 if id == iId then -- general
-                    editbox:SetText("[Cell.Debuffs: "..bossIdToName[0].." ("..instanceIdToName[iId]..") - "..Cell.vars.playerNameFull.."]")
+                    editbox:SetText("[Cell:Debuffs: "..bossIdToName[0].." ("..instanceIdToName[iId]..") - "..Cell.vars.playerNameFull.."]")
                 else
                     local bId = F.SplitToNumber("-", id)
-                    editbox:SetText("[Cell.Debuffs: "..bossIdToName[bId].." ("..instanceIdToName[iId]..") - "..Cell.vars.playerNameFull.."]")
+                    editbox:SetText("[Cell:Debuffs: "..bossIdToName[bId].." ("..instanceIdToName[iId]..") - "..Cell.vars.playerNameFull.."]")
                 end
             end
         elseif IsAltKeyDown() and b:IsMouseOver() then -- NOTE: reset
@@ -593,7 +597,7 @@ ShowBosses = function(instanceId, forceRefresh)
                     -- update
                     F.UpdateRaidDebuffs(iId, "general", nil, which)
                     -- reload
-                    C_Timer.After(0.25, function()
+                    F.C_Timer.After(0.25, function()
                         ShowDebuffs(id, 1)
                     end)
                 else
@@ -602,7 +606,7 @@ ShowBosses = function(instanceId, forceRefresh)
                     -- update
                     F.UpdateRaidDebuffs(iId, bId, nil, which)
                     -- reload
-                    C_Timer.After(0.25, function()
+                    F.C_Timer.After(0.25, function()
                         ShowDebuffs(id, 1)
                     end)
                 end
@@ -710,18 +714,18 @@ local function CreateDebuffsFrame()
             local spellId = tonumber(popup.editBox:GetText())
             if not spellId then
                 CellSpellTooltip:Hide()
-                popup.button1:SetEnabled(false)
+                F.SetEnabled(popup.button1, false)
                 return
             end
 
             local name, icon = F.GetSpellInfo(spellId)
             if not name then
                 CellSpellTooltip:Hide()
-                popup.button1:SetEnabled(false)
+                F.SetEnabled(popup.button1, false)
                 return
             end
 
-            popup.button1:SetEnabled(true)
+            F.SetEnabled(popup.button1, true)
             CellSpellTooltip:SetOwner(popup, "ANCHOR_NONE")
             CellSpellTooltip:SetPoint("TOPLEFT", popup, "BOTTOMLEFT", 0, -1)
             CellSpellTooltip:SetSpellByID(spellId, icon)
@@ -732,7 +736,7 @@ local function CreateDebuffsFrame()
 
     delete = Cell.CreateButton(debuffsTab, L["Delete"], "accent-hover", {66, 20})
     delete:SetPoint("LEFT", create, "RIGHT", 5, 0)
-    delete:SetEnabled(false)
+    F.SetEnabled(delete, false)
     delete:SetScript("OnClick", function()
         local text = selectedSpellName.." ["..selectedSpellId.."]".."\n".."|T"..selectedSpellIcon..":12:12:0:0:12:12:1:11:1:11|t"
         local popup = Cell.CreateConfirmPopup(debuffsTab, 200, L["Delete debuff?"].."\n"..text, function()
@@ -820,7 +824,7 @@ local function RegisterForDrag(b)
     b:SetScript("OnDragStop", function(self)
         self:SetAlpha(1)
         dragged:Hide()
-        local newB = F.GetMouseFocus()
+        local newB = GetMouseFocus()
         -- move on a debuff button & not on currently moving button & not disabled
         if newB:GetParent() == debuffListFrame.scrollFrame.content and newB ~= self and newB.enabled then
             local temp, from, to = self, self.index, newB.index
@@ -969,8 +973,8 @@ local function CreateDebuffButton(i, sTable)
         debuffButtons[i].spellIcon = icon
         debuffButtons[i]:SetText(name)
     else
-        debuffButtons[i].icon:SetTexture(134400)
-        debuffButtons[i].spellIcon = 134400
+        debuffButtons[i].icon:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
+        debuffButtons[i].spellIcon = "Interface\\Icons\\INV_Misc_QuestionMark"
         debuffButtons[i]:SetText(sTable["id"])
     end
 
@@ -1013,7 +1017,7 @@ ShowDebuffs = function(bossId, buttonIndex)
     selectedSpellId = nil
     selectedButtonIndex = nil
     RaidDebuffsTab_DebuffDetails.scrollFrame:Hide()
-    delete:SetEnabled(false)
+    F.SetEnabled(delete, false)
 
     debuffListFrame.scrollFrame:ResetScroll()
 
@@ -1104,15 +1108,12 @@ local function CreatePreviewButton()
 
     previewButton.fadeIn = previewButton:CreateAnimationGroup()
     local fadeIn = previewButton.fadeIn:CreateAnimation("alpha")
-    fadeIn:SetFromAlpha(0)
-    fadeIn:SetToAlpha(1)
+    F.AlphaSetFromTo(fadeIn, 0, 1)
     fadeIn:SetDuration(0.25)
     fadeIn:SetSmoothing("OUT")
-
     previewButton.fadeOut = previewButton:CreateAnimationGroup()
     local fadeOut = previewButton.fadeOut:CreateAnimation("alpha")
-    fadeOut:SetFromAlpha(1)
-    fadeOut:SetToAlpha(0)
+    F.AlphaSetFromTo(fadeOut, 1, 0)
     fadeOut:SetDuration(0.25)
     fadeOut:SetSmoothing("IN")
     fadeOut:SetScript("OnPlay", function()
@@ -1152,7 +1153,9 @@ local function UpdatePreviewButton()
     B.SetPowerSize(previewButton, Cell.vars.currentLayoutTable["main"]["powerSize"])
 
     previewButton.widgets.healthBar:SetStatusBarTexture(Cell.vars.texture)
+    F.SetStatusBarRotatesTexture(previewButton.widgets.healthBar, previewButton.widgets.healthBar.rotatesTexture)
     previewButton.widgets.powerBar:SetStatusBarTexture(Cell.vars.texture)
+    F.SetStatusBarRotatesTexture(previewButton.widgets.powerBar, previewButton.widgets.powerBar.rotatesTexture)
 
     -- health color
     local r, g, b = F.GetHealthBarColor(1, false, F.GetClassColor(Cell.vars.playerClass))
@@ -1212,7 +1215,7 @@ local function CreateDetailsFrame()
     spellIconBG:SetSize(27, 27)
     spellIconBG:SetDrawLayer("ARTWORK", 6)
     spellIconBG:SetPoint("TOPLEFT", 5, -5)
-    spellIconBG:SetColorTexture(0, 0, 0, 1)
+    spellIconBG:SetTexture(0, 0, 0, 1)
 
     spellIcon = detailsContentFrame:CreateTexture(nil, "ARTWORK")
     spellIcon:SetDrawLayer("ARTWORK", 7)
@@ -1374,7 +1377,7 @@ local function CreateDetailsFrame()
         }
     })
 
-    conditionFrame = CreateFrame("Frame", nil, detailsContentFrame, "BackdropTemplate")
+    conditionFrame = CreateFrame("Frame", nil, detailsContentFrame)
     conditionFrame:SetPoint("TOPLEFT", conditionDropDown, "BOTTOMLEFT", 0, -5)
     conditionFrame:SetPoint("RIGHT")
     conditionFrame:SetHeight(20)
@@ -1473,7 +1476,7 @@ local function CreateDetailsFrame()
 
     -- glowTarget
     glowTargetDropdown = Cell.CreateDropdown(detailsContentFrame, 117)
-    glowTargetDropdown:SetEnabled(false) -- TODO:
+    F.SetEnabled(glowTargetDropdown, false) -- TODO:
     glowTargetDropdown:SetPoint("TOPLEFT", glowTypeDropdown, "BOTTOMLEFT", 0, -5)
     glowTargetDropdown:SetItems({
         {
@@ -1980,7 +1983,7 @@ ShowDetails = function(spell)
     -- SetSpellDesc(desc)
     -- -- to ensure desc
     -- if timer then timer:Cancel() end
-    -- timer = C_Timer.NewTimer(0.7, function()
+    -- timer = F.C_Timer.NewTimer(0.7, function()
     --     SetSpellDesc(select(3, F.GetSpellTooltipInfo(spellId)))
     -- end)
 
@@ -2014,9 +2017,9 @@ ShowDetails = function(spell)
 
     -- check deletion
     if isEnabled then
-        delete:SetEnabled(not currentBossTable["enabled"][buttonIndex]["built-in"])
+        F.SetEnabled(delete, not currentBossTable["enabled"][buttonIndex]["built-in"])
     else -- disabled
-        delete:SetEnabled(not currentBossTable["disabled"][buttonIndex-#currentBossTable["enabled"]]["built-in"])
+        F.SetEnabled(delete, not currentBossTable["disabled"][buttonIndex-#currentBossTable["enabled"]]["built-in"])
     end
 end
 
@@ -2183,7 +2186,7 @@ end
 function F.ShowInstanceDebuffs(instanceId, bossId)
     if not InCombatLockdown() then
         F.ShowRaidDebuffsTab()
-        C_Timer.After(0.25, function()
+        F.C_Timer.After(0.25, function()
             if bossId == "general" or bossId == nil then
                 OpenInstanceBoss(instanceIdToName[instanceId], "general")
             else -- numeric bossId / no bossId
@@ -2255,49 +2258,6 @@ end
 -------------------------------------------------
 -- notice
 -------------------------------------------------
-local function CreateNoticeFrame()
-    if CellDB["raidDebuffsNoticeViewed"] then return end
-
-    local noticeFrame = CreateFrame("Frame", nil, debuffsTab, "BackdropTemplate")
-    noticeFrame:SetAllPoints(debuffsTab)
-    noticeFrame:EnableMouse(true)
-    noticeFrame:SetFrameLevel(debuffsTab:GetFrameLevel()+25)
-    Cell.StylizeFrame(noticeFrame, {0.1, 0.1, 0.1, 0.99})
-
-    local content = noticeFrame:CreateFontString(nil, "OVERLAY")
-    content:SetFont(UNIT_NAME_FONT_CHINESE, 12 + CellDB["appearance"]["optionsFontSizeOffset"], "")
-    content:SetTextColor(1, 1, 1, 1)
-    content:SetShadowColor(0, 0, 0)
-    content:SetShadowOffset(1, -1)
-    content:SetText([[
-|cffe52b50Raid Debuffs issues|r
-The instance/boss list is generated automatically on Retail.
-For this reason, there can be some mistakes.
-But there's no plan for me to correct them.
-It's unnecessary in most cases, since the debuffs will work as expected.
-If you'd like to fix it, go check |cfffff2b2Cell\RaidDebuffs\ExpansionData\ExpansionData.lua|r (at the end of the file), then create a PR on GitHub.
-
-
-|cffe52b50副本减益中存在的问题|r
-副本/首领列表是在正式服上自动生成的。
-因此，其中有些并不与怀旧服完全一致。
-对于此类错误，我自己不打算修复。
-因为在大多数情况下，这并不影响副本减益正常运作。
-如果你想修复它，查看 |cfffff2b2Cell\RaidDebuffs\ExpansionData\ExpansionData.lua|r 这个文件的末尾，然后在 GitHub 上提交。
-]])
-    content:SetPoint("LEFT", 20, 0)
-    content:SetPoint("RIGHT", -20, 0)
-    content:SetJustifyH("LEFT")
-    content:SetSpacing(5)
-
-    local closeBtn = Cell.CreateButton(noticeFrame, "OK", "accent", {205, 20})
-    closeBtn:SetPoint("BOTTOMLEFT")
-    closeBtn:SetPoint("BOTTOMRIGHT")
-    closeBtn:SetScript("OnClick", function()
-        noticeFrame:Hide()
-        CellDB["raidDebuffsNoticeViewed"] = true
-    end)
-end
 
 -------------------------------------------------
 -- show
@@ -2312,7 +2272,6 @@ local function ShowTab(tab)
             CreateBossesFrame()
             CreateDebuffsFrame()
             CreateDetailsFrame()
-            if Cell.isTBC or Cell.isVanilla then CreateNoticeFrame() end
         end
 
         debuffsTab:Show()

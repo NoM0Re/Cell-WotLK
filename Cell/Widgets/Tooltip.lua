@@ -6,7 +6,7 @@ local P = Cell.pixelPerfectFuncs
 -- Tooltip
 -----------------------------------------
 local function CreateTooltip(name, hasIcon)
-    local tooltip = CreateFrame("GameTooltip", name, CellParent, "CellTooltipTemplate,BackdropTemplate")
+    local tooltip = CreateFrame("GameTooltip", name, CellParent, "CellTooltipTemplate")
     tooltip:SetBackdrop({bgFile = Cell.vars.whiteTexture, edgeFile = Cell.vars.whiteTexture, edgeSize = 1})
     tooltip:SetBackdropColor(0.1, 0.1, 0.1, 0.9)
     tooltip:SetBackdropBorderColor(Cell.GetAccentColorRGB())
@@ -17,7 +17,7 @@ local function CreateTooltip(name, hasIcon)
         tooltip.iconBG = iconBG
         iconBG:SetSize(35, 35)
         iconBG:SetPoint("TOPRIGHT", tooltip, "TOPLEFT", -1, 0)
-        iconBG:SetColorTexture(Cell.GetAccentColorRGB())
+        iconBG:SetTexture(Cell.GetAccentColorRGB())
         iconBG:Hide()
 
         local icon = tooltip:CreateTexture(nil, "ARTWORK")
@@ -27,21 +27,14 @@ local function CreateTooltip(name, hasIcon)
         icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
         icon:Hide()
 
-        hooksecurefunc(tooltip, "SetSpellByID", function(self, id, tex)
+        function tooltip:SetSpellByID(id, tex)
+            self:SetHyperlink("spell:" .. (id or 0))
             if tex then
                 iconBG:Show()
                 icon:SetTexture(tex)
                 icon:Show()
             end
-        end)
-    end
-
-    if Cell.isRetail then
-        tooltip:RegisterEvent("TOOLTIP_DATA_UPDATE")
-        tooltip:SetScript("OnEvent", function()
-            -- Interface\FrameXML\GameTooltip.lua line924
-            tooltip:RefreshData()
-        end)
+        end
     end
 
     tooltip:SetScript("OnTooltipCleared", function()
@@ -70,7 +63,7 @@ local function CreateTooltip(name, hasIcon)
         tooltip:SetBackdropBorderColor(Cell.GetAccentColorRGB())
         if hasIcon then
             P.Repoint(tooltip.icon)
-            tooltip.iconBG:SetColorTexture(Cell.GetAccentColorRGB())
+            tooltip.iconBG:SetTexture(Cell.GetAccentColorRGB())
         end
     end
 end
@@ -79,29 +72,54 @@ CreateTooltip("CellTooltip")
 CreateTooltip("CellSpellTooltip", true)
 -- CreateTooltip("CellScanningTooltip")
 
+local cursorAnchor = CreateFrame("Frame", nil, UIParent)
+cursorAnchor:SetSize(1, 1)
+cursorAnchor:EnableMouse(false)
+cursorAnchor:Hide()
+local function UpdateCursorAnchor(self)
+    local scale = UIParent:GetEffectiveScale()
+    local x, y = GetCursorPosition()
+    self:ClearAllPoints()
+    self:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", x / scale, y / scale)
+end
+cursorAnchor:SetScript("OnUpdate", UpdateCursorAnchor)
+
+local function SetCursorTooltip(anchor, point, relativePoint, x, y)
+    UpdateCursorAnchor(cursorAnchor)
+    GameTooltip:SetOwner(anchor, "ANCHOR_NONE")
+    GameTooltip:ClearAllPoints()
+    GameTooltip:SetPoint(point, cursorAnchor, relativePoint, x, y)
+    cursorAnchor:Show()
+end
+
+GameTooltip:HookScript("OnHide", function()
+    cursorAnchor:Hide()
+end)
+
 function F.ShowSpellTooltips(tooltip, spellID)
-    local tooltipInfo = CreateBaseTooltipInfo("GetSpellByID", spellID)
-    tooltip:ProcessInfo(tooltipInfo)
+    tooltip:SetSpellByID(spellID)
     tooltip:Show()
 end
 
 function F.ShowTooltips(anchor, tooltipType, unit, aura, filter)
     if not CellDB["general"]["enableTooltips"] or (tooltipType == "unit" and CellDB["general"]["hideTooltipsInCombat"] and InCombatLockdown()) then return end
 
-    if CellDB["general"]["tooltipsPosition"][2] == "Default" then
+    cursorAnchor:Hide()
+    local position = CellDB["general"]["tooltipsPosition"][2]
+    if position == "Default" then
         GameTooltip_SetDefaultAnchor(GameTooltip, anchor)
-    elseif CellDB["general"]["tooltipsPosition"][2] == "Cell" then
+    elseif position == "Cell" then
         GameTooltip:SetOwner(Cell.frames.mainFrame, "ANCHOR_NONE")
         GameTooltip:SetPoint(CellDB["general"]["tooltipsPosition"][1], Cell.frames.mainFrame, CellDB["general"]["tooltipsPosition"][3], CellDB["general"]["tooltipsPosition"][4], CellDB["general"]["tooltipsPosition"][5])
-    elseif CellDB["general"]["tooltipsPosition"][2] == "Unit Button" then
+    elseif position == "Unit Button" then
         GameTooltip:SetOwner(anchor, "ANCHOR_NONE")
         GameTooltip:SetPoint(CellDB["general"]["tooltipsPosition"][1], anchor, CellDB["general"]["tooltipsPosition"][3], CellDB["general"]["tooltipsPosition"][4], CellDB["general"]["tooltipsPosition"][5])
-    elseif CellDB["general"]["tooltipsPosition"][2] == "Cursor" then
-        GameTooltip:SetOwner(anchor, "ANCHOR_CURSOR")
-    elseif CellDB["general"]["tooltipsPosition"][2] == "Cursor Left" then
-        GameTooltip:SetOwner(anchor, "ANCHOR_CURSOR_LEFT", CellDB["general"]["tooltipsPosition"][4], CellDB["general"]["tooltipsPosition"][5])
-    elseif CellDB["general"]["tooltipsPosition"][2] == "Cursor Right" then
-        GameTooltip:SetOwner(anchor, "ANCHOR_CURSOR_RIGHT", CellDB["general"]["tooltipsPosition"][4], CellDB["general"]["tooltipsPosition"][5])
+    elseif position == "Cursor" then
+        SetCursorTooltip(anchor, "BOTTOM", "TOP", 0, 0)
+    elseif position == "Cursor Left" then
+        SetCursorTooltip(anchor, "BOTTOMRIGHT", "BOTTOMLEFT", CellDB["general"]["tooltipsPosition"][4], CellDB["general"]["tooltipsPosition"][5])
+    elseif position == "Cursor Right" then
+        SetCursorTooltip(anchor, "BOTTOMLEFT", "BOTTOMRIGHT", CellDB["general"]["tooltipsPosition"][4], CellDB["general"]["tooltipsPosition"][5])
     end
 
     if tooltipType == "unit" then
@@ -110,10 +128,6 @@ function F.ShowTooltips(anchor, tooltipType, unit, aura, filter)
         -- GameTooltip:SetSpellByID(aura)
         GameTooltip:SetUnitAura(unit, aura, filter)
     elseif tooltipType == "aura" and unit and aura then
-        if filter == "HARMFUL" then
-            GameTooltip:SetUnitDebuffByAuraInstanceID(unit, aura)
-        elseif filter == "HELPFUL" then
-            GameTooltip:SetUnitBuffByAuraInstanceID(unit, aura)
-        end
+        GameTooltip:SetUnitAura(unit, aura, filter)
     end
 end

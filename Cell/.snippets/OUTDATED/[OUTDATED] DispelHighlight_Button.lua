@@ -30,7 +30,7 @@ F.IterateAllUnitButtons(function(b)
         end
 
         -- highlight
-        dispels.highlight:SetColorTexture(r, g, b, a ~= 0 and ALPHA or 0)
+        dispels.highlight:SetTexture(r, g, b, a ~= 0 and ALPHA or 0)
     end
 
     -- 修改护盾材质

@@ -79,7 +79,7 @@ local function BarIcon_SetCooldown(frame, start, duration, debuffType, texture, 
         end
     end
 
-    frame.spark:SetColorTexture(0.5, 0.5, 0.5, 1)
+    frame.spark:SetTexture(0.5, 0.5, 0.5, 1)
     frame:SetBackdropColor(0, 0, 0, 1)
     frame.icon:SetTexture(texture)
     frame.maskIcon:SetTexture(texture)

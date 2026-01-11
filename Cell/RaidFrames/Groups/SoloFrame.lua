@@ -22,11 +22,11 @@ Cell.unitButtons.solo["pet"] = petButton
 local function SoloFrame_UpdateLayout(layout, which)
     -- visibility
     if Cell.vars.groupType ~= "solo" or Cell.vars.isHidden then
-        UnregisterAttributeDriver(soloFrame, "state-visibility")
+        UnregisterStateDriver(soloFrame, "visibility")
         soloFrame:Hide()
         return
     else
-        RegisterAttributeDriver(soloFrame, "state-visibility", "[@raid1,exists] hide;[@party1,exists] hide;[group] hide;show")
+        RegisterStateDriver(soloFrame, "visibility", "[@raid1,exists] hide;[@party1,exists] hide;[group] hide;show")
     end
 
     -- update
@@ -100,9 +100,9 @@ local function SoloFrame_UpdateLayout(layout, which)
 
     if not which or which == "pet" then
         if layout["pet"]["soloEnabled"] then
-            RegisterAttributeDriver(petButton, "state-visibility", "[nopet] hide; [vehicleui] hide; show")
+            RegisterStateDriver(petButton, "visibility", "[nopet] hide; [vehicleui] hide; show")
         else
-            UnregisterAttributeDriver(petButton, "state-visibility")
+            UnregisterStateDriver(petButton, "visibility")
             petButton:Hide()
         end
     end

@@ -37,7 +37,7 @@ local function UpdateColor_HSBA(h, s, b, a, updateBrightness, updatePickers)
 
     if updateBrightness then
         local _r, _g, _b = F.ConvertHSBToRGB(h, s, 1)
-        brightness.tex:SetGradient("VERTICAL", CreateColor(0, 0, 0, 1), CreateColor(_r, _g, _b, 1))
+        brightness.tex:SetGradientAlpha("VERTICAL", 0, 0, 0, 1, _r, _g, _b, 1)
     end
 
     if updatePickers then
@@ -152,7 +152,7 @@ local function CreateColorPicker()
     --------------------------------------------------
     -- current
     --------------------------------------------------
-    current = CreateFrame("Frame", name.."Current", colorPicker, "BackdropTemplate")
+    current = CreateFrame("Frame", name.."Current", colorPicker)
     Cell.StylizeFrame(current)
     P.Size(current, 97, 27)
     current:SetPoint("TOPLEFT", 7, -7)
@@ -166,14 +166,14 @@ local function CreateColorPicker()
     current.alpha:SetPoint("BOTTOMRIGHT", P.Scale(-1), P.Scale(1))
 
     function current:SetColor(r, g, b, a)
-        current.solid:SetColorTexture(r, g, b)
-        current.alpha:SetColorTexture(r, g, b, a)
+        current.solid:SetTexture(r, g, b)
+        current.alpha:SetTexture(r, g, b, a)
     end
 
     --------------------------------------------------
     -- original
     --------------------------------------------------
-    original = CreateFrame("Frame", name.."Original", colorPicker, "BackdropTemplate")
+    original = CreateFrame("Frame", name.."Original", colorPicker)
     Cell.StylizeFrame(original)
     P.Size(original, 97, 27)
     original:SetPoint("TOPRIGHT", -7, -7)
@@ -187,14 +187,14 @@ local function CreateColorPicker()
     original.alpha:SetPoint("BOTTOMRIGHT", P.Scale(-1), P.Scale(1))
 
     function original:SetColor(r, g, b, a)
-        original.solid:SetColorTexture(r, g, b)
-        original.alpha:SetColorTexture(r, g, b, a)
+        original.solid:SetTexture(r, g, b)
+        original.alpha:SetTexture(r, g, b, a)
     end
 
     --------------------------------------------------
     -- hue, saturation
     --------------------------------------------------
-    hueSaturationBG = CreateFrame("Frame", name.."HueSaturation", colorPicker, "BackdropTemplate")
+    hueSaturationBG = CreateFrame("Frame", name.."HueSaturation", colorPicker)
     Cell.StylizeFrame(hueSaturationBG)
     P.Size(hueSaturationBG, 130, 130)
     hueSaturationBG:SetPoint("TOPLEFT", current, "BOTTOMLEFT", 0, -7)
@@ -217,9 +217,9 @@ local function CreateColorPicker()
     for i = 1, 6 do
         hueSaturation[i] = hueSaturation:CreateTexture(name.."HS_Gradient"..i, "ARTWORK", nil, 0)
         hueSaturation[i]:SetTexture(Cell.vars.whiteTexture)
-        -- hueSaturation[i]:SetColorTexture(1, 1, 1, 1)
+        -- hueSaturation[i]:SetTexture(1, 1, 1, 1)
         -- hueSaturation[i]:SetVertexColor(1, 1, 1, 1)
-        hueSaturation[i]:SetGradient("HORIZONTAL", CreateColor(color[i].r, color[i].g, color[i].b, 1), CreateColor(color[i+1].r, color[i+1].g, color[i+1].b, 1))
+        hueSaturation[i]:SetGradientAlpha("HORIZONTAL", color[i].r, color[i].g, color[i].b, 1, color[i+1].r, color[i+1].g, color[i+1].b, 1)
 
         -- width
         hueSaturation[i]:SetWidth(sectionSize)
@@ -237,23 +237,30 @@ local function CreateColorPicker()
     local saturation = hueSaturation:CreateTexture(name.."HS_Saturation", "ARTWORK", nil, 1)
     saturation:SetBlendMode("BLEND")
     saturation:SetTexture(Cell.vars.whiteTexture)
-    saturation:SetGradient("VERTICAL", CreateColor(1, 1, 1, 1), CreateColor(1, 1, 1, 0))
+    saturation:SetGradientAlpha("VERTICAL", 1, 1, 1, 1, 1, 1, 1, 0)
     saturation:SetAllPoints(hueSaturation)
 
     --------------------------------------------------
     -- brightness
     --------------------------------------------------
-    brightness = CreateFrame("Slider", nil, colorPicker, "BackdropTemplate")
+    brightness = CreateFrame("Slider", nil, colorPicker)
     Cell.StylizeFrame(brightness)
     brightness:SetValueStep(0.01)
     brightness:SetMinMaxValues(0, 1)
-    brightness:SetObeyStepOnDrag(true)
     brightness:SetOrientation("VERTICAL")
     P.Size(brightness, 17, 130)
     brightness:SetPoint("TOPLEFT", hueSaturation, "TOPRIGHT", 15, 0)
 
+    brightness._programmatic = false
+    local origBrightnessSetValue = brightness.SetValue
+    brightness.SetValue = function(self, value)
+        self._programmatic = true
+        origBrightnessSetValue(self, value)
+        self._programmatic = false
+    end
+
     brightness:SetScript("OnValueChanged", function(self, value, userChanged)
-        if not userChanged then return end
+        if not userChanged and self._programmatic then return end
         B = 1 - value
 
         if brightness.prev == B then return end
@@ -269,7 +276,7 @@ local function CreateColorPicker()
     brightness.tex:SetTexture(Cell.vars.whiteTexture)
 
     brightness.thumb1 = brightness:CreateTexture(nil, "ARTWORK")
-    -- brightness.thumb1:SetColorTexture(0, 1, 0, 1)
+    -- brightness.thumb1:SetTexture(0, 1, 0, 1)
     P.Size(brightness.thumb1, 17, 1)
     brightness:SetThumbTexture(brightness.thumb1)
 
@@ -281,14 +288,21 @@ local function CreateColorPicker()
     --------------------------------------------------
     -- alpha
     --------------------------------------------------
-    alpha = CreateFrame("Slider", nil, colorPicker, "BackdropTemplate")
+    alpha = CreateFrame("Slider", nil, colorPicker)
     Cell.StylizeFrame(alpha)
     alpha:SetValueStep(0.01)
     alpha:SetMinMaxValues(0, 1)
-    alpha:SetObeyStepOnDrag(true)
     alpha:SetOrientation("VERTICAL")
     P.Size(alpha, 17, 130)
     alpha:SetPoint("TOPLEFT", brightness, "TOPRIGHT", 15, 0)
+
+    alpha._programmatic = false
+    local origAlphaSetValue = alpha.SetValue
+    alpha.SetValue = function(self, value)
+        self._programmatic = true
+        origAlphaSetValue(self, value)
+        self._programmatic = false
+    end
 
     alpha:SetScript("OnEnable", function()
         alpha:SetAlpha(1)
@@ -299,7 +313,7 @@ local function CreateColorPicker()
         alpha.thumb2:SetVertexColor(0.2, 0.2, 0.2, 1)
     end)
     alpha:SetScript("OnValueChanged", function(self, value, userChanged)
-        if not userChanged then return end
+        if not userChanged and self._programmatic then return end
         A = 1 - value
 
         if alpha.prev == A then return end
@@ -313,7 +327,7 @@ local function CreateColorPicker()
     alpha.tex:SetPoint("TOPLEFT", P.Scale(1), P.Scale(-1))
     alpha.tex:SetPoint("BOTTOMRIGHT", P.Scale(-1), P.Scale(1))
     alpha.tex:SetTexture(Cell.vars.whiteTexture)
-    alpha.tex:SetGradient("VERTICAL", CreateColor(0, 0, 0, 1), CreateColor(1, 1, 1, 1))
+    alpha.tex:SetGradientAlpha("VERTICAL", 0, 0, 0, 1, 1, 1, 1, 1)
 
     alpha.thumb1 = alpha:CreateTexture(nil, "ARTWORK")
     P.Size(alpha.thumb1, 17, 1)
@@ -327,7 +341,7 @@ local function CreateColorPicker()
     --------------------------------------------------
     -- picker
     --------------------------------------------------
-    picker = CreateFrame("Frame", name.."HSPicker", hueSaturation, "BackdropTemplate")
+    picker = CreateFrame("Frame", name.."HSPicker", hueSaturation)
     P.Size(picker, 10, 10)
     picker:SetPoint("CENTER", hueSaturation, "BOTTOMLEFT")
 
@@ -338,6 +352,27 @@ local function CreateColorPicker()
 
     picker:EnableMouse(true)
     picker:SetMovable(true)
+
+    local function SetPickerPosition(x, y)
+        if x < 0 then
+            x = 0
+        elseif x > hueSaturation:GetWidth() then
+            x = hueSaturation:GetWidth()
+        end
+
+        if y < 0 then
+            y = 0
+        elseif y > hueSaturation:GetHeight() then
+            y = hueSaturation:GetHeight()
+        end
+
+        picker:SetPoint("CENTER", hueSaturation, "BOTTOMLEFT", x, y)
+
+        H = (x / hueSaturation:GetWidth()) * 360
+        S = y / hueSaturation:GetHeight()
+
+        UpdateAll("hsb", H, S, B, A, true)
+    end
 
     function picker:StartMoving(x, y, mouseX, mouseY)
         local scale = picker:GetEffectiveScale()
@@ -351,26 +386,7 @@ local function CreateColorPicker()
             local newX = x + (newMouseX - mouseX) / scale
             local newY = y + (newMouseY - mouseY) / scale
 
-            if newX < 0 then -- left
-                newX = 0
-            elseif newX > hueSaturation:GetWidth() then -- right
-                newX = hueSaturation:GetWidth()
-            end
-
-            if newY < 0 then -- top
-                newY = 0
-            elseif newY > hueSaturation:GetHeight() then
-                newY = hueSaturation:GetHeight()
-            end
-
-            picker:SetPoint("CENTER", hueSaturation, "BOTTOMLEFT", newX, newY)
-
-            -- update HSV
-            H = (newX / hueSaturation:GetWidth()) * 360
-            S = newY / hueSaturation:GetHeight()
-
-            -- update
-            UpdateAll("hsb", H, S, B, A, true)
+            SetPickerPosition(newX, newY)
         end)
     end
 
@@ -387,17 +403,21 @@ local function CreateColorPicker()
     end)
 
     -- click & drag
+    hueSaturation:EnableMouse(true)
     hueSaturation:SetScript("OnMouseDown", function(self, button)
         if button ~= 'LeftButton' then return end
         local hueSaturationX, hueSaturationY = hueSaturation:GetLeft(), hueSaturation:GetBottom()
         local mouseX, mouseY = GetCursorPosition()
 
         local scale = picker:GetEffectiveScale()
-        mouseX, mouseY = mouseX/scale, mouseY/scale
+        local scaledMouseX, scaledMouseY = mouseX / scale, mouseY / scale
+        local x = scaledMouseX - hueSaturationX
+        local y = scaledMouseY - hueSaturationY
+
+        SetPickerPosition(x, y)
 
         -- start dragging
-        local x, y = select(4, picker:GetPoint(1))
-        picker:StartMoving(mouseX/scale-hueSaturationX, mouseY/scale-hueSaturationY, mouseX, mouseY)
+        picker:StartMoving(x, y, mouseX, mouseY)
     end)
 
     hueSaturation:SetScript("OnMouseUp", function(self, button)

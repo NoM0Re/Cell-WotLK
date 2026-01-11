@@ -3,6 +3,10 @@ local L = Cell.L
 local F = Cell.funcs
 local P = Cell.pixelPerfectFuncs
 
+local function RaiseAboveParent(frame, parent)
+    frame:SetFrameLevel(parent:GetFrameLevel() + 1)
+end
+
 local aboutTab = Cell.CreateFrame("CellOptionsFrame_AboutTab", Cell.frames.optionsFrame, nil, nil, true)
 Cell.frames.aboutTab = aboutTab
 aboutTab:SetAllPoints(Cell.frames.optionsFrame)
@@ -51,7 +55,7 @@ local function CreateAuthorPane()
 
     authorText = authorPane:CreateFontString(nil, "OVERLAY")
     authorText:SetPoint("TOPLEFT", 5, -27)
-    authorText.font = "Interface\\AddOns\\Cell\\Media\\Fonts\\font.ttf"
+    authorText.font = UNIT_NAME_FONT_CHINESE
     authorText.size = 12
     UpdateFont(authorText)
 
@@ -228,8 +232,7 @@ local function CreateAnimation(frame)
     local fadeOut = frame:CreateAnimationGroup()
     frame.fadeOut = fadeOut
     fadeOut.alpha = fadeOut:CreateAnimation("Alpha")
-    fadeOut.alpha:SetFromAlpha(1)
-    fadeOut.alpha:SetToAlpha(0)
+    F.AlphaSetFromTo(fadeOut.alpha, 1, 0)
     fadeOut.alpha:SetDuration(0.3)
     fadeOut:SetScript("OnFinished", function()
         frame:Hide()
@@ -238,8 +241,7 @@ local function CreateAnimation(frame)
     local fadeIn = frame:CreateAnimationGroup()
     frame.fadeIn = fadeIn
     fadeIn.alpha = fadeIn:CreateAnimation("Alpha")
-    fadeIn.alpha:SetFromAlpha(0)
-    fadeIn.alpha:SetToAlpha(1)
+    F.AlphaSetFromTo(fadeIn.alpha, 0, 1)
     fadeIn.alpha:SetDuration(0.3)
     fadeIn:SetScript("OnPlay", function()
         frame:Show()
@@ -299,10 +301,11 @@ local function CreateSupportersPane()
     local bgTex = supportersPane:CreateTexture(nil, "BACKGROUND", nil, 0)
     bgTex:SetPoint("TOPLEFT", -5, 5)
     bgTex:SetPoint("BOTTOMRIGHT", 5, -5)
-    bgTex:SetTexture(Cell.vars.whiteTexture)
-    bgTex:SetGradient("HORIZONTAL", CreateColor(0.1, 0.1, 0.1, 1), CreateColor(0.1, 0.1, 0.1, 0.7))
+    bgTex:SetTexture(0.1, 0.1, 0.1, 1)
+    bgTex:SetGradientAlpha("HORIZONTAL", 0.1, 0.1, 0.1, 1, 0.1, 0.1, 0.1, 0.7)
 
     local supportersFrame1 = CreateFrame("Frame", nil, supportersPane)
+    RaiseAboveParent(supportersFrame1, supportersPane)
     supportersFrame1:SetPoint("TOPLEFT", 0, -27)
     supportersFrame1:SetPoint("BOTTOMLEFT")
     supportersFrame1.scroll = Cell.CreateScrollFrame(supportersFrame1)
@@ -319,6 +322,7 @@ local function CreateSupportersPane()
     supportersText1:SetText(GetSupporters(Cell.supporters1))
 
     local supportersFrame2 = CreateFrame("Frame", nil, supportersPane)
+    RaiseAboveParent(supportersFrame2, supportersPane)
     supportersFrame2:SetPoint("TOPLEFT", supportersFrame1, "TOPRIGHT", 10, 0)
     supportersFrame2:SetPoint("BOTTOMLEFT", supportersFrame1, "BOTTOMRIGHT")
     supportersFrame2.scroll = Cell.CreateScrollFrame(supportersFrame2)
@@ -359,19 +363,13 @@ local function CreateSupportersPane()
     supportersBtn1:SetPoint("TOPLEFT", aboutTab, "TOPRIGHT", 1, -5)
 
     local label = supportersBtn1:GetFontString()
-    -- if Cell.isRetail then
-        label:ClearAllPoints()
-        label:SetPoint("CENTER", 6, -5)
-        label:SetRotation(-math.pi/2)
-    -- else
-    --     Cell.StopRainbowText(label)
-    --     label:SetWordWrap(true)
-    --     label:SetSpacing(0)
-    --     label:ClearAllPoints()
-    --     label:SetPoint("CENTER")
-    --     label:SetText("P\na\nt\nr\no\nn\ns")
-    --     Cell.StartRainbowText(label)
-    -- end
+    Cell.StopRainbowText(label)
+    label:SetWordWrap(true)
+    label:SetSpacing(0)
+    label:ClearAllPoints()
+    label:SetPoint("CENTER")
+    label:SetText("P\na\nt\nr\no\nn\ns")
+    Cell.StartRainbowText(label)
 
     local supportersBtn2 = CreateButton(17, 17, [[Interface\AddOns\Cell\Media\Icons\left]])
     -- supportersBtn2:SetPoint("TOPLEFT", aboutTab, "TOPRIGHT", 6, -5)
@@ -399,7 +397,9 @@ end
 -------------------------------------------------
 local links = {}
 local function CreateLink(parent, id, icon, onEnter)
-    local f = CreateFrame("Frame", nil, parent, "BackdropTemplate")
+    local f = CreateFrame("Frame", nil, parent)
+    RaiseAboveParent(f, parent)
+    f:EnableMouse(true)
     P.Size(f, 34, 34)
     f:SetBackdrop({bgFile = Cell.vars.whiteTexture})
     f:SetBackdropColor(0, 0, 0, 1)
@@ -436,7 +436,7 @@ local function CreateLinksPane()
 
     local linksEB = Cell.CreateEditBox(linksPane, 412, 20)
     linksEB:SetPoint("TOPLEFT", 5, -27)
-    linksEB:SetText("https://github.com/enderneko/Cell")
+    linksEB:SetText("https://github.com/NoM0Re/Cell-WotLK")
     linksEB:SetScript("OnTextChanged", function(self, userChanged)
         if userChanged then
             linksEB:SetText(current)
@@ -450,7 +450,7 @@ local function CreateLinksPane()
 
     --! github
     local github = CreateLink(linksPane, "github", "Interface\\AddOns\\Cell\\Media\\Links\\github.tga", function()
-        current = "https://github.com/enderneko/Cell"
+        current = "https://github.com/NoM0Re/Cell-WotLK"
         linksEB:SetText(current)
         linksEB:ClearFocus()
     end)
@@ -478,7 +478,7 @@ local function CreateLinksPane()
 
     --! discord
     local discord = CreateLink(linksPane, "discord", "Interface\\AddOns\\Cell\\Media\\Links\\discord.tga", function()
-        current = "https://discord.gg/9PSe3fKQGJ"
+        current = "https://discord.gg/UXSc7nt"
         linksEB:SetText(current)
         linksEB:ClearFocus()
     end)

@@ -23,8 +23,8 @@ local colors = {
 local class = select(2, UnitClass("player"))
 local classColor = {s="|cCCB2B2B2", t={0.7, 0.7, 0.7}}
 if class then
-    classColor.t[1], classColor.t[2], classColor.t[3], classColor.s = GetClassColor(class)
-    classColor.s = "|c"..classColor.s
+    classColor.t[1], classColor.t[2], classColor.t[3] = F.GetClassColor(class)
+    classColor.s = F.GetClassColorStr(class)
 end
 
 -----------------------------------------
@@ -1043,16 +1043,16 @@ local function CreateSetting_HealthFormat(parent)
 
         local function UpdateWidgets()
             local health1Enabled = widget.format.health1.format ~= "none"
-            widget.health1HideIfEmptyOrFullCB:SetEnabled(health1Enabled)
-            widget.health1ColorDropdown:SetEnabled(health1Enabled)
-            widget.health1ColorPicker:SetEnabled(health1Enabled)
+            F.SetEnabled(widget.health1HideIfEmptyOrFullCB, health1Enabled)
+            F.SetEnabled(widget.health1ColorDropdown, health1Enabled)
+            F.SetEnabled(widget.health1ColorPicker, health1Enabled)
 
             local health2Enabled = widget.format.health2.format ~= "none"
-            widget.health2DelimiterEB:SetEnabled(health2Enabled)
+            F.SetEnabled(widget.health2DelimiterEB, health2Enabled)
             widget.health2DelimiterEB.confirmBtn:Hide()
-            widget.health2HideIfEmptyOrFullCB:SetEnabled(health2Enabled)
-            widget.health2ColorDropdown:SetEnabled(health2Enabled)
-            widget.health2ColorPicker:SetEnabled(health2Enabled)
+            F.SetEnabled(widget.health2HideIfEmptyOrFullCB, health2Enabled)
+            F.SetEnabled(widget.health2ColorDropdown, health2Enabled)
+            F.SetEnabled(widget.health2ColorPicker, health2Enabled)
             if health2Enabled then
                 widget.health2DelimiterText:SetTextColor(1, 1, 1)
             else
@@ -1060,10 +1060,10 @@ local function CreateSetting_HealthFormat(parent)
             end
 
             local shieldEnabled = widget.format.shields.format ~= "none"
-            widget.shieldDelimiterEB:SetEnabled(shieldEnabled)
+            F.SetEnabled(widget.shieldDelimiterEB, shieldEnabled)
             widget.shieldDelimiterEB.confirmBtn:Hide()
-            widget.shieldColorDropdown:SetEnabled(shieldEnabled)
-            widget.shieldColorPicker:SetEnabled(shieldEnabled)
+            F.SetEnabled(widget.shieldColorDropdown, shieldEnabled)
+            F.SetEnabled(widget.shieldColorPicker, shieldEnabled)
             if shieldEnabled then
                 widget.shieldDelimiterText:SetTextColor(1, 1, 1)
             else
@@ -1071,10 +1071,10 @@ local function CreateSetting_HealthFormat(parent)
             end
 
             local healAbsorbEnabled = widget.format.healAbsorbs.format ~= "none"
-            widget.healAbsorbDelimiterEB:SetEnabled(healAbsorbEnabled)
+            F.SetEnabled(widget.healAbsorbDelimiterEB, healAbsorbEnabled)
             widget.healAbsorbDelimiterEB.confirmBtn:Hide()
-            widget.healAbsorbColorDropdown:SetEnabled(healAbsorbEnabled)
-            widget.healAbsorbColorPicker:SetEnabled(healAbsorbEnabled)
+            F.SetEnabled(widget.healAbsorbColorDropdown, healAbsorbEnabled)
+            F.SetEnabled(widget.healAbsorbColorPicker, healAbsorbEnabled)
             if healAbsorbEnabled then
                 widget.healAbsorbDelimiterText:SetTextColor(1, 1, 1)
             else
@@ -2281,7 +2281,7 @@ local function CreateSetting_BlockColors(parent)
         local colorBy = Cell.CreateDropdown(widget, 260)
         colorBy:SetPoint("TOPLEFT", 5, -20)
 
-        colorByText = widget:CreateFontString(nil, "OVERLAY", font_name)
+        local colorByText = widget:CreateFontString(nil, "OVERLAY", font_name)
         colorByText:SetText(L["Color By"])
         colorByText:SetPoint("BOTTOMLEFT", colorBy, "TOPLEFT", 0, 1)
 
@@ -3289,7 +3289,7 @@ local function CreateSetting_StatusColors(parent)
             widget.func()
         end)
         pendingColor:SetPoint("TOPLEFT", ghostColor, "BOTTOMLEFT", 0, -8)
-        pendingColor:SetEnabled(Cell.isRetail)
+        F.SetEnabled(pendingColor, false)
 
         local acceptedColor = Cell.CreateColorPicker(widget, L["ACCEPTED"], true, function(r, g, b, a)
             widget.colorsTable["ACCEPTED"][1] = r
@@ -3299,7 +3299,7 @@ local function CreateSetting_StatusColors(parent)
             widget.func()
         end)
         acceptedColor:SetPoint("TOPLEFT", pendingColor, "TOPRIGHT", 70, 0)
-        acceptedColor:SetEnabled(Cell.isRetail)
+        F.SetEnabled(acceptedColor, false)
 
         local declinedColor = Cell.CreateColorPicker(widget, L["DECLINED"], true, function(r, g, b, a)
             widget.colorsTable["DECLINED"][1] = r
@@ -3309,7 +3309,7 @@ local function CreateSetting_StatusColors(parent)
             widget.func()
         end)
         declinedColor:SetPoint("TOPLEFT", acceptedColor, "TOPRIGHT", 70, 0)
-        declinedColor:SetEnabled(Cell.isRetail)
+        F.SetEnabled(declinedColor, false)
 
         local resetBtn = Cell.CreateButton(widget, L["Reset All"], "accent", {70, 20})
         resetBtn:SetPoint("TOPLEFT", pendingColor, "BOTTOMLEFT", 0, -8)
@@ -3386,7 +3386,7 @@ local function CreateSetting_CheckButton(parent)
             widget.cb:SetChecked(checked)
             widget.cb:SetText(L[settingName])
             if tooltip then
-                Cell.SetTooltips(widget.cb, "ANCHOR_TOPLEFT", 0, 2, L[settingName], string.split("|", tooltip))
+                Cell.SetTooltips(widget.cb, "ANCHOR_TOPLEFT", 0, 2, L[settingName], strsplit("|", tooltip))
             else
                 Cell.ClearTooltips(widget.cb)
             end
@@ -3421,7 +3421,7 @@ local function CreateSetting_CheckButton2(parent)
             widget.cb:SetChecked(checked)
             widget.cb:SetText(L[settingName])
             if tooltip then
-                Cell.SetTooltips(widget.cb, "ANCHOR_TOPLEFT", 0, 2, L[settingName], string.split("|", tooltip))
+                Cell.SetTooltips(widget.cb, "ANCHOR_TOPLEFT", 0, 2, L[settingName], strsplit("|", tooltip))
             else
                 Cell.ClearTooltips(widget.cb)
             end
@@ -3456,7 +3456,7 @@ local function CreateSetting_CheckButton3(parent)
             widget.cb:SetChecked(checked)
             widget.cb:SetText(L[settingName])
             if tooltip then
-                Cell.SetTooltips(widget.cb, "ANCHOR_TOPLEFT", 0, 2, L[settingName], string.split("|", tooltip))
+                Cell.SetTooltips(widget.cb, "ANCHOR_TOPLEFT", 0, 2, L[settingName], strsplit("|", tooltip))
             else
                 Cell.ClearTooltips(widget.cb)
             end
@@ -3491,7 +3491,7 @@ local function CreateSetting_CheckButton4(parent)
             widget.cb:SetChecked(checked)
             widget.cb:SetText(L[settingName])
             if tooltip then
-                Cell.SetTooltips(widget.cb, "ANCHOR_TOPLEFT", 0, 2, L[settingName], string.split("|", tooltip))
+                Cell.SetTooltips(widget.cb, "ANCHOR_TOPLEFT", 0, 2, L[settingName], strsplit("|", tooltip))
             else
                 Cell.ClearTooltips(widget.cb)
             end
@@ -3585,7 +3585,7 @@ local function CreateSetting_Stack(parent)
         widget.stackCB = Cell.CreateCheckButton(widget, L["showStack"], function(checked, self)
             widget.stackTbl[1] = checked
             widget.func(widget.stackTbl)
-            -- widget.circledStackCB:SetEnabled(checked)
+            -- F.SetEnabled(widget.circledStackCB, checked)
         end)
         widget.stackCB:SetPoint("TOPLEFT", 5, -8)
 
@@ -3609,7 +3609,7 @@ local function CreateSetting_Stack(parent)
             widget.stackTbl = stackTbl
             widget.stackCB:SetChecked(stackTbl[1])
             widget.circledStackCB:SetChecked(stackTbl[2])
-            -- widget.circledStackCB:SetEnabled(stackTbl[1])
+            -- F.SetEnabled(widget.circledStackCB, stackTbl[1])
         end
     else
         widget = settingWidgets["stack"]
@@ -3629,7 +3629,7 @@ local function CreateSetting_RoleTexture(parent)
         widget.texture = Cell.CreateDropdown(widget, 260)
         widget.texture:SetPoint("TOPLEFT", 5, -20)
 
-        local blizzard = F.UpperFirst(SLASH_TEXTTOSPEECH_BLIZZARD)
+        local blizzard = "Blizzard"
         local indices = {"default", "default2", "blizzard", "blizzard2", "blizzard3", "blizzard4", "ffxiv", "miirgui", "mattui", "custom"}
         local ICON_PATH = " |TInterface\\AddOns\\Cell\\Media\\Roles\\Preview_%s:0:4|t"
         local options = {
@@ -3953,7 +3953,7 @@ local function CreateSetting_Glow(parent)
         function widget:SetDBValue(t, hideNone)
             widget.useSmallerSize = not hideNone -- TODO: may require addtional arg
             widget.glowType.items[1].disabled = hideNone
-            widget.glowType.items[5].disabled = not Cell.isRetail
+            widget.glowType.items[5].disabled = true
 
             -- {"Pixel", {0.95,0.95,0.32,1}, 9, 0.25, 8, 2},
             widget.glow = t
@@ -4166,7 +4166,7 @@ local function CreateAuraButtons(parent, auraButtons, auraTable, noUpDownButtons
             auraButtons[i].spellIconBg = auraButtons[i]:CreateTexture(nil, "BORDER")
             auraButtons[i].spellIconBg:SetSize(16, 16)
             auraButtons[i].spellIconBg:SetPoint("TOPLEFT", 2, -2)
-            auraButtons[i].spellIconBg:SetColorTexture(0, 0, 0, 1)
+            auraButtons[i].spellIconBg:SetTexture(0, 0, 0, 1)
             auraButtons[i].spellIconBg:Hide()
 
             auraButtons[i].spellIcon = auraButtons[i]:CreateTexture(nil, "OVERLAY")
@@ -4543,10 +4543,10 @@ local function CreateSetting_Auras(parent, index)
                     if data and #data ~= 0 then
                         auraImportExportFrame.data = data
                         auraImportExportFrame.info:SetText(Cell.GetAccentColorString()..L["Spells"]..":|r "..#data)
-                        auraImportExportFrame.importBtn:SetEnabled(true)
+                        F.SetEnabled(auraImportExportFrame.importBtn, true)
                     else
                         auraImportExportFrame.info:SetText(Cell.GetAccentColorString()..L["Spells"]..":|r 0")
-                        auraImportExportFrame.importBtn:SetEnabled(false)
+                        F.SetEnabled(auraImportExportFrame.importBtn, false)
                     end
                 else
                     eb:SetText(auraImportExportFrame.exported)
@@ -4637,7 +4637,7 @@ local function CreateSetting_Auras(parent, index)
             auraImportExportFrame.textArea:SetText("")
             auraImportExportFrame.info:SetText(Cell.GetAccentColorString()..L["Spells"]..":|r 0")
             auraImportExportFrame.importBtn:Show()
-            auraImportExportFrame.importBtn:SetEnabled(false)
+            F.SetEnabled(auraImportExportFrame.importBtn, false)
             auraImportExportFrame:ShowUp()
             -- hide editbox
             if widget.frame.popupEditBox then
@@ -4707,7 +4707,7 @@ local function CreateCleuAuraButtons(parent, auraTable, updateHeightFunc)
 
     -- tooltip
     if not parent.inputs then
-        local inputs = CreateFrame("Frame", nil, parent, "BackdropTemplate")
+        local inputs = CreateFrame("Frame", nil, parent)
         Cell.StylizeFrame(inputs, {0.115, 0.115, 0.115, 1})
         inputs:SetFrameStrata("DIALOG")
         inputs:Hide()
@@ -4717,12 +4717,12 @@ local function CreateCleuAuraButtons(parent, auraTable, updateHeightFunc)
             inputs.durationEB.isValid = false
             inputs.spellEB:SetText("")
             inputs.durationEB:SetText("")
-            inputs.okBtn:SetEnabled(false)
+            F.SetEnabled(inputs.okBtn, false)
             CellSpellTooltip:Hide()
         end)
 
         local function Validate()
-            inputs.okBtn:SetEnabled(inputs.spellEB.isValid and inputs.durationEB.isValid)
+            F.SetEnabled(inputs.okBtn, inputs.spellEB.isValid and inputs.durationEB.isValid)
         end
 
         local spellEB = Cell.CreateEditBox(inputs, 20, 20, false, false, true)
@@ -4790,7 +4790,7 @@ local function CreateCleuAuraButtons(parent, auraTable, updateHeightFunc)
         end)
 
         local okBtn = Cell.CreateButton(inputs, "OK", "green", {40, 20})
-        okBtn:SetEnabled(false)
+        F.SetEnabled(okBtn, false)
 
         spellEB:SetPoint("TOPLEFT")
         spellEB:SetPoint("BOTTOMRIGHT", inputs, "BOTTOMLEFT", 120, 0)
@@ -4819,7 +4819,7 @@ local function CreateCleuAuraButtons(parent, auraTable, updateHeightFunc)
         parent.inputs:Show()
         parent.inputs.spellEB:SetText("")
         parent.inputs.durationEB:SetText("")
-        parent.inputs.okBtn:SetEnabled(false)
+        F.SetEnabled(parent.inputs.okBtn, false)
         parent.inputs.okBtn:SetScript("OnClick", function()
             local spellId = tonumber(parent.inputs.spellEB:GetText())
             local duration = tonumber(parent.inputs.durationEB:GetText())
@@ -4841,7 +4841,7 @@ local function CreateCleuAuraButtons(parent, auraTable, updateHeightFunc)
             cleuAuraButtons[i].spellIconBg = cleuAuraButtons[i]:CreateTexture(nil, "BORDER")
             cleuAuraButtons[i].spellIconBg:SetSize(16, 16)
             cleuAuraButtons[i].spellIconBg:SetPoint("TOPLEFT", 2, -2)
-            cleuAuraButtons[i].spellIconBg:SetColorTexture(0, 0, 0, 1)
+            cleuAuraButtons[i].spellIconBg:SetTexture(0, 0, 0, 1)
             cleuAuraButtons[i].spellIconBg:Hide()
 
             cleuAuraButtons[i].spellIcon = cleuAuraButtons[i]:CreateTexture(nil, "OVERLAY")
@@ -4952,7 +4952,7 @@ local function CreateCleuAuraButtons(parent, auraTable, updateHeightFunc)
             parent.inputs:Show()
             parent.inputs.spellEB:SetText(cleuAuraButtons[i].spellId)
             parent.inputs.durationEB:SetText(cleuAuraButtons[i].duration)
-            parent.inputs.okBtn:SetEnabled(false)
+            F.SetEnabled(parent.inputs.okBtn, false)
             parent.inputs.okBtn:SetScript("OnClick", function()
                 local spellId = tonumber(parent.inputs.spellEB:GetText())
                 local duration = tonumber(parent.inputs.durationEB:GetText())
@@ -5063,11 +5063,12 @@ local function CreateSpellButtons(parent, class, spells, disableds)
     local n = 1
     for spellId in pairs(spells) do
         if not spellButtons[buttonIndex] then
-            spellButtons[buttonIndex] = CreateFrame("Button", "CellIndicatorSettings_BuiltIns_SpellButton"..buttonIndex, parent:GetParent(), "BackdropTemplate")
+            spellButtons[buttonIndex] = CreateFrame("Button", "CellIndicatorSettings_BuiltIns_SpellButton"..buttonIndex, parent:GetParent())
             spellButtons[buttonIndex]:SetBackdrop({bgFile = Cell.vars.whiteTexture})
             P.Size(spellButtons[buttonIndex], 20, 20)
 
             spellButtons[buttonIndex].icon = spellButtons[buttonIndex]:CreateTexture(nil, "ARTWORK")
+            F.FixTextureDesaturation(spellButtons[buttonIndex].icon)
             spellButtons[buttonIndex].icon:SetTexCoord(0.12, 0.88, 0.12, 0.88)
             P.Point(spellButtons[buttonIndex].icon, "TOPLEFT", 2, -2)
             P.Point(spellButtons[buttonIndex].icon, "BOTTOMRIGHT", -2, 2)
@@ -5100,7 +5101,7 @@ local function CreateSpellButtons(parent, class, spells, disableds)
 
         if spellId == 45438 then
             -- 深寒凝冰 覆盖了 寒冰屏障
-            spellButtons[buttonIndex].icon:SetTexture(135841)
+            spellButtons[buttonIndex].icon:SetTexture("Interface\\Icons\\Spell_Frost_Frost")
         else
             local icon = select(2, F.GetSpellInfo(spellId))
             spellButtons[buttonIndex].icon:SetTexture(icon)
@@ -5215,7 +5216,7 @@ local function CreateSetting_BuiltIns(parent)
 end
 
 local function CreateActionPreview(parent, style)
-    local f = CreateFrame("Frame", "CellIndicatorSettings_ActionsPreview_Type"..style, parent, "BackdropTemplate")
+    local f = CreateFrame("Frame", "CellIndicatorSettings_ActionsPreview_Type"..style, parent)
     f:SetBackdrop({bgFile = Cell.vars.whiteTexture, edgeFile = Cell.vars.whiteTexture, edgeSize = P.Scale(1)})
     f:SetBackdropColor(0.2, 0.2, 0.2, 1)
     f:SetBackdropBorderColor(0, 0, 0, 1)
@@ -5228,8 +5229,7 @@ local function CreateActionPreview(parent, style)
 
     function f:UpdateTicker(speed)
         f:SetScript("OnShow", function()
-            f.actions:Display(style, {1, 1, 1})
-            f.ticker = C_Timer.NewTicker(2/speed, function()
+            f.ticker = F.C_Timer.NewTicker(2/speed, function()
                 f.actions:Display(style, {1, 1, 1})
             end)
         end)
@@ -5409,7 +5409,7 @@ local function CreateActionButtons(parent, spellTable, updateHeightFunc)
             actionButtons[i].spellIconBg = actionButtons[i]:CreateTexture(nil, "BORDER")
             actionButtons[i].spellIconBg:SetSize(16, 16)
             actionButtons[i].spellIconBg:SetPoint("TOPLEFT", 2, -2)
-            actionButtons[i].spellIconBg:SetColorTexture(0, 0, 0, 1)
+            actionButtons[i].spellIconBg:SetTexture(0, 0, 0, 1)
             actionButtons[i].spellIconBg:Hide()
 
             actionButtons[i].spellIcon = actionButtons[i]:CreateTexture(nil, "OVERLAY")
@@ -5953,43 +5953,6 @@ local function CreateSetting_HighlightType(parent)
     return widget
 end
 
-local function CreateSetting_PrivateAuraOptions(parent)
-    local widget
-
-    if not settingWidgets["privateAuraOptions"] then
-        widget = Cell.CreateFrame("CellIndicatorSettings_PrivateAuraOptions", parent, 240, 55)
-        settingWidgets["privateAuraOptions"] = widget
-
-        widget.cb1 = Cell.CreateCheckButton(widget, L["Show countdown swipe"])
-        widget.cb1:SetPoint("TOPLEFT", 5, -8)
-        widget.cb2 = Cell.CreateCheckButton(widget, L["Show countdown number"])
-        widget.cb2:SetPoint("TOPLEFT", widget.cb1, "BOTTOMLEFT", 0, -7)
-
-        -- callback
-        function widget:SetFunc(func)
-            widget.cb1.onClick = function(checked)
-                widget.cb2:SetEnabled(checked)
-                func({checked, widget.cb2:GetChecked()})
-            end
-            widget.cb2.onClick = function(checked)
-                func({widget.cb1:GetChecked(), checked})
-            end
-        end
-
-        -- show db value
-        function widget:SetDBValue(t)
-            widget.cb1:SetChecked(t[1])
-            widget.cb2:SetChecked(t[2])
-            widget.cb2:SetEnabled(t[1])
-        end
-    else
-        widget = settingWidgets["privateAuraOptions"]
-    end
-
-    widget:Show()
-    return widget
-end
-
 local function CreateSetting_Tips(parent, text)
     local widget
 
@@ -6525,7 +6488,7 @@ end
 
 
 local function CreateRoleFilter(parent, class, roles)
-    local filter = CreateFrame("Frame", nil, parent, "BackdropTemplate")
+    local filter = CreateFrame("Frame", nil, parent)
     Cell.StylizeFrame(filter)
     P.Size(filter, 170, 20)
 
@@ -6591,7 +6554,7 @@ local function CreateSetting_RoleFilters(parent)
 
         local last
         for class in F.IterateClasses() do
-            widget.filters[class] = CreateRoleFilter(widget, class, Cell.isVanilla and {"TANK", "HEALER", "DAMAGER"} or CLASS_ROLES[class])
+            widget.filters[class] = CreateRoleFilter(widget, class, CLASS_ROLES[class])
             if last then
                 widget.filters[class]:SetPoint("TOPLEFT", last, "BOTTOMLEFT", 0, -5)
             else
@@ -6788,7 +6751,6 @@ local builders = {
     ["actionsList"] = CreateSetting_ActionsList,
     ["highlightType"] = CreateSetting_HighlightType,
     ["thresholds"] = CreateSetting_Thresholds,
-    ["privateAuraOptions"] = CreateSetting_PrivateAuraOptions,
     ["shape"] = CreateSetting_Shape,
     ["targetCounterFilters"] = CreateSetting_TargetCounterFilters,
     ["dispelFilters"] = CreateSetting_DispelFilters,

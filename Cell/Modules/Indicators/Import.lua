@@ -10,6 +10,7 @@ local deflateConfig = {level = 9}
 
 local toLayout, toLayoutName
 local imported
+local isImport
 
 -------------------------------------------------
 -- import frame
@@ -32,7 +33,7 @@ local function CreateIndicatorsImportFrame()
     title:SetPoint("TOPLEFT", 5, -5)
 
     -- list
-    local listFrame = CreateFrame("Frame", nil, importFrame, "BackdropTemplate")
+    local listFrame = CreateFrame("Frame", nil, importFrame)
     Cell.StylizeFrame(listFrame, {0, 0, 0, 0}, Cell.GetAccentColorTable())
     listFrame:SetPoint("TOPLEFT", 5, -20)
     listFrame:SetPoint("BOTTOMRIGHT", importFrame, "BOTTOMLEFT", 139, 29)
@@ -42,7 +43,7 @@ local function CreateIndicatorsImportFrame()
     -- buttons
     local importBtn = Cell.CreateButton(importFrame, L["Import"], "green", {67, 20})
     importBtn:SetPoint("BOTTOMLEFT", 5, 5)
-    importBtn:SetEnabled(false)
+    F.SetEnabled(importBtn, false)
     importBtn:SetScript("OnClick", function()
         -- lower frame level
         importFrame:SetFrameLevel(Cell.frames.indicatorsTab:GetFrameLevel() + 20)
@@ -98,16 +99,6 @@ local function CreateIndicatorsImportFrame()
                     I.UpdateDefensives(CellDB[k])
                 elseif k == "externals" then
                     I.UpdateExternals(CellDB[k])
-                -- elseif k == "cleuAuras" then
-                --     if Cell.isRetail then
-                --         I.UpdateCleuAuras(CellDB[k])
-                --     elseif Cell.isCata then
-                --         CellDB[k] = nil
-                --     end
-                -- elseif k == "cleuGlow" then
-                --     if Cell.isCata then
-                --         CellDB[k] = nil
-                --     end
                 elseif k == "targetedSpellsList" then
                     Cell.vars.targetedSpellsList = F.ConvertTable(CellDB[k])
                 elseif k == "targetedSpellsGlow" then
@@ -115,6 +106,10 @@ local function CreateIndicatorsImportFrame()
                 elseif k == "actions" then
                     Cell.vars.actions = I.ConvertActions(CellDB[k])
                 end
+            end
+
+            if imported.related["targetedSpellsList"] or imported.related["targetedSpellsGlow"] then
+                I.RefreshTargetedSpells(imported.related["targetedSpellsList"] ~= nil)
             end
 
             -- fire events
@@ -139,7 +134,7 @@ local function CreateIndicatorsImportFrame()
     -- content
     local function Failed(reason)
         title:SetText(L["Import"].." > "..toLayoutName..": |cffff2222"..reason)
-        importBtn:SetEnabled(false)
+        F.SetEnabled(importBtn, false)
         listFrame.scrollFrame:Reset()
     end
 
@@ -172,7 +167,7 @@ local function CreateIndicatorsImportFrame()
 
                         if builtIn + custom == count then
                             title:SetText(L["Import"].." > "..toLayoutName..": |cff90EE90"..builtIn.." "..L["built-in(s)"].."|r, |cffFFB5C5"..custom.." "..L["custom(s)"].."|r")
-                            importBtn:SetEnabled(true)
+                            F.SetEnabled(importBtn, true)
                             imported = data
 
                             -- create buttons, update list
@@ -196,7 +191,7 @@ local function CreateIndicatorsImportFrame()
                                 end
 
                                 b:HookScript("OnEnter", function()
-                                    if b:GetFontString():IsTruncated() then
+                                    if F.IsFontStringTruncated(b:GetFontString()) then
                                         CellTooltip:SetOwner(b, "ANCHOR_NONE")
                                         CellTooltip:SetPoint("RIGHT", b, "LEFT", -1, 0)
                                         CellTooltip:AddLine(b:GetText())
@@ -249,7 +244,7 @@ local function CreateIndicatorsImportFrame()
         Cell.frames.indicatorsTab.mask:Hide()
         textArea:SetText("")
         listFrame.scrollFrame:Reset()
-        importBtn:SetEnabled(false)
+        F.SetEnabled(importBtn, false)
     end)
 
     importFrame:SetScript("OnShow", function()

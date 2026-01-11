@@ -1462,7 +1462,7 @@ function F.Revise()
     -- r137-release
     if CellDB["revise"] and dbRevision < 137 then
         if not strfind(CellDB["snippets"][0]["code"], "^%-%- snippets can be found") then
-            CellDB["snippets"][0]["code"] = "-- snippets can be found at https://github.com/enderneko/Cell/tree/master/.snippets\n"..CellDB["snippets"][0]["code"]
+            CellDB["snippets"][0]["code"] = "-- snippets can be found at https://github.com/NoM0Re/Cell-WotLK/tree/main/Cell/.snippets\n"..CellDB["snippets"][0]["code"]
         end
     end
 
@@ -3324,51 +3324,12 @@ function F.Revise()
         end
     end
 
-    -- 254-release
-    if CellDB["revise"] and dbRevision < 254 then
-        if Cell.isMists then
-            for _, layout in pairs(CellDB["layouts"]) do
-                for _, i in pairs(layout["indicators"]) do
-                    if i.indicatorName == "powerText" then
-                        -- reset powerText filter
-                        i.filters = F.Copy(Cell.defaults.layout.indicators[Cell.defaults.indicatorIndices.powerText].filters)
-                    end
-                end
-
-                -- reset power filters
-                layout["powerFilters"] = F.Copy(Cell.defaults.layout.powerFilters)
-            end
-
-            -- enable healAbsorb
-            CellDB["appearance"]["healAbsorb"][1] = true
-
-            -- reset layoutAutoSwitch
-            -- if not CellDB["layoutAutoSwitch"] then
-            --     CellDB["layoutAutoSwitch"] = {}
-            -- end
-            -- if not CellDB["layoutAutoSwitch"]["role"] then
-            --     CellDB["layoutAutoSwitch"]["role"] = {
-            --         ["TANK"] = F.Copy(Cell.defaults.layoutAutoSwitch),
-            --         ["HEALER"] = F.Copy(Cell.defaults.layoutAutoSwitch),
-            --         ["DAMAGER"] = F.Copy(Cell.defaults.layoutAutoSwitch),
-            --     }
-            -- end
-            -- if not CellDB["layoutAutoSwitch"][Cell.vars.playerClass] then
-            --     CellDB["layoutAutoSwitch"][Cell.vars.playerClass] = {}
-            -- end
-
-            if not next(CellDB["actions"]) then
-                CellDB["actions"] = I.GetDefaultActions()
-            end
-        end
-    end
-
     -- r262-release
     if CellDB["revise"] and dbRevision < 262 then
         CellDB["general"]["alwaysUpdateAuras"] = false
 
         if type(CellDB["general"]["hideBlizzardRaidManager"]) ~= "boolean" then
-            CellDB["general"]["hideBlizzardRaidManager"] = true
+            CellDB["general"]["hideBlizzardRaidManager"] = false
         end
 
         for _, layout in pairs(CellDB["layouts"]) do
@@ -3382,35 +3343,16 @@ function F.Revise()
 
     -- r264-release
     if CellDB["revise"] and dbRevision < 264 then
-        if Cell.isRetail then
-            F.TInsertIfNotExists(CellDB["targetedSpellsList"], unpack(I.GetDefaultTargetedSpellsList()))
-        end
-
         CellDB["tools"]["buffTracker"][5] = U.GetBuffTrackerDefaults()
     end
 
-    -- 269-release
-    if CellDB["revise"] and dbRevision < 269 then
-        if Cell.isMists and GetCVar("portal") == "CN" then
-            for _, layout in pairs(CellDB["layouts"]) do
-                for _, i in pairs(layout["indicators"]) do
-                    if i.indicatorName == "powerText" then
-                        -- reset powerText filter
-                        i.filters = F.Copy(Cell.defaults.layout.indicators[Cell.defaults.indicatorIndices.powerText].filters)
-                    end
-                end
-
-                -- reset power filters
-                layout["powerFilters"] = F.Copy(Cell.defaults.layout.powerFilters)
-            end
-
-            -- enable healAbsorb
-            CellDB["appearance"]["healAbsorb"][1] = true
-
-            if not next(CellDB["actions"]) then
-                CellDB["actions"] = I.GetDefaultActions()
-            end
-        end
+    -- LibHealComm is always enabled in this backport.
+    local defaultSnippet = CellDB["snippets"] and CellDB["snippets"][0]
+    if defaultSnippet and type(defaultSnippet["code"]) == "string" then
+        defaultSnippet["code"] = defaultSnippet["code"]:gsub(
+            "\n\n%-%- use LibHealComm %(boolean, non%-retail%)\nCELL_USE_LIBHEALCOMM = [^\r\n]*",
+            ""
+        )
     end
 
     -- ----------------------------------------------------------------------- --
@@ -3447,8 +3389,9 @@ function F.Revise()
             end
             for i = 1, maxKey do
                 if i <= Cell.defaults.builtIns then
-                    if not temp[i] or i ~= Cell.defaults.indicatorIndices[temp[i]["indicatorName"]] then
-                        F.Debug(layoutName, "RESET_WRONG", i, name)
+                    local indicatorName = temp[i] and temp[i]["indicatorName"]
+                    if not indicatorName or i ~= Cell.defaults.indicatorIndices[indicatorName] then
+                        F.Debug(layoutName, "RESET_WRONG", i, indicatorName)
                         temp[i] = F.Copy(Cell.defaults.layout.indicators[i])
                     end
                 else

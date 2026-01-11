@@ -100,7 +100,7 @@ end)
 -------------------------------------------------
 -- icon options
 -------------------------------------------------
-local iconAnimation, iconAnchor, iconAnchorTo, iconiconGlowColor, size, xOffset, yOffset
+local iconAnimation, iconAnchor, iconAnchorTo, iconGlowColor, size, xOffset, yOffset
 
 local function UpdateIconPreview()
     local setting = CellDB["spellRequest"]["sharedIconOptions"]

@@ -6,10 +6,10 @@ local A = Cell.animations
 
 local readyBtn, pullBtn
 
-local buttonsFrame = CreateFrame("Frame", "CellReadyAndPullFrame", Cell.frames.mainFrame, "SecureFrameTemplate,BackdropTemplate")
+local buttonsFrame = CreateFrame("Frame", "CellReadyAndPullFrame", Cell.frames.mainFrame, "SecureFrameTemplate")
 Cell.frames.readyAndPullFrame = buttonsFrame
 P.Size(buttonsFrame, 60, 55)
-PixelUtil.SetPoint(buttonsFrame, "TOPRIGHT", CellParent, "CENTER", -1, -1)
+F.PixelUtil.SetPoint(buttonsFrame, "TOPRIGHT", CellParent, "CENTER", -1, -1)
 buttonsFrame:SetClampedToScreen(true)
 buttonsFrame:SetMovable(true)
 buttonsFrame:RegisterForDrag("LeftButton")
@@ -81,13 +81,13 @@ local function Start(sec, sendToChat)
         pullTicker = nil
     end
     pullBtn.sec = sec
-    pullTicker = C_Timer.NewTicker(1, function()
+    pullTicker = F.C_Timer.NewTicker(1, function()
         pullBtn.sec = pullBtn.sec - 1
         if pullBtn.sec == 0 then
             isPullTickerRunning = false
             pullBtn:SetText(L["Go!"])
             if sendToChat then
-                SendChatMessage(L["Go!"], IsInRaid() and "RAID_WARNING" or "PARTY")
+                SendChatMessage(L["Go!"], F.IsInRaid() and "RAID_WARNING" or "PARTY")
             end
         elseif pullBtn.sec == -1 then
             pullBtn:SetText(L["Pull"])
@@ -95,9 +95,9 @@ local function Start(sec, sendToChat)
             pullBtn:SetText(pullBtn.sec)
             if sendToChat then
                 if pullBtn.sec > 3 then
-                    SendChatMessage(pullBtn.sec, IsInRaid() and "RAID" or "PARTY")
+                    SendChatMessage(pullBtn.sec, F.IsInRaid() and "RAID" or "PARTY")
                 else
-                    SendChatMessage(pullBtn.sec, IsInRaid() and "RAID_WARNING" or "PARTY")
+                    SendChatMessage(pullBtn.sec, F.IsInRaid() and "RAID_WARNING" or "PARTY")
                 end
             end
         end
@@ -116,6 +116,16 @@ local function Stop()
     end
 end
 
+local function SendDBMPull(sec)
+    local command = SlashCmdList and SlashCmdList["DEADLYBOSSMODS"]
+    if not DBM or type(command) ~= "function" then
+        return
+    end
+
+    command("pull "..sec)
+    return true
+end
+
 function pullBtn:CHAT_MSG_ADDON(prefix, text)
     if prefix == "D4" then -- DBM
         local pre, sec = strsplit("\t", text)
@@ -123,6 +133,14 @@ function pullBtn:CHAT_MSG_ADDON(prefix, text)
         if pre == "PT" and sec > 0 then -- start
             Start(sec)
         elseif pre == "PT" and sec  == 0 then -- cancel
+            Stop()
+        end
+    elseif prefix == "DBMv4-PT" then
+        local sec = strsplit("\t", text)
+        sec = tonumber(sec)
+        if sec and sec > 0 then
+            Start(sec)
+        elseif sec == 0 then
             Stop()
         end
 
@@ -150,13 +168,9 @@ readyBtn = Cell.CreateStatusBarButton(buttonsFrame, L["Ready"], {60, 17}, 35)
 -- P.Point(readyBtn, "BOTTOMLEFT", pullBtn, "TOPLEFT", 0, 3)
 readyBtn:Hide()
 
-readyBtn:RegisterForClicks("LeftButtonDown", "RightButtonDown")
-readyBtn:SetScript("OnClick", function(self, button)
-    if button == "LeftButton" then
-        DoReadyCheck()
-    else
-        InitiateRolePoll()
-    end
+readyBtn:RegisterForClicks("LeftButtonDown")
+readyBtn:SetScript("OnClick", function()
+    DoReadyCheck()
 end)
 
 local ready = {}
@@ -166,18 +180,18 @@ readyBtn:SetScript("OnEvent", function(self, event, arg1, arg2)
         readyBtn:Start()
         wipe(ready)
         tinsert(ready, "player")
-        readyBtn:SetText("1 / "..GetNumGroupMembers())
+        readyBtn:SetText("1 / "..F.GetNumGroupMembers())
     elseif event == "READY_CHECK_FINISHED" then
         readyBtn:Stop()
         readyBtn:SetText(L["Ready"])
     else
         if arg2 then -- isReady
-            if IsInRaid() then
+            if F.IsInRaid() then
                 if string.find(arg1, "raid") then tinsert(ready, arg1) end
             else
                 tinsert(ready, arg1)
             end
-            readyBtn:SetText(#ready.." / "..GetNumGroupMembers())
+            readyBtn:SetText(#ready.." / "..F.GetNumGroupMembers())
         end
     end
 end)
@@ -283,14 +297,14 @@ local function CheckPermission()
         buttonsFrame:UnregisterEvent("PLAYER_REGEN_ENABLED")
         if F.HasPermission() and CellDB["tools"]["readyAndPull"][1] then
             readyBtn:Show()
-            readyBtn:SetEnabled(true)
+            F.SetEnabled(readyBtn, true)
             pullBtn:Show()
-            pullBtn:SetEnabled(true)
+            F.SetEnabled(pullBtn, true)
         else
             readyBtn:Hide()
-            readyBtn:SetEnabled(false)
+            F.SetEnabled(readyBtn, false)
             pullBtn:Hide()
-            pullBtn:SetEnabled(false)
+            F.SetEnabled(pullBtn, false)
         end
     end
 end
@@ -329,27 +343,24 @@ local function UpdateTools(which)
             pullBtn:SetAttribute("macrotext1", "/pull "..CellDB["tools"]["readyAndPull"][3][2])
             pullBtn:SetAttribute("macrotext2", "/pull 0")
         else -- default
-            if Cell.isRetail then
-                -- C_PartyInfo.DoCountdown(CellDB["tools"]["readyAndPull"][3][2])
-                pullBtn:RegisterEvent("START_TIMER")
-                pullBtn:SetAttribute("macrotext1", "/cd "..CellDB["tools"]["readyAndPull"][3][2])
-                pullBtn:SetAttribute("macrotext2", "/cd 0")
-            else
-                pullBtn:SetAttribute("type1", nil)
-                pullBtn:SetAttribute("type2", nil)
-                pullBtn:SetScript("OnMouseUp", function(self, button)
-                    if button == "LeftButton" then
-                        SendChatMessage(L["Pull in %d sec"]:format(CellDB["tools"]["readyAndPull"][3][2]), IsInRaid() and "RAID_WARNING" or "PARTY")
-                        Start(CellDB["tools"]["readyAndPull"][3][2], true)
-                    else
-                        if isPullTickerRunning then
-                            SendChatMessage(L["Pull timer cancelled"], IsInRaid() and "RAID_WARNING" or "PARTY")
-                            Stop()
-                        end
+            pullBtn:SetAttribute("type1", nil)
+            pullBtn:SetAttribute("type2", nil)
+            pullBtn:RegisterEvent("CHAT_MSG_ADDON")
+            pullBtn:SetScript("OnMouseUp", function(self, button)
+                if button == "LeftButton" then
+                    local sec = CellDB["tools"]["readyAndPull"][3][2]
+                    if not SendDBMPull(sec) then
+                        SendChatMessage(L["Pull in %d sec"]:format(sec), F.IsInRaid() and "RAID_WARNING" or "PARTY")
+                        Start(sec, true)
                     end
-                    pullBtn.onMouseUp()
-                end)
-            end
+                else
+                    if not SendDBMPull(0) and isPullTickerRunning then
+                        SendChatMessage(L["Pull timer cancelled"], F.IsInRaid() and "RAID_WARNING" or "PARTY")
+                        Stop()
+                    end
+                end
+                pullBtn.onMouseUp()
+            end)
         end
 
         UpdateStyle()

@@ -10,9 +10,7 @@ local Comm = LibStub:GetLibrary("AceComm-3.0")
 -----------------------------------------
 local sendChannel
 local function UpdateSendChannel()
-    if IsInGroup(LE_PARTY_CATEGORY_INSTANCE) then
-        sendChannel = "INSTANCE_CHAT"
-    elseif IsInRaid() then
+    if F.IsInRaid() then
         sendChannel = "RAID"
     else
         sendChannel = "PARTY"
@@ -56,7 +54,7 @@ local function UpdateName(who)
         if strfind(who, "-") then
             who = F.ToShortName(who)
         else
-            who = who.."-"..GetNormalizedRealmName()
+            who = who.."-"..F.GetNormalizedRealmName()
         end
         F.HandleUnitButton("name", who, Update)
     end
@@ -68,10 +66,10 @@ local function UpdateName(who)
 end
 
 local function CheckNicknames()
-    if IsInGroup() then
+    if F.IsInGroup() then
         if CellDB["nicknames"]["sync"] then
             if nic_check then nic_check:Cancel() end
-            nic_check = C_Timer.NewTimer(random(3), function()
+            nic_check = F.C_Timer.NewTimer(random(3), function()
                 UpdateSendChannel()
                 Comm:SendCommMessage("CELL_CNIC", "chk", sendChannel, nil, "ALERT")
             end)
@@ -111,9 +109,10 @@ function nickname:PLAYER_ENTERING_WORLD()
     Cell.Fire("UpdateNicknames")
 end
 
-function nickname:GROUP_ROSTER_UPDATE()
+function nickname:RAID_ROSTER_UPDATE()
     CheckNicknames()
 end
+nickname.PARTY_MEMBERS_CHANGED = nickname.RAID_ROSTER_UPDATE
 ---------------------------------------
 
 local function UpdateNicknames(which, value1, value2)
@@ -126,7 +125,8 @@ local function UpdateNicknames(which, value1, value2)
 
         if CellDB["nicknames"]["sync"] then
             CheckNicknames()
-            nickname:RegisterEvent("GROUP_ROSTER_UPDATE")
+            nickname:RegisterEvent("RAID_ROSTER_UPDATE")
+            nickname:RegisterEvent("PARTY_MEMBERS_CHANGED")
         end
 
         -- customs
@@ -151,11 +151,13 @@ local function UpdateNicknames(which, value1, value2)
     elseif which == "sync" then
         if CellDB["nicknames"]["sync"] then
             CheckNicknames()
-            nickname:RegisterEvent("GROUP_ROSTER_UPDATE")
+            nickname:RegisterEvent("RAID_ROSTER_UPDATE")
+            nickname:RegisterEvent("PARTY_MEMBERS_CHANGED")
         else
             -- clear all except mine
             F.RemoveElementsExceptKeys(Cell.vars.nicknames, Cell.vars.playerNameShort)
-            nickname:UnregisterEvent("GROUP_ROSTER_UPDATE")
+            nickname:UnregisterEvent("RAID_ROSTER_UPDATE")
+            nickname:UnregisterEvent("PARTY_MEMBERS_CHANGED")
 
             if nic_check then nic_check:Cancel() end
             -- disabled, notify others
@@ -176,7 +178,7 @@ local function UpdateNicknames(which, value1, value2)
         CheckSelf()
 
         -- notify others
-        if IsInGroup() and CellDB["nicknames"]["sync"] then
+        if F.IsInGroup() and CellDB["nicknames"]["sync"] then
             UpdateSendChannel()
             Comm:SendCommMessage("CELL_NIC", Cell.vars.playerNickname or "CELL_NONE", sendChannel)
         end
@@ -216,7 +218,7 @@ Comm:RegisterComm("CELL_CNIC", function(prefix, message, channel, sender)
     if nic_check then nic_check:Cancel() end
 
     if nic_send then nic_send:Cancel() end
-    nic_send = C_Timer.NewTimer(3, function()
+    nic_send = F.C_Timer.NewTimer(3, function()
         UpdateSendChannel()
         if CellDB["nicknames"]["sync"] then
             Comm:SendCommMessage("CELL_NIC", Cell.vars.playerNickname or "CELL_NONE", sendChannel)
@@ -232,7 +234,7 @@ Comm:RegisterComm("CELL_NIC", function(prefix, message, channel, sender)
 
     if CellDB["nicknames"]["sync"] then
         if not string.find(sender, "-") then
-            sender = sender .. "-" .. GetNormalizedRealmName()
+            sender = sender .. "-" .. F.GetNormalizedRealmName()
         end
 
         if message == "CELL_NONE" or Cell.vars.nicknameBlacklist[sender] or LBW.ContainsBadWords(message) then
@@ -271,7 +273,7 @@ f:SetScript("OnEvent", function()
                 timer:Cancel()
                 timer = nil
             end
-            timer = C_Timer.NewTimer(3, UpdateAll)
+            timer = F.C_Timer.NewTimer(3, UpdateAll)
         end)
     end
 end)

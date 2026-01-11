@@ -26,11 +26,9 @@ local function DoImport(noReload)
     end
 
     -- deal with invalid
-    if Cell.isMists or Cell.isCata or Cell.isTBC or Cell.isVanilla then
-        imported["quickCast"] = nil
-        imported["quickAssist"] = nil
-        imported["appearance"]["healAbsorb"][1] = false
-    end
+    imported["quickCast"] = nil
+    imported["quickAssist"] = nil
+    imported["appearance"]["healAbsorb"][1] = false
 
     -- layouts
     local builtInFound = {}
@@ -82,12 +80,9 @@ local function DoImport(noReload)
         imported["clickCastings"] = nil
 
     elseif imported["characterDB"] and imported["characterDB"]["clickCastings"] then
-        if (Cell.isVanilla or Cell.isTBC or Cell.isWrath or Cell.isCata) and imported["characterDB"]["clickCastings"]["class"] == Cell.vars.playerClass then -- WRATH -> WRATH, same class
+        if imported["characterDB"]["clickCastings"]["class"] == Cell.vars.playerClass then -- WRATH -> WRATH, same class
             clickCastings = imported["characterDB"]["clickCastings"]
-            if Cell.isVanilla and GetNumTalentGroups() == 1 then -- no dual spec system
-                clickCastings["useCommon"] = true
-            end
-        else -- WRATH -> RETAIL
+        else -- different class
             clickCastings = nil
         end
         imported["characterDB"]["clickCastings"] = nil
@@ -104,11 +99,7 @@ local function DoImport(noReload)
         imported["layoutAutoSwitch"] = nil
 
     elseif imported["characterDB"] and imported["characterDB"]["layoutAutoSwitch"] then
-        if Cell.isVanilla or Cell.isTBC or Cell.isWrath or Cell.isCata then -- WRATH -> WRATH
-            layoutAutoSwitch = imported["characterDB"]["layoutAutoSwitch"]
-        else -- CLASSIC -> RETAIL
-            layoutAutoSwitch = nil
-        end
+        layoutAutoSwitch = imported["characterDB"]["layoutAutoSwitch"]
         imported["characterDB"]["layoutAutoSwitch"] = nil
     end
 
@@ -143,22 +134,13 @@ local function DoImport(noReload)
     end
 
     --! overwrite
-    if Cell.isRetail or Cell.isMists then
-        if not ignoredIndices["clickCastings"] then
-            CellDB["clickCastings"] = clickCastings
-        end
-        if not ignoredIndices["layouts"] then
-            CellDB["layoutAutoSwitch"] = layoutAutoSwitch
-        end
-    else
-        if not ignoredIndices["clickCastings"] then
-            CellCharacterDB["clickCastings"] = clickCastings
-        end
-        if not ignoredIndices["layouts"] then
-            CellCharacterDB["layoutAutoSwitch"] = layoutAutoSwitch
-        end
-        CellCharacterDB["revise"] = imported["revise"]
+    if not ignoredIndices["clickCastings"] then
+        CellCharacterDB["clickCastings"] = clickCastings
     end
+    if not ignoredIndices["layouts"] then
+        CellCharacterDB["layoutAutoSwitch"] = layoutAutoSwitch
+    end
+    CellCharacterDB["revise"] = imported["revise"]
 
     for k, v in pairs(imported) do
         CellDB[k] = v
@@ -203,7 +185,7 @@ end
 -- import confirmation
 ---------------------------------------------------------------------
 local function CreateImportConfirmationFrame()
-    confirmationFrame = CreateFrame("Frame", nil, Cell.frames.aboutTab, "BackdropTemplate")
+    confirmationFrame = CreateFrame("Frame", nil, Cell.frames.aboutTab)
     confirmationFrame:SetSize(361, 165)
     Cell.StylizeFrame(confirmationFrame, {0.1, 0.1, 0.1, 0.95}, Cell.GetAccentColorTable())
     confirmationFrame:EnableMouse(true)
@@ -334,7 +316,7 @@ local function CreateImportConfirmationFrame()
         for name, cb in pairs(checkboxes) do
             if name == "nickname" then
                 cb:SetChecked(false)
-                cb:SetEnabled(imported["nicknames"])
+                F.SetEnabled(cb, imported["nicknames"])
             else
                 cb:SetChecked(true)
             end
@@ -346,7 +328,7 @@ end
 -- import/export frame
 ---------------------------------------------------------------------
 local function CreateImportExportFrame()
-    importExportFrame = CreateFrame("Frame", "CellOptionsFrame_ImportExport", Cell.frames.aboutTab, "BackdropTemplate")
+    importExportFrame = CreateFrame("Frame", "CellOptionsFrame_ImportExport", Cell.frames.aboutTab)
     importExportFrame:Hide()
     Cell.StylizeFrame(importExportFrame, nil, Cell.GetAccentColorTable())
     importExportFrame:EnableMouse(true)
@@ -427,19 +409,19 @@ local function CreateImportExportFrame()
 
                         if success and data then
                             title:SetText(L["Import"]..": r"..version)
-                            importBtn:SetEnabled(true)
+                            F.SetEnabled(importBtn, true)
                             imported = data
                         else
                             title:SetText(L["Import"]..": |cffff2222"..L["Error"])
-                            importBtn:SetEnabled(false)
+                            F.SetEnabled(importBtn, false)
                         end
                     else -- incompatible version
                         title:SetText(L["Import"]..": |cffff2222"..L["Incompatible Version"])
-                        importBtn:SetEnabled(false)
+                        F.SetEnabled(importBtn, false)
                     end
                 else
                     title:SetText(L["Import"]..": |cffff2222"..L["Error"])
-                    importBtn:SetEnabled(false)
+                    F.SetEnabled(importBtn, false)
                 end
             else
                 eb:SetText(exported)
@@ -490,7 +472,7 @@ function F.ShowImportFrame()
     importExportFrame:Show()
     isImport = true
     importBtn:Show()
-    importBtn:SetEnabled(false)
+    F.SetEnabled(importBtn, false)
 
     exported = ""
     title:SetText(L["Import"])
@@ -526,10 +508,8 @@ function F.ShowExportFrame()
 
     includeNicknamesCB:SetChecked(false)
     includeNicknamesCB:Show()
-    if Cell.isVanilla or Cell.isTBC or Cell.isWrath or Cell.isCata then
-        includeCharacterCB:SetChecked(false)
-        includeCharacterCB:Show()
-    end
+    includeCharacterCB:SetChecked(false)
+    includeCharacterCB:Show()
     textArea:SetPoint("TOPLEFT", 5, -50)
     P.Height(importExportFrame, 230)
 end

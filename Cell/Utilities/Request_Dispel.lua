@@ -117,12 +117,12 @@ local function CreateDRPane()
     drMacroEB = Cell.CreateEditBox(drPane, 412, 20)
     drMacroEB:SetPoint("TOPLEFT", drResponseDD, "BOTTOMLEFT", 0, -27)
 
-    drMacroEB:SetText("/run C_ChatInfo.SendAddonMessage(\"CELL_REQ_D\",\"D\",\"RAID\")")
+    drMacroEB:SetText("/run SendAddonMessage(\"CELL_REQ_D\",\"D\",\"RAID\")")
     drMacroEB:SetCursorPosition(0)
 
     drMacroEB:SetScript("OnTextChanged", function(self, userChanged)
         if userChanged then
-            drMacroEB:SetText("/run C_ChatInfo.SendAddonMessage(\"CELL_REQ_D\",\"D\",\"RAID\")")
+            drMacroEB:SetText("/run SendAddonMessage(\"CELL_REQ_D\",\"D\",\"RAID\")")
             drMacroEB:SetCursorPosition(0)
             drMacroEB:HighlightText()
         end
@@ -291,7 +291,7 @@ LoadList = function(scrollToBottom)
             debuffItems[i].spellIconBg = debuffItems[i]:CreateTexture(nil, "BORDER")
             debuffItems[i].spellIconBg:SetSize(16, 16)
             debuffItems[i].spellIconBg:SetPoint("TOPLEFT", 2, -2)
-            debuffItems[i].spellIconBg:SetColorTexture(0, 0, 0, 1)
+            debuffItems[i].spellIconBg:SetTexture(0, 0, 0, 1)
             debuffItems[i].spellIconBg:Hide()
 
             debuffItems[i].spellIcon = debuffItems[i]:CreateTexture(nil, "OVERLAY")
@@ -402,43 +402,36 @@ local flipBookFrames = {
 function U.CreateDispelRequestText(parent)
     local drText = CreateFrame("Frame", parent:GetName().."DispelRequestText", parent.widgets.indicatorFrame)
     parent.widgets.drText = drText
-    drText:SetIgnoreParentAlpha(true)
     drText:SetFrameLevel(parent.widgets.indicatorFrame:GetFrameLevel()+110)
     drText:Hide()
 
     local tex = drText:CreateTexture(nil, "ARTWORK")
-    -- tex:SetTexture("Interface/AddOns/Cell/Media/FlipBooks/dispel.png")
+    -- tex:SetTexture("Interface/AddOns/Cell/Media/FlipBooks/dispel.blp")
     --tex:SetAtlas("UI-HUD-ActionBar-GCD-Flipbook")
     --tex:SetTexture("interface/hud/uiactionbarfx")
     --tex:SetTexCoord(0.412598, 0.458496, 0.393555, 0.898438) -- NOTE: SetTexCoord will NOT work
     tex:SetAllPoints(drText)
-    tex:SetParentKey("Flipbook")
+    drText.Flipbook = tex
 
-    local ag = drText:CreateAnimationGroup()
-    ag:SetLooping("REPEAT")
-
-    local flip = ag:CreateAnimation("FlipBook")
-    flip:SetDuration(1)
-    flip:SetFlipBookRows(8)
-    flip:SetFlipBookColumns(4)
-    flip:SetFlipBookFrames(31)
-    --flip:SetFlipBookFrameWidth(0)
-    --flip:SetFlipBookFrameHeight(0)
-    flip:SetChildKey("Flipbook")
+    local flip = F.CreateFlipBook(tex, 1, 8, 4, 31, true)
 
     function drText:Display()
         drText:Show()
-        ag:Play()
+        flip:Play()
     end
 
     function drText:SetType(type)
-        tex:SetTexture("Interface/AddOns/Cell/Media/FlipBooks/dispel_"..type..".png")
-        flip:SetFlipBookFrames(flipBookFrames[type])
+        tex:SetTexture("Interface/AddOns/Cell/Media/FlipBooks/dispel_"..type..".tga")
+        flip:SetFrames(flipBookFrames[type])
     end
 
     function drText:SetColor(color)
         tex:SetVertexColor(unpack(color))
     end
+
+    drText:SetScript("OnHide", function()
+        flip:Stop()
+    end)
 end
 
 -------------------------------------------------

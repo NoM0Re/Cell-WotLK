@@ -1,0 +1,30 @@
+package-as: Cell
+
+enable-nolib-creation: no
+
+manual-changelog:
+  filename: .release-changelog.md
+  markup-type: markdown
+
+ignore:
+  - .github
+  - .agents-cache
+  - .discord-release.md
+  - .gitattributes
+  - .gitignore
+  - .kanban
+  - .luacheckrc
+  - .pkgmeta
+  - .release-changelog-section.md
+  - AGENTS.md
+  - APIDocumentation
+  - CHANGELOG.md
+  - CODE_OF_CONDUCT.md
+  - CONTRIBUTING.md
+  - README.md
+  - Cell/.snippets
+  - Cell/Media/Roles/default.zip
+  - Cell/Tools
+
+move-folders:
+  Cell/Cell: Cell

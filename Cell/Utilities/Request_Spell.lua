@@ -27,10 +27,10 @@ local function ShowSpellOptions(index)
 
     if responseType == "all" then
         srMacroText:SetText(L["Macro"])
-        macroText = "/run C_ChatInfo.SendAddonMessage(\"CELL_REQ_S\",\""..spellId.."\",\"RAID\")"
+        macroText = "/run SendAddonMessage(\"CELL_REQ_S\",\""..spellId.."\",\"RAID\")"
     elseif responseType == "me" then
         srMacroText:SetText(L["Macro"])
-        macroText = "/run C_ChatInfo.SendAddonMessage(\"CELL_REQ_S\",\""..spellId..":"..GetUnitName("player").."\",\"RAID\")"
+        macroText = "/run SendAddonMessage(\"CELL_REQ_S\",\""..spellId..":"..GetUnitName("player").."\",\"RAID\")"
     else -- whisper
         srMacroText:SetText(L["Contains"])
         keywords = CellDB["spellRequest"]["spells"][index]["keywords"]
@@ -57,7 +57,7 @@ local function ShowSpellOptions(index)
     end
 
     canEdit = not CellDB["spellRequest"]["spells"][index]["isBuiltIn"] -- not built-in
-    srDeleteBtn:SetEnabled(canEdit)
+    F.SetEnabled(srDeleteBtn, canEdit)
 
     srMacroText:Show()
     srMacroEB:SetCursorPosition(0)
@@ -86,7 +86,7 @@ local function HideSpellOptions()
     canEdit = nil
     srType = nil
     srSpellsDD:ClearSelected()
-    srDeleteBtn:SetEnabled(false)
+    F.SetEnabled(srDeleteBtn, false)
     srTypeOptionsBtn:Hide()
     CellDropdownList:Hide()
     srMacroText:Hide()
@@ -434,7 +434,7 @@ local spellId, buffId, spellName, spellIcon
 local spellEditFrame, title, spellIdEB, buffIdEB, addBtn, cancelBtn
 
 local function CreateSpellEditFrame()
-    spellEditFrame = CreateFrame("Frame", nil, Cell.frames.utilitiesTab, "BackdropTemplate")
+    spellEditFrame = CreateFrame("Frame", nil, Cell.frames.utilitiesTab)
     spellEditFrame:Hide()
     Cell.StylizeFrame(spellEditFrame, {0.1, 0.1, 0.1, 0.95}, Cell.GetAccentColorTable())
     spellEditFrame:SetFrameLevel(Cell.frames.utilitiesTab:GetFrameLevel() + 50)
@@ -471,7 +471,7 @@ local function CreateSpellEditFrame()
         if not id then
             CellSpellTooltip:Hide()
             spellId = nil
-            addBtn:SetEnabled(false)
+            F.SetEnabled(addBtn, false)
             spellIdEB.tip:SetTextColor(1, 0, 0, 0.777)
             return
         end
@@ -480,12 +480,12 @@ local function CreateSpellEditFrame()
         if not name then
             CellSpellTooltip:Hide()
             spellId = nil
-            addBtn:SetEnabled(false)
+            F.SetEnabled(addBtn, false)
             spellIdEB.tip:SetTextColor(1, 0, 0, 0.777)
             return
         end
 
-        C_Timer.After(0.1, function()
+        F.C_Timer.After(0.1, function()
             CellSpellTooltip:SetOwner(spellEditFrame, "ANCHOR_NONE")
             CellSpellTooltip:SetPoint("TOPLEFT", spellEditFrame, "BOTTOMLEFT", 0, -1)
             CellSpellTooltip:SetSpellByID(id)
@@ -495,7 +495,7 @@ local function CreateSpellEditFrame()
         spellId = id
         spellName = name
         spellIcon = icon
-        addBtn:SetEnabled(spellId and buffId)
+        F.SetEnabled(addBtn, spellId and buffId)
         spellIdEB.tip:SetTextColor(0, 1, 0, 0.777)
     end)
 
@@ -518,7 +518,7 @@ local function CreateSpellEditFrame()
         local id = tonumber(buffIdEB:GetText())
         if not id then
             buffId = nil
-            addBtn:SetEnabled(false)
+            F.SetEnabled(addBtn, false)
             buffIdEB.tip:SetTextColor(1, 0, 0, 0.777)
             return
         end
@@ -526,13 +526,13 @@ local function CreateSpellEditFrame()
         local name = F.GetSpellInfo(id)
         if not name then
             buffId = nil
-            addBtn:SetEnabled(false)
+            F.SetEnabled(addBtn, false)
             buffIdEB.tip:SetTextColor(1, 0, 0, 0.777)
             return
         end
 
         buffId = id
-        addBtn:SetEnabled(spellId and buffId)
+        F.SetEnabled(addBtn, spellId and buffId)
         buffIdEB.tip:SetTextColor(0, 1, 0, 0.777)
     end)
 
@@ -563,7 +563,7 @@ ShowSpellEditFrame = function(index)
     spellEditFrame:Show()
 
     if not index then -- add
-        spellIdEB:SetEnabled(true)
+        F.SetEnabled(spellIdEB, true)
         spellIdEB:SetFocus()
 
         title:SetText(L["Add new spell"])
@@ -620,7 +620,7 @@ ShowSpellEditFrame = function(index)
             spellEditFrame:Hide()
         end)
     else
-        spellIdEB:SetEnabled(false)
+        F.SetEnabled(spellIdEB, false)
         buffIdEB:SetFocus()
 
         spellIdEB:SetText(CellDB["spellRequest"]["spells"][index]["spellId"])
@@ -668,7 +668,6 @@ end
 function U.CreateSpellRequestIcon(parent)
     local srIcon = CreateFrame("Frame", parent:GetName().."SpellRequestIcon", parent.widgets.indicatorFrame)
     parent.widgets.srIcon = srIcon
-    srIcon:SetIgnoreParentAlpha(true)
     srIcon:SetFrameLevel(parent.widgets.indicatorFrame:GetFrameLevel()+110)
     srIcon:Hide()
 

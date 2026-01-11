@@ -1,43 +1,37 @@
-# Cell WotLK
+<div align="center">
 
-[![version](https://img.shields.io/github/v/release/enderneko/Cell)](https://github.com/enderneko/Cell/releases)
-[![GitHub commit activity](https://img.shields.io/github/commit-activity/m/enderneko/Cell)](https://github.com/enderneko/Cell/commits/master)
-[![last commit](https://img.shields.io/github/last-commit/enderneko/Cell)](https://github.com/enderneko/Cell/commits/master)
-![wakatime](https://wakatime.com/badge/user/b2ffce60-8269-440f-81a0-7316f36a6085/project/82ff5b42-1fec-416d-9d8d-50b586ceea0c.svg)
+# Cell WotLK (3.3.5a)
 
-[![Discord](https://img.shields.io/discord/1122747237546610760?label=Discord&color=5865F2)](https://discord.gg/9PSe3fKQGJ)
-[![KOOK](https://img.shields.io/badge/KOOK-87eb00)](https://kook.top/q4T7yp)
-[![Curseforge](https://img.shields.io/curseforge/dt/409666?label=CurseForge&color=F16436)](https://www.curseforge.com/wow/addons/cell)
-[![Wago](https://img.shields.io/badge/Wago-Cell-ad1319)](https://addons.wago.io/addons/cell)
+[![Latest release](https://img.shields.io/github/v/release/NoM0Re/Cell-WotLK?label=release)](https://github.com/NoM0Re/Cell-WotLK/releases/latest) [![Discord](https://img.shields.io/discord/259362419372064778?style=flat&logo=discord&label=Discord)](https://discord.gg/UXSc7nt) [![GitHub Issues](https://img.shields.io/github/issues/NoM0Re/Cell-WotLK)](https://github.com/NoM0Re/Cell-WotLK/issues) [![PayPal](https://img.shields.io/badge/Buy_me_a_coffee-100000?style=flat&logo=PayPal&logoColor=white&labelColor=3b7bbf&color=grey)](https://streamelements.com/nom0ree/tip)
 
-[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/enderneko)
+[![Cell logo](https://media.forgecdn.net/avatars/thumbnails/302/26/256/256/637365498585337836.png)](https://github.com/NoM0Re/Cell-WotLK/releases/latest)
+</div>
 
 Cell is a nice raid frame addon inspired by several great addons, such as __CompactRaid__, __Grid2__, __Aptechka__ and __VuhDo__.
 With a more human-friendly interface, Cell can provide a better user experience, better than ever.
 Hope you enjoy.
 
-&nbsp;
-
 ## Features
 
-- __Layouts:__ auto switch layout by spec/role, supports party, raid, arena, and battleground.
-- __Customizable Appearance:__ textures, colors and alphas.
-- __Built-in Click-Castings:__ supports keyboard and multi-button mouse.
-- __Indicators:__ dozens of built-in indicators and unlimited custom indicators (icon, bar, rect, text, icons).
-- __Raid Debuffs:__ debuffs priority and glow.
-- __Useful Raid Tools:__ ready check, countdown, rebuff, death report, marks, battleres.
-- __Nice Options UI:__ I mean yes it's pretty darn good!
-- __Spotlight Frame:__ extra 15 unit buttons, can be set to Target, Focus, Unit, Tank, etc.
-- __Quick Assist:__ for Augmentation Evokers!
-- __Compatibility:__ [BigDebuffs](https://www.curseforge.com/wow/addons/bigdebuffs), [Class Colors](https://www.curseforge.com/wow/addons/classcolors), [OmniCD](https://www.curseforge.com/wow/addons/omnicd) and of course, [WAs](https://wago.io/weakauras).
+**Layouts:** auto switch layout by spec/role, supports party, raid, arena, and battleground.<br>
+**Customizable Appearance:** textures, colors and alphas.<br>
+**Built-in Click-Castings:** supports keyboard and multi-button mouse.<br>
+**Indicators:** dozens of built-in indicators and unlimited custom indicators (icon, bar, rect, text, icons).<br>
+**Raid Debuffs:** debuffs priority and glow.<br>
+**Useful Raid Tools:** ready check, countdown, rebuff, death report, marks, battleres.<br>
+**Nice Options UI:** I mean yes it's pretty darn good!<br>
+**Spotlight Frame:** extra 15 unit buttons, can be set to Target, Focus, Unit, Tank, etc.<br>
+**Compatibility:** BigDebuffs, Class Colors, OmniCD and of course, WAs.
 
-&nbsp;
+## Quick Start
+
+To open the options window, type `/cell` or `/cell options` into your chat and hit enter.
 
 ## Code Snippets
 
-__Try disabling all snippets if there are any issues.__
+Try disabling all snippets if there are any issues.
 
-Check <https://github.com/enderneko/Cell/tree/master/.snippets> for more snippets.
+Check https://github.com/NoM0Re/Cell-WotLK/tree/main/Cell/.snippets for more snippets.
 
 ### Usage
 
@@ -45,66 +39,43 @@ Check <https://github.com/enderneko/Cell/tree/master/.snippets> for more snippet
 2. New -> Paste -> Save -> Tick the AutoRun box
 3. Reload
 
-&nbsp;
+## Install
 
-## Not supported and probably won't be included in the future
+1. [Download the latest release package](https://github.com/NoM0Re/Cell-WotLK/releases/latest/download/Cell.zip).
+2. Open the archive and extract all addon folders to `Interface\AddOns`.
 
-- Custom border
-- Changing layout based on group size
-- Other click-casting addons
+## Client Extensions
 
-&nbsp;
+* [Large Address Aware](https://github.com/NoM0Re/WeakAuras-WotLK/wiki/Large-Address-Aware): Enables the WoW client to use up to 4GB of RAM instead of the default 2GB, improving stability and performance on modern systems. This patch is highly recommended for WotLK 3.3.5a users.
+* [Awesome WotLK](https://github.com/NoM0Re/WeakAuras-WotLK/wiki/awesome_wotlk): Adds modern nameplate search functions, unit tracking, and events. Cell uses these functions for improved enemy nameplate discovery when the extension is available.
+* [Deadly Boss Mods](https://github.com/DeadlyBossMods/DBM-WotLK): Supplies encounter callbacks and can handle Cell's pull timer.
 
-## Slash Commands
+## Extensions
 
-Use __/cell__ for more information.
-
-&nbsp;
+- [bKader Shared Media](https://github.com/bkader/SharedMedia): For more bar, textures, fonts, sounds, with alot custom stuff added (popular version).
+- [SharedMedia](https://github.com/NoM0Re/SharedMedia): For more bar textures, fonts (retail version).
+- [SharedMediaAdditionalFonts](https://github.com/NoM0Re/SharedMediaAdditionalFonts): For more fonts.
+- [MerfinPlus](https://drive.google.com/file/d/1xDCpDpStRbXdSBKYOeZHpYBt_dRDqb3g/view?usp=sharing): Adds predefined tts, sounds, statusbar, fonts and more.
 
 ## Guides & Sharing
 
 - [ULTIMATE Cell Raid Frames AddOn Setup GUIDE for HEALERS (Reat TV)](https://www.youtube.com/watch?v=ntXko7htO2I)
 - [Healer UI & Addon Guide for Dragonflight Season 4 (yumytv)](https://www.youtube.com/watch?v=XcXvXxFipOE)
 - [Addon Spotlight: How to set up Cell + OmniCD for Augmentation Evoker (JFunkGaming)](https://www.youtube.com/watch?v=PMvtgJv-808)
+- [团队框架插件 Cell 配置流程分享 (钛锬)](https://bbs.nga.cn/read.php?tid=32921170)
 
-&nbsp;
+## Examples
 
-## Want to help improve Raid Debuffs?
+For some examples of what WeakAuras can do, take a look at [wago.io](https://wago.io/search/imports/wow/cell/) where tons of people upload their creations utilizing Cell!
 
-Use [Instance Spell Collector](https://www.curseforge.com/wow/addons/instance-spell-collector) to collect debuffs. Then create a PR or submit a ticket on GitHub.
+## Problems
 
-&nbsp;
+* If you've discovered something that's clearly wrong, or if you get an error, please create a [ticket](https://github.com/NoM0Re/Cell-WotLK/issues).
+* Feel free to join our [Discord Community](https://discord.gg/UXSc7nt) to talk, get help and discuss everything about Cell
 
-## Localization
+## Official Repository and License
 
-If you want to help with the localization, please visit <https://legacy.curseforge.com/wow/addons/cell/localization>, instead of creating a PR.
-
-&nbsp;
-
-## About Pull Requests
-
-- Before submitting any PRs related to new features or feature optimizations/changes, it's best to ask me first. Otherwise, there's a high chance they won't be accepted.
-- Features that are listed as "not supported" above will be rejected.
-
-If a PR is not accepted, it might not be because it's not good enough, it just doesn't align with my design philosophy.
-For rejected PRs, I suggest you implement them through code snippets.
-What I want to express is that I don't oppose any code snippets making changes to Cell, even if it's not what I envisioned.
-Regardless, I appreciate all the contributions you've made!
-
-&nbsp;
-
-## Misc
-
-Discord: <https://discord.gg/9PSe3fKQGJ>
-
-## License & Attribution
-
-This project is a backported and modified version of the Cell addon.
-
-- Original author: enderneko
-- Backport author: NoM0Re
-
-The original author retains full copyright.
-Modification and redistribution are permitted only by explicit authorization.
-
-All rights not expressly granted remain reserved.
+This is the official Cell WotLK 3.3.5a port maintained at [NoM0Re/Cell-WotLK](https://github.com/NoM0Re/Cell-WotLK).<br>
+Cell WotLK is derived from Cell by **enderneko** and remains subject to the custom terms included in [LICENSE](LICENSE).<br>
+**NoM0Re** maintains this repository and is authorized by enderneko to backport, modify, and distribute Cell under the conditions recorded in [PERMISSION.md](PERMISSION.md).<br>
+The authorization applies exclusively to NoM0Re and does not grant redistribution rights to other parties. Copyright and attribution notices must be preserved.

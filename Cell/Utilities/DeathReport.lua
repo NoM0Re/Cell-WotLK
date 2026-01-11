@@ -3,14 +3,12 @@ local L = Cell.L
 local F = Cell.funcs
 
 local UnitIsFeignDeath = UnitIsFeignDeath
-local IsInGroup = IsInGroup
-local IsEncounterInProgress = IsEncounterInProgress
-local GetSpellLink = C_Spell.GetSpellLink or GetSpellLink
+local GetSpellLink = GetSpellLink
 
 ----------------------------------------------------
 -- vars
 ----------------------------------------------------
-local init, instanceType, inInstance
+local init, instanceType, inInstance, enabled
 local deathLogs = {
     -- time, type, name, ability, school, amount, overkill, resisted, blocked, absorbed, critical, sourceName
 }
@@ -34,6 +32,12 @@ else
     criticalText = strlower(string.gsub(_G.TEXT_MODE_A_STRING_RESULT_CRITICAL, "[()]", ""))
 end
 
+-- WotLK's combat text formats use %d, but F.FormatNumber returns a string.
+overkillFormat = string.gsub(overkillFormat, "%%d", "%%s")
+resistedFormat = string.gsub(resistedFormat, "%%d", "%%s")
+blockedFormat = string.gsub(blockedFormat, "%%d", "%%s")
+absorbedFormat = string.gsub(absorbedFormat, "%%d", "%%s")
+
 ----------------------------------------------------
 -- functions
 ----------------------------------------------------
@@ -52,11 +56,7 @@ end
 local function Send(msg)
     -- F.Print(strupper(ACTION_UNIT_DIED)..": "..msg)
     if Cell.hasHighestPriority then
-        if IsInGroup(LE_PARTY_CATEGORY_INSTANCE) then
-            SendChatMessage(strupper(ACTION_UNIT_DIED)..": "..msg, "INSTANCE_CHAT")
-        else
-            SendChatMessage(strupper(ACTION_UNIT_DIED)..": "..msg, IsInRaid() and "RAID" or "PARTY")
-        end
+        SendChatMessage(strupper(ACTION_UNIT_DIED)..": "..msg, F.IsInRaid() and "RAID" or "PARTY")
     end
 end
 
@@ -64,7 +64,7 @@ local function Report(guid)
     if not deathLogs[guid] or deathLogs[guid]["reported"] then return end
     deathLogs[guid]["reported"] = true
 
-    if instanceType == "raid" and IsEncounterInProgress() then
+    if instanceType == "raid" and F.IsEncounterInProgress() then
         count = count + 1
         if count > limit then
             return
@@ -128,45 +128,62 @@ end
 local frame = CreateFrame("Frame")
 -- frame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
 
+function frame:ENCOUNTER_START()
+    count = 0
+end
+
+function frame:ENCOUNTER_END()
+    frame:GROUP_ROSTER_UPDATE()
+end
+
+local function RegisterEncounterCallbacks()
+    Cell.RegisterCallback("EncounterStart", "DeathReport_EncounterStart", frame.ENCOUNTER_START)
+    Cell.RegisterCallback("EncounterEnd", "DeathReport_EncounterEnd", frame.ENCOUNTER_END)
+end
+
+local function UnregisterEncounterCallbacks()
+    Cell.UnregisterCallback("EncounterStart", "DeathReport_EncounterStart")
+    Cell.UnregisterCallback("EncounterEnd", "DeathReport_EncounterEnd")
+end
+
 function frame:PLAYER_ENTERING_WORLD()
     local isIn, iType = IsInInstance()
     instanceType = iType
 
     if instanceType == "pvp" or instanceType == "arena" then
-        frame:UnregisterEvent("ENCOUNTER_START")
-        frame:UnregisterEvent("ENCOUNTER_END")
+        UnregisterEncounterCallbacks()
         frame:UnregisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
-        frame:UnregisterEvent("GROUP_ROSTER_UPDATE")
+        frame:UnregisterEvent("RAID_ROSTER_UPDATE")
+        frame:UnregisterEvent("PARTY_MEMBERS_CHANGED")
         return
     else
-        frame:RegisterEvent("GROUP_ROSTER_UPDATE")
+        frame:RegisterEvent("RAID_ROSTER_UPDATE")
+        frame:RegisterEvent("PARTY_MEMBERS_CHANGED")
     end
 
     if not init then frame:GROUP_ROSTER_UPDATE() end
     if isIn then
         inInstance = true
         if instanceType == "raid" then
-            frame:RegisterEvent("ENCOUNTER_START")
+            RegisterEncounterCallbacks()
             count = 0
         else
-            frame:UnregisterEvent("ENCOUNTER_START")
+            UnregisterEncounterCallbacks()
         end
-    elseif inInstance then -- left insntance
+    elseif inInstance then -- left instance
         inInstance = false
         wipe(deathLogs)
-        frame:UnregisterEvent("ENCOUNTER_START")
+        UnregisterEncounterCallbacks()
     end
     -- texplore(deathLogs)
 end
 
 local timer
 function frame:GROUP_ROSTER_UPDATE()
-    if IsInGroup() then
-        if IsEncounterInProgress() then
-            frame:RegisterEvent("ENCOUNTER_END")
-        else
+    if F.IsInGroup() then
+        if not F.IsEncounterInProgress() then
             if timer then timer:Cancel() end
-            timer = C_Timer.NewTimer(7, function()
+            timer = F.C_Timer.NewTimer(7, function()
                 F.CheckPriority()
             end)
         end
@@ -175,62 +192,54 @@ function frame:GROUP_ROSTER_UPDATE()
     end
     init = true
 end
-
-function frame:ENCOUNTER_END()
-    frame:UnregisterEvent("ENCOUNTER_END")
-    frame:GROUP_ROSTER_UPDATE()
-end
-
-function frame:ENCOUNTER_START()
-    count = 0
-end
+frame.RAID_ROSTER_UPDATE = frame.GROUP_ROSTER_UPDATE
+frame.PARTY_MEMBERS_CHANGED = frame.GROUP_ROSTER_UPDATE
 
 function frame:COMBAT_LOG_EVENT_UNFILTERED(...)
-    local timestamp, event, hideCaster, sourceGUID, sourceName, sourceFlags, sourceRaidFlags, destGUID, destName, destFlags, destRaidFlags, arg12, arg13, arg14 = ...
+    local timestamp, event, sourceGUID, sourceName, sourceFlags, destGUID, destName, destFlags, arg9, arg10, arg11 = ...
     local amount, overkill, school, resisted, blocked, absorbed, critical -- glancing, crushing
 
-    -- arg12, arg13, arg14,
+    -- arg9, arg10, arg11,
     -- UNIT_DIED: recapID, unconsciousOnDeath
     -- ENVIRONMENTAL: environmentalType
     -- SPELL/RANGE: spellId, spellName, spellSchool
 
-    -- if string.find(destGUID, "^Player") then -- debug
-    if string.find(destGUID, "^Player") and F.IsFriend(destFlags) then
+    if F.IsPlayer(destGUID) and F.IsFriend(destFlags) then
         if event == "SPELL_INSTAKILL" then
             UpdateDeathLog(destGUID, timestamp, "INSTAKILL", destName)
         end
 
         if event == "ENVIRONMENTAL_DAMAGE" then
-            amount, overkill, school, resisted, blocked, absorbed, critical = select(13, ...)
+            amount, overkill, school, resisted, blocked, absorbed, critical = select(10, ...)
             amount = amount == 0 and absorbed or amount
             -- _G.ENVIRONMENTAL_DAMAGE.." "..
-            UpdateDeathLog(destGUID, timestamp, "ENVIRONMENTAL", destName, strlower(_G["ACTION_ENVIRONMENTAL_DAMAGE_" .. strupper(arg12)]), nil, amount)
+            UpdateDeathLog(destGUID, timestamp, "ENVIRONMENTAL", destName, strlower(_G["ACTION_ENVIRONMENTAL_DAMAGE_" .. strupper(arg9)]), nil, amount)
         end
 
         if event == "SWING_DAMAGE" then
-            amount, overkill, school, resisted, blocked, absorbed, critical = select(12, ...)
+            amount, overkill, school, resisted, blocked, absorbed, critical = select(9, ...)
             UpdateDeathLog(destGUID, timestamp, "SWING", destName, nil, school, amount, overkill or -1, resisted, blocked, absorbed, critical, sourceName)
         end
 
         if event == "SPELL_DAMAGE" or event == "SPELL_PERIODIC_DAMAGE" or event == "RANGE_DAMAGE" then
-            if not blacklist[arg12] then
-                amount, overkill, school, resisted, blocked, absorbed, critical = select(15, ...)
-                local spellLink = GetSpellLink(arg12)
+            if not blacklist[arg9] then
+                amount, overkill, school, resisted, blocked, absorbed, critical = select(12, ...)
+                local spellLink = GetSpellLink(arg9)
                 UpdateDeathLog(destGUID, timestamp, "SPELL", destName, spellLink, school, amount, overkill or -1, resisted, blocked, absorbed, critical, sourceName)
             end
         end
 
         if event == "SPELL_AURA_APPLIED" then
-            -- print(arg12, arg13, arg14)
-            if arg12 == 27827 or arg12 == 358164 then -- 救赎之魂 or 灵魂疲惫
-                C_Timer.After(0.25, function()
+            -- print(arg9, arg10, arg11)
+            if arg9 == 27827 or arg9 == 358164 then -- 救赎之魂 or 灵魂疲惫
+                F.C_Timer.After(0.25, function()
                     Report(destGUID)
                 end)
             end
         end
 
         if event == "UNIT_DIED" and not UnitIsFeignDeath(destName) then
-            C_Timer.After(0.5, function()
+            F.C_Timer.After(0.5, function()
                 if not deathLogs[destGUID] then deathLogs[destGUID] = {["name"]=destName} end
                 Report(destGUID)
             end)
@@ -239,11 +248,7 @@ function frame:COMBAT_LOG_EVENT_UNFILTERED(...)
 end
 
 frame:SetScript("OnEvent", function(self, event, ...)
-    if event == "COMBAT_LOG_EVENT_UNFILTERED" then
-        self:COMBAT_LOG_EVENT_UNFILTERED(CombatLogGetCurrentEventInfo())
-    else
-        self[event](self, ...)
-    end
+    self[event](self, ...)
 end)
 
 ----------------------------------------------------
@@ -261,12 +266,12 @@ Cell.RegisterCallback("UpdatePriority", "DeathReport_UpdatePriority", UpdatePrio
 ----------------------------------------------------
 -- UpdateTools
 ----------------------------------------------------
-local enabled
 local function UpdateTools(which)
     if not which or which == "deathReport" then
         if CellDB["tools"]["deathReport"][1] then
             frame:RegisterEvent("PLAYER_ENTERING_WORLD")
-            frame:RegisterEvent("GROUP_ROSTER_UPDATE")
+            frame:RegisterEvent("RAID_ROSTER_UPDATE")
+            frame:RegisterEvent("PARTY_MEMBERS_CHANGED")
 
             limit = CellDB["tools"]["deathReport"][2]
             count = 0
@@ -276,6 +281,7 @@ local function UpdateTools(which)
             enabled = true
         else
             frame:UnregisterAllEvents()
+            UnregisterEncounterCallbacks()
             wipe(deathLogs)
             enabled = false
         end

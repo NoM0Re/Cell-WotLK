@@ -3,6 +3,7 @@
 	<Script file="ExpansionData.lua"/>
 	<Script file="ExpansionData_deDE.lua"/>
 	<Script file="ExpansionData_frFR.lua"/>
+	<Script file="ExpansionData_esES.lua"/>
 	<Script file="ExpansionData_koKR.lua"/>
 	<Script file="ExpansionData_ruRU.lua"/>
 	<Script file="ExpansionData_zhCN.lua"/>

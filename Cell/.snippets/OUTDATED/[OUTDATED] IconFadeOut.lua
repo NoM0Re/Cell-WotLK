@@ -99,10 +99,10 @@ local function SetCooldown(frame, start, duration, debuffType, texture, count, r
     local r, g, b
     if debuffType then
         r, g, b = DebuffTypeColor[debuffType].r, DebuffTypeColor[debuffType].g, DebuffTypeColor[debuffType].b
-        frame.spark:SetColorTexture(r, g, b, 1)
+        frame.spark:SetTexture(r, g, b, 1)
     else
         r, g, b = 0, 0, 0
-        frame.spark:SetColorTexture(0.5, 0.5, 0.5, 1)
+        frame.spark:SetTexture(0.5, 0.5, 0.5, 1)
     end
 
     frame:SetBackdropColor(r, g, b, 1)

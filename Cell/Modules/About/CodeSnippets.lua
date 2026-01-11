@@ -15,7 +15,7 @@ local function CreateCodeSnippetsFrame()
     codeSnippetsFrame:SetToplevel(true)
     codeSnippetsFrame:SetPoint("CENTER")
 
-    local reloadBtn = Cell.CreateButton(codeSnippetsFrame.header, _G.RELOADUI, "blue", {100, 20})
+    local reloadBtn = Cell.CreateButton(codeSnippetsFrame.header, L["Reload UI"], "blue", {100, 20})
     reloadBtn:SetPoint("TOPRIGHT", codeSnippetsFrame.header.closeBtn, "TOPLEFT", P.Scale(1), 0)
     reloadBtn:SetScript("OnClick", ReloadUI)
 
@@ -35,7 +35,7 @@ local function CreateCodeSnippetsFrame()
     end)
 
     -- top
-    topPane = CreateFrame("Frame", nil, codeSnippetsFrame, "BackdropTemplate")
+    topPane = CreateFrame("Frame", nil, codeSnippetsFrame)
     -- Cell.StylizeFrame(topPane, {0,1,0,0.1}, {0,0,0,0})
     topPane:SetPoint("TOPLEFT", 10, -40)
     topPane:SetPoint("TOPRIGHT", -10, -40)
@@ -59,7 +59,7 @@ local function CreateCodeSnippetsFrame()
     end)
 
     -- bottom
-    bottomPane = CreateFrame("Frame", nil, codeSnippetsFrame, "BackdropTemplate")
+    bottomPane = CreateFrame("Frame", nil, codeSnippetsFrame)
     -- Cell.StylizeFrame(bottomPane, {0,1,0,0.1}, {0,0,0,0})
     bottomPane:SetPoint("BOTTOMLEFT", 10, 10)
     bottomPane:SetPoint("BOTTOMRIGHT", -10, 10)
@@ -68,7 +68,7 @@ local function CreateCodeSnippetsFrame()
     local runBtn = Cell.CreateButton(bottomPane, L["Run"], "red", {200, 20})
     bottomPane.runBtn = runBtn
     runBtn:SetPoint("BOTTOMLEFT")
-    runBtn:SetEnabled(false)
+    F.SetEnabled(runBtn, false)
     runBtn:SetScript("OnClick", function()
         local errorMsg = RunSnippet(codePane:GetText())
         if errorMsg then
@@ -88,22 +88,22 @@ local function CreateCodeSnippetsFrame()
     local cancelBtn = Cell.CreateButton(bottomPane, L["Cancel"], "red", {200, 20})
     bottomPane.cancelBtn = cancelBtn
     cancelBtn:SetPoint("BOTTOMRIGHT")
-    cancelBtn:SetEnabled(false)
+    F.SetEnabled(cancelBtn, false)
     cancelBtn:SetScript("OnClick", function()
         codePane:SetText(CellDB["snippets"][selected]["code"])
-        cancelBtn:SetEnabled(false)
-        bottomPane.saveBtn:SetEnabled(false)
+        F.SetEnabled(cancelBtn, false)
+        F.SetEnabled(bottomPane.saveBtn, false)
     end)
 
     local saveBtn = Cell.CreateButton(bottomPane, L["Save"], "red", {200, 20})
     bottomPane.saveBtn = saveBtn
     saveBtn:SetPoint("BOTTOMLEFT", runBtn, "BOTTOMRIGHT", 10, 0)
     saveBtn:SetPoint("BOTTOMRIGHT", cancelBtn, "BOTTOMLEFT", -10, 0)
-    saveBtn:SetEnabled(false)
+    F.SetEnabled(saveBtn, false)
     saveBtn:SetScript("OnClick", function()
         CellDB["snippets"][selected]["code"] = codePane:GetText()
-        saveBtn:SetEnabled(false)
-        bottomPane.cancelBtn:SetEnabled(false)
+        F.SetEnabled(saveBtn, false)
+        F.SetEnabled(bottomPane.cancelBtn, false)
     end)
 
     -- current line number
@@ -113,7 +113,7 @@ local function CreateCodeSnippetsFrame()
     -- code
     codePane = Cell.CreateScrollEditBox(codeSnippetsFrame, nil, 3)
     codePane.scrollFrame:SetScrollStep(1000)
-    codePane.eb:SetEnabled(false)
+    F.SetEnabled(codePane.eb, false)
     codePane.eb:SetFontObject(ChatFontNormal)
     Cell.StylizeFrame(codePane.scrollFrame, {0.115, 0.115, 0.115, 0.9})
     codePane:SetPoint("TOPLEFT", topPane, "BOTTOMLEFT", 0, -10)
@@ -122,8 +122,8 @@ local function CreateCodeSnippetsFrame()
 
     codePane.eb:HookScript("OnTextChanged", function(self, userChanged)
         local changed = CellDB["snippets"][selected]["code"] ~= codePane:GetText()
-        saveBtn:SetEnabled(changed)
-        cancelBtn:SetEnabled(changed)
+        F.SetEnabled(saveBtn, changed)
+        F.SetEnabled(cancelBtn, changed)
     end)
 
     codePane.eb:SetScript("OnEditFocusGained", function()
@@ -152,7 +152,7 @@ local function CreateCodeSnippetsFrame()
     Cell.IndentationLib.enable(codePane.eb)
 
     -- errorPopup
-    errorPopup = CreateFrame("Frame", nil, codePane, "BackdropTemplate")
+    errorPopup = CreateFrame("Frame", nil, codePane)
     errorPopup:SetFrameStrata("TOOLTIP")
     Cell.StylizeFrame(errorPopup, {0.15, 0.1, 0.1, 0.95})
     errorPopup:SetWidth(200)
@@ -277,7 +277,7 @@ LoadList = function()
 
             -- tooltip
             buttons[i].ShowTooltip = function()
-                if buttons[i].label:IsTruncated() then
+                if F.IsFontStringTruncated(buttons[i].label) then
                     CellTooltip:SetOwner(buttons[i], "ANCHOR_NONE")
                     CellTooltip:SetPoint("BOTTOMLEFT", buttons[i], "TOPLEFT", 0, 1)
                     CellTooltip:AddLine(buttons[i].label:GetText())
@@ -353,10 +353,10 @@ LoadSnippet = function(index)
         selected = index
         forceLoadSelected = false
         codePane:SetText(CellDB["snippets"][index]["code"])
-        codePane:SetEnabled(true)
-        bottomPane.runBtn:SetEnabled(true)
-        bottomPane.saveBtn:SetEnabled(false)
-        bottomPane.cancelBtn:SetEnabled(false)
+        F.SetEnabled(codePane.eb, true)
+        F.SetEnabled(bottomPane.runBtn, true)
+        F.SetEnabled(bottomPane.saveBtn, false)
+        F.SetEnabled(bottomPane.cancelBtn, false)
         renameEB:Hide()
         errorPopup:Hide()
     end
@@ -426,14 +426,12 @@ end
 function F.GetDefaultSnippet()
     return {
         ["autorun"] = true,
-        ["code"] = "-- snippets can be found at https://github.com/enderneko/Cell/tree/master/.snippets\n" ..
+        ["code"] = "-- snippets can be found at https://github.com/NoM0Re/Cell-WotLK/tree/main/Cell/.snippets\n" ..
             "-- use \"/run CellDB['snippets'][0]=nil ReloadUI()\" to reset this snippet\n\n" ..
             "-- cooldown style for icon/block indicators (\"VERTICAL\", \"CLOCK\")\n" ..
             "CELL_COOLDOWN_STYLE = \"VERTICAL\"\n\n" ..
             "-- fade out unit button if hp percent > (number: 0-1)\n" ..
             "CELL_FADE_OUT_HEALTH_PERCENT = nil\n\n" ..
-            "-- add summon icons to Status Icon indicator (boolean, retail only)\n" ..
-            "CELL_SUMMON_ICONS_ENABLED = false\n\n" ..
             "-- use separate width and height for custom indicator icons (boolean)\n" ..
             "CELL_RECTANGULAR_CUSTOM_INDICATOR_ICONS = false\n\n" ..
             "-- Use nicknames from Details! Damage Meter (boolean, NickTag-1.0 library)\n" ..
@@ -445,9 +443,7 @@ function F.GetDefaultSnippet()
             "-- unit button border color ({r, g, b, a}, number: 0-1)\n" ..
             "CELL_BORDER_COLOR = {0, 0, 0, 1}\n\n" ..
             "-- show raid pet owner name (\"VEHICLE\", \"NAME\", nil)\n" ..
-            "CELL_SHOW_GROUP_PET_OWNER_NAME = nil\n\n" ..
-            "-- use LibHealComm (boolean, non-retail)\n" ..
-            "CELL_USE_LIBHEALCOMM = false"
+            "CELL_SHOW_GROUP_PET_OWNER_NAME = nil"
     }
 end
 

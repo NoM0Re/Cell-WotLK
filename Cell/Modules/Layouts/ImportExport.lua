@@ -75,7 +75,7 @@ local function DoImport(overwriteExisting)
 end
 
 local function CreateLayoutImportExportFrame()
-    importExportFrame = CreateFrame("Frame", "CellOptionsFrame_LayoutsImportExport", Cell.frames.layoutsTab, "BackdropTemplate")
+    importExportFrame = CreateFrame("Frame", "CellOptionsFrame_LayoutsImportExport", Cell.frames.layoutsTab)
     importExportFrame:Hide()
     Cell.StylizeFrame(importExportFrame, nil, Cell.GetAccentColorTable())
     importExportFrame:EnableMouse(true)
@@ -139,20 +139,20 @@ local function CreateLayoutImportExportFrame()
 
                         if success and data then
                             title:SetText(L["Import"]..": "..(name == "default" and _G.DEFAULT or name))
-                            importBtn:SetEnabled(true)
+                            F.SetEnabled(importBtn, true)
                             imported["name"] = name
                             imported["data"] = data
                         else
                             title:SetText(L["Import"]..": |cffff2222"..L["Error"])
-                            importBtn:SetEnabled(false)
+                            F.SetEnabled(importBtn, false)
                         end
                     else -- incompatible version
                         title:SetText(L["Import"]..": |cffff2222"..L["Incompatible Version"])
-                        importBtn:SetEnabled(false)
+                        F.SetEnabled(importBtn, false)
                     end
                 else
                     title:SetText(L["Import"]..": |cffff2222"..L["Error"])
-                    importBtn:SetEnabled(false)
+                    F.SetEnabled(importBtn, false)
                 end
             else
                 eb:SetText(exported)
@@ -199,7 +199,7 @@ function F.ShowLayoutImportFrame()
     importExportFrame:Show()
     isImport = true
     importBtn:Show()
-    importBtn:SetEnabled(false)
+    F.SetEnabled(importBtn, false)
 
     exported = ""
     title:SetText(L["Import"])

@@ -24,7 +24,7 @@ local function UpdateFontString(b)
 end
 
 function F.CreateUtilityList(anchor)
-    listFrame = CreateFrame("Frame", nil, Cell.frames.optionsFrame, "BackdropTemplate")
+    listFrame = CreateFrame("Frame", nil, Cell.frames.optionsFrame)
     Cell.StylizeFrame(listFrame, {0,1,0,0.1}, {0,0,0,1})
     listFrame:SetPoint("TOPLEFT", anchor, "TOPRIGHT", 1, 0)
     listFrame:Hide()
@@ -53,20 +53,7 @@ function F.CreateUtilityList(anchor)
     buttons["dispelRequest"]:SetPoint("TOPLEFT", buttons["spellRequest"], "BOTTOMLEFT")
     buttons["dispelRequest"]:SetPoint("TOPRIGHT", buttons["spellRequest"], "BOTTOMRIGHT")
 
-    if Cell.isRetail then
-        buttons["quickAssist"] = Cell.CreateButton(listFrame, L["Quick Assist"], "transparent-accent", {20, 20}, true)
-        buttons["quickAssist"].id = "quickAssist"
-        buttons["quickAssist"]:SetPoint("TOPLEFT", buttons["dispelRequest"], "BOTTOMLEFT")
-        buttons["quickAssist"]:SetPoint("TOPRIGHT", buttons["dispelRequest"], "BOTTOMRIGHT")
-
-        buttons["quickCast"] = Cell.CreateButton(listFrame, L["Quick Cast"], "transparent-accent", {20, 20}, true)
-        buttons["quickCast"].id = "quickCast"
-        buttons["quickCast"]:SetPoint("TOPLEFT", buttons["quickAssist"], "BOTTOMLEFT")
-        buttons["quickCast"]:SetPoint("TOPRIGHT", buttons["quickAssist"], "BOTTOMRIGHT")
-        P.Size(listFrame, ceil(max(dumbFS1:GetStringWidth(), dumbFS2:GetStringWidth())) + 13, 20*5)
-    else
-        P.Size(listFrame, ceil(max(dumbFS1:GetStringWidth(), dumbFS2:GetStringWidth())) + 13, 20*3)
-    end
+    P.Size(listFrame, ceil(max(dumbFS1:GetStringWidth(), dumbFS2:GetStringWidth())) + 13, 20*3)
 
     local highlight = Cell.CreateButtonGroup(buttons, function(id)
         lastShown = id

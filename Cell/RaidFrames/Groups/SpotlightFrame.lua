@@ -8,12 +8,17 @@ local P = Cell.pixelPerfectFuncs
 local LCG = LibStub("LibCustomGlow-1.0")
 
 local placeholders, assignmentButtons = {}, {}
-local menu, target, targettarget, focus, focustarget, unit, unitname, unitpet, unittarget, tank, boss1target, clear
+local menu, target, targettarget, focus, focustarget, unit, unitname, unitpet, unittarget, tank, healer, boss1target, clear
 local tanks, healers, names = {}, {}, {}
 local UpdateTanks, UpdateHealers, UpdateNames
-local tankUpdateRequired, nameUpdateRequired
+local tankUpdateRequired, healerUpdateRequired, nameUpdateRequired
 local tooltipPoint, tooltipRelativePoint, tooltipX, tooltipY
 local NONE = strlower(_G.NONE)
+
+local function SaveAssignment(_, index, unit)
+    menu:Save(index, unit)
+end
+
 -------------------------------------------------
 -- spotlightFrame
 -------------------------------------------------
@@ -22,11 +27,11 @@ Cell.frames.spotlightFrame = spotlightFrame
 
 local anchorFrame = CreateFrame("Frame", "CellSpotlightAnchorFrame", spotlightFrame)
 Cell.frames.spotlightFrameAnchor = anchorFrame
-PixelUtil.SetPoint(anchorFrame, "TOPLEFT", CellParent, "CENTER", 1, -1)
+F.PixelUtil.SetPoint(anchorFrame, "TOPLEFT", CellParent, "CENTER", 1, -1)
 anchorFrame:SetMovable(true)
 anchorFrame:SetClampedToScreen(true)
 
-local hoverFrame = CreateFrame("Frame", nil, spotlightFrame, "BackdropTemplate")
+local hoverFrame = CreateFrame("Frame", nil, spotlightFrame)
 hoverFrame:SetPoint("TOP", anchorFrame, 0, 1)
 hoverFrame:SetPoint("BOTTOM", anchorFrame, 0, -1)
 hoverFrame:SetPoint("LEFT", anchorFrame, -1, 0)
@@ -142,9 +147,10 @@ local function CreateAssignmentButton(index)
             menu:GetFrameRef("assignment"..index):SetAttribute("text", nil)
             menu:Hide()
 
-            menu:CallMethod("Save", index, nil)
+            control:CallMethod("Save", index, nil)
         end
     ]])
+    b.Save = SaveAssignment
 
     b:SetScript("OnAttributeChanged", function(self, name, value)
         if name ~= "text" then return end
@@ -185,7 +191,7 @@ local function CreateAssignmentButton(index)
 
         if InCombatLockdown() then return end
 
-        local f = F.GetMouseFocus()
+        local f = GetMouseFocus()
 
         if f == WorldFrame then
             f = F.GetUnitButtonByGUID(UnitGUID("mouseover") or "")
@@ -218,7 +224,7 @@ end
 -- placeholders
 -------------------------------------------------
 local function CreatePlaceHolder(index)
-    local placeholder = CreateFrame("Frame", "CellSpotlightFramePlaceholder"..index, spotlightFrame, "BackdropTemplate")
+    local placeholder = CreateFrame("Frame", "CellSpotlightFramePlaceholder"..index, spotlightFrame)
     placeholder:Hide()
     Cell.StylizeFrame(placeholder, {0, 0, 0, 0.27})
 
@@ -284,7 +290,7 @@ end
 -------------------------------------------------
 -- menu
 -------------------------------------------------
-menu = CreateFrame("Frame", "CellSpotlightAssignmentMenu", spotlightFrame, "BackdropTemplate,SecureHandlerAttributeTemplate,SecureHandlerShowHideTemplate")
+menu = CreateFrame("Frame", "CellSpotlightAssignmentMenu", spotlightFrame, "SecureHandlerAttributeTemplate,SecureHandlerShowHideTemplate")
 menu:SetFrameStrata("FULLSCREEN_DIALOG")
 menu:SetToplevel(true)
 menu:SetClampedToScreen(true)
@@ -324,8 +330,9 @@ target:SetAttribute("_onclick", [[
     menu:GetFrameRef("assignment"..index):SetAttribute("text", "target")
     menu:Hide()
 
-    menu:CallMethod("Save", index, "target")
+    control:CallMethod("Save", index, "target")
 ]])
+target.Save = SaveAssignment
 
 -- NOTE: no EVENT for this kind of targets， use OnUpdate
 targettarget = Cell.CreateButton(menu, L["Target of Target"], "transparent-accent", {20, 20}, true, false, nil, nil, "SecureHandlerAttributeTemplate,SecureHandlerClickTemplate")
@@ -342,8 +349,9 @@ targettarget:SetAttribute("_onclick", [[
     menu:GetFrameRef("assignment"..index):SetAttribute("text", "targettarget")
     menu:Hide()
 
-    menu:CallMethod("Save", index, "targettarget")
+    control:CallMethod("Save", index, "targettarget")
 ]])
+targettarget.Save = SaveAssignment
 
 focus = Cell.CreateButton(menu, L["Focus"], "transparent-accent", {20, 20}, true, false, nil, nil, "SecureHandlerAttributeTemplate,SecureHandlerClickTemplate")
 P.Point(focus, "TOPLEFT", targettarget, "BOTTOMLEFT")
@@ -359,8 +367,9 @@ focus:SetAttribute("_onclick", [[
     menu:GetFrameRef("assignment"..index):SetAttribute("text", "focus")
     menu:Hide()
 
-    menu:CallMethod("Save", index, "focus")
+    control:CallMethod("Save", index, "focus")
 ]])
+focus.Save = SaveAssignment
 
 focustarget = Cell.CreateButton(menu, L["Focus Target"], "transparent-accent", {20, 20}, true, false, nil, nil, "SecureHandlerAttributeTemplate,SecureHandlerClickTemplate")
 P.Point(focustarget, "TOPLEFT", focus, "BOTTOMLEFT")
@@ -376,8 +385,9 @@ focustarget:SetAttribute("_onclick", [[
     menu:GetFrameRef("assignment"..index):SetAttribute("text", "focustarget")
     menu:Hide()
 
-    menu:CallMethod("Save", index, "focustarget")
+    control:CallMethod("Save", index, "focustarget")
 ]])
+focustarget.Save = SaveAssignment
 
 unit = Cell.CreateButton(menu, L["Unit"], "transparent-accent", {20, 20}, true, false, nil, nil, "SecureHandlerAttributeTemplate,SecureHandlerClickTemplate")
 P.Point(unit, "TOPLEFT", focustarget, "BOTTOMLEFT")
@@ -389,8 +399,9 @@ unit:SetAttribute("_onclick", [[
     spotlight:SetAttribute("specialUnit", nil)
     spotlight:SetAttribute("refreshOnUpdate", nil)
     spotlight:SetAttribute("updateOnTargetChanged", nil)
-    self:CallMethod("SetUnit", index, "target")
     menu:Hide()
+
+    control:CallMethod("SetUnit", index, "target")
 ]])
 function unit:SetUnit(index, target)
     local unitId = F.GetTargetUnitID(target)
@@ -413,12 +424,13 @@ unitname:SetAttribute("_onclick", [[
     spotlight:SetAttribute("specialUnit", nil)
     spotlight:SetAttribute("refreshOnUpdate", nil)
     spotlight:SetAttribute("updateOnTargetChanged", nil)
-    self:CallMethod("SetUnit", index, "target")
     menu:Hide()
+
+    control:CallMethod("SetUnit", index, "target")
 ]])
 function unitname:SetUnit(index, target)
     local unitId = F.GetTargetUnitID(target)
-    if unitId and (UnitIsPlayer(unitId) or UnitInPartyIsAI(unitId)) then
+    if unitId and UnitIsPlayer(unitId) then
         local name = GetUnitName(unitId, true)
         Cell.unitButtons.spotlight[index]:SetAttribute("unit", unitId)
         assignmentButtons[index]:SetText(name)
@@ -447,8 +459,9 @@ unitpet:SetAttribute("_onclick", [[
     spotlight:SetAttribute("specialUnit", nil)
     spotlight:SetAttribute("refreshOnUpdate", nil)
     spotlight:SetAttribute("updateOnTargetChanged", nil)
-    self:CallMethod("SetUnit", index, "target")
     menu:Hide()
+
+    control:CallMethod("SetUnit", index, "target")
 ]])
 function unitpet:SetUnit(index, target)
     local unitId = F.GetTargetPetID(target)
@@ -467,8 +480,9 @@ P.Point(unittarget, "TOPRIGHT", unitpet, "BOTTOMRIGHT")
 unittarget:SetAttribute("_onclick", [[
     local menu = self:GetParent()
     local index = menu:GetAttribute("index")
-    self:CallMethod("SetUnit", index, "target")
     menu:Hide()
+
+    control:CallMethod("SetUnit", index, "target")
 ]])
 function unittarget:SetUnit(index, target)
     local unitId = F.GetTargetUnitID(target)
@@ -503,8 +517,9 @@ tank:SetAttribute("_onclick", [[
     spotlight:SetAttribute("refreshOnUpdate", nil)
     spotlight:SetAttribute("updateOnTargetChanged", nil)
     menu:GetFrameRef("assignment"..index):SetAttribute("text", "tank")
-    self:CallMethod("SetUnit", index)
     menu:Hide()
+
+    control:CallMethod("SetUnit", index)
 ]])
 function tank:SetUnit(index)
     tanks[index] = true
@@ -524,8 +539,9 @@ healer:SetAttribute("_onclick", [[
     spotlight:SetAttribute("refreshOnUpdate", nil)
     spotlight:SetAttribute("updateOnTargetChanged", nil)
     menu:GetFrameRef("assignment"..index):SetAttribute("text", "healer")
-    self:CallMethod("SetUnit", index)
     menu:Hide()
+
+    control:CallMethod("SetUnit", index)
 ]])
 function healer:SetUnit(index)
     healers[index] = true
@@ -537,7 +553,6 @@ end
 boss1target = Cell.CreateButton(menu, L["Boss1 Target"], "transparent-accent", {20, 20}, true, false, nil, nil, "SecureHandlerAttributeTemplate,SecureHandlerClickTemplate")
 P.Point(boss1target, "TOPLEFT", healer, "BOTTOMLEFT")
 P.Point(boss1target, "TOPRIGHT", healer, "BOTTOMRIGHT")
-boss1target:SetEnabled(not (Cell.isTBC or Cell.isVanilla))
 boss1target:SetAttribute("_onclick", [[
     local menu = self:GetParent()
     local index = menu:GetAttribute("index")
@@ -549,8 +564,9 @@ boss1target:SetAttribute("_onclick", [[
     menu:GetFrameRef("assignment"..index):SetAttribute("text", "boss1target")
     menu:Hide()
 
-    menu:CallMethod("Save", index, "boss1target")
+    control:CallMethod("Save", index, "boss1target")
 ]])
+boss1target.Save = SaveAssignment
 
 clear = Cell.CreateButton(menu, L["Clear"], "transparent-accent", {20, 20}, true, false, nil, nil, "SecureHandlerAttributeTemplate,SecureHandlerClickTemplate")
 P.Point(clear, "TOPLEFT", boss1target, "BOTTOMLEFT")
@@ -566,8 +582,9 @@ clear:SetAttribute("_onclick", [[
     menu:GetFrameRef("assignment"..index):SetAttribute("text", nil)
     menu:Hide()
 
-    menu:CallMethod("Save", index, nil)
+    control:CallMethod("Save", index, nil)
 ]])
+clear.Save = SaveAssignment
 
 -------------------------------------------------
 -- functions
@@ -578,7 +595,7 @@ UpdateTanks = function()
     -- search for tanks
     local units = {}
     for unit in F.IterateGroupMembers() do
-        if UnitGroupRolesAssigned(unit) == "TANK" then
+        if F.UnitGroupRolesAssigned(unit) == "TANK" then
             tinsert(units, unit)
         end
     end
@@ -610,7 +627,7 @@ UpdateHealers = function()
     -- search for healers
     local units = {}
     for unit in F.IterateGroupMembers() do
-        if UnitGroupRolesAssigned(unit) == "HEALER" then
+        if F.UnitGroupRolesAssigned(unit) == "HEALER" then
             tinsert(units, unit)
         end
     end
@@ -678,33 +695,41 @@ local function UpdateAll()
     UpdateNames()
 end
 
-menu:RegisterEvent("GROUP_ROSTER_UPDATE")
+menu:RegisterEvent("RAID_ROSTER_UPDATE")
+menu:RegisterEvent("PARTY_MEMBERS_CHANGED")
 menu:RegisterEvent("PLAYER_REGEN_ENABLED")
 menu:RegisterEvent("PLAYER_REGEN_DISABLED")
 menu:SetScript("OnEvent", function(self, event)
-    if event == "GROUP_ROSTER_UPDATE" then
+    if event == "RAID_ROSTER_UPDATE" or event == "PARTY_MEMBERS_CHANGED" then
         if timer then
             timer:Cancel()
         end
-        timer = C_Timer.NewTimer(1, UpdateAll)
+        timer = F.C_Timer.NewTimer(1, UpdateAll)
     elseif event == "PLAYER_REGEN_DISABLED" then
-        unit:SetEnabled(false)
-        unitname:SetEnabled(false)
-        unittarget:SetEnabled(false)
-        unitpet:SetEnabled(false)
-        tank:SetEnabled(false)
-        healer:SetEnabled(false)
+        F.SetEnabled(unit, false)
+        F.SetEnabled(unitname, false)
+        F.SetEnabled(unittarget, false)
+        F.SetEnabled(unitpet, false)
+        F.SetEnabled(tank, false)
+        F.SetEnabled(healer, false)
     elseif event == "PLAYER_REGEN_ENABLED" then
-        unit:SetEnabled(true)
-        unitname:SetEnabled(true)
-        unittarget:SetEnabled(true)
-        unitpet:SetEnabled(true)
-        tank:SetEnabled(true)
-        healer:SetEnabled(true)
+        F.SetEnabled(unit, true)
+        F.SetEnabled(unitname, true)
+        F.SetEnabled(unittarget, true)
+        F.SetEnabled(unitpet, true)
+        F.SetEnabled(tank, true)
+        F.SetEnabled(healer, true)
         UpdateTanks()
         UpdateHealers()
         UpdateNames()
     end
+end)
+
+Cell.RegisterCallback("GroupRoleChanged", "SpotlightFrame_GroupRoleChanged", function()
+    if timer then
+        timer:Cancel()
+    end
+    timer = F.C_Timer.NewTimer(0.1, UpdateAll)
 end)
 
 function menu:Save(index, unit)
@@ -1056,7 +1081,7 @@ Cell.RegisterCallback("UpdatePixelPerfect", "SpotlightFrame_UpdatePixelPerfect",
 
 local function UpdateAppearance(which)
     if not which or which == "strata" then
-        C_Timer.After(0.5, function()
+        F.C_Timer.After(0.5, function()
             targetFrame:SetFrameStrata("TOOLTIP")
             if not InCombatLockdown() then
                 menu:SetFrameStrata("FULLSCREEN_DIALOG")

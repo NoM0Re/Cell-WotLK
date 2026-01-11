@@ -12,42 +12,21 @@ local selectedLayout, selectedLayoutTable
 -----------------------------------------
 -- power filter
 -----------------------------------------
-local CLASS_ROLES
-if Cell.isTBC or Cell.isVanilla then
-    CLASS_ROLES = {
-        ["DRUID"] = {"TANK", "HEALER", "DAMAGER"},
-        ["HUNTER"] = {"TANK", "HEALER", "DAMAGER"},
-        ["MAGE"] = {"TANK", "HEALER", "DAMAGER"},
-        ["PALADIN"] = {"TANK", "HEALER", "DAMAGER"},
-        ["PRIEST"] = {"TANK", "HEALER", "DAMAGER"},
-        ["ROGUE"] = {"TANK", "HEALER", "DAMAGER"},
-        ["SHAMAN"] = {"TANK", "HEALER", "DAMAGER"},
-        ["WARLOCK"] = {"TANK", "HEALER", "DAMAGER"},
-        ["WARRIOR"] = {"TANK", "HEALER", "DAMAGER"},
-        ["PET"] = {"DAMAGER"},
-        ["VEHICLE"] = {"DAMAGER"},
-        ["NPC"] = {"DAMAGER"},
-    }
-else
-    CLASS_ROLES = {
-        ["DEATHKNIGHT"] = {"TANK", "DAMAGER"},
-        ["DEMONHUNTER"] = {"TANK", "DAMAGER"},
-        ["DRUID"] = {"TANK", "HEALER", "DAMAGER"},
-        ["EVOKER"] = {"HEALER", "DAMAGER"},
-        ["HUNTER"] = {"DAMAGER"},
-        ["MAGE"] = {"DAMAGER"},
-        ["MONK"] = {"TANK", "HEALER", "DAMAGER"},
-        ["PALADIN"] = {"TANK", "HEALER", "DAMAGER"},
-        ["PRIEST"] = {"HEALER", "DAMAGER"},
-        ["ROGUE"] = {"DAMAGER"},
-        ["SHAMAN"] = {"HEALER", "DAMAGER"},
-        ["WARLOCK"] = {"DAMAGER"},
-        ["WARRIOR"] = {"TANK", "DAMAGER"},
-        ["PET"] = {"DAMAGER"},
-        ["VEHICLE"] = {"DAMAGER"},
-        ["NPC"] = {"DAMAGER"},
-    }
-end
+local CLASS_ROLES = {
+    ["DEATHKNIGHT"] = {"TANK", "DAMAGER"},
+    ["DRUID"] = {"TANK", "HEALER", "DAMAGER"},
+    ["HUNTER"] = {"DAMAGER"},
+    ["MAGE"] = {"DAMAGER"},
+    ["PALADIN"] = {"TANK", "HEALER", "DAMAGER"},
+    ["PRIEST"] = {"HEALER", "DAMAGER"},
+    ["ROGUE"] = {"DAMAGER"},
+    ["SHAMAN"] = {"HEALER", "DAMAGER"},
+    ["WARLOCK"] = {"DAMAGER"},
+    ["WARRIOR"] = {"TANK", "DAMAGER"},
+    ["PET"] = {"DAMAGER"},
+    ["VEHICLE"] = {"DAMAGER"},
+    ["NPC"] = {"DAMAGER"},
+}
 
 local function UpdateButton(b, enabled)
     b.tex:SetDesaturated(not enabled)
@@ -67,7 +46,7 @@ local function UpdateButton(b, enabled)
 end
 
 local function CreatePowerFilter(parent, class, buttons, color, bgColor)
-    local filter = CreateFrame("Frame", nil, parent, "BackdropTemplate")
+    local filter = CreateFrame("Frame", nil, parent)
     Cell.StylizeFrame(filter, color, bgColor)
     P.Size(filter, 135, 20)
 
@@ -126,7 +105,7 @@ end
 -------------------------------------------------
 -- filters
 -------------------------------------------------
-local dkF, dhF, druidF, evokerF, hunterF, mageF, monkF, paladinF, priestF, rogueF, shamanF, warlockF, warriorF, petF, vehicleF, npcF
+local dkF, druidF, hunterF, mageF, paladinF, priestF, rogueF, shamanF, warlockF, warriorF, petF, vehicleF, npcF
 
 local function CreateFilters()
     druidF = CreatePowerFilter(powerFilters, "DRUID", CLASS_ROLES["DRUID"])
@@ -142,87 +121,23 @@ local function CreateFilters()
     vehicleF = CreatePowerFilter(powerFilters, "VEHICLE", CLASS_ROLES["VEHICLE"])
     npcF = CreatePowerFilter(powerFilters, "NPC", CLASS_ROLES["NPC"])
 
-    if Cell.isRetail then
-        P.Height(powerFilters, 205)
+    P.Height(powerFilters, 180)
 
-        dkF = CreatePowerFilter(powerFilters, "DEATHKNIGHT", CLASS_ROLES["DEATHKNIGHT"])
-        dhF = CreatePowerFilter(powerFilters, "DEMONHUNTER", CLASS_ROLES["DEMONHUNTER"])
-        monkF = CreatePowerFilter(powerFilters, "MONK", CLASS_ROLES["MONK"])
-        evokerF = CreatePowerFilter(powerFilters, "EVOKER", CLASS_ROLES["EVOKER"])
+    dkF = CreatePowerFilter(powerFilters, "DEATHKNIGHT", CLASS_ROLES["DEATHKNIGHT"])
 
-        dkF:SetPoint("TOPLEFT", 5, -5)
-        dhF:SetPoint("TOPLEFT", 145, -5)
-        druidF:SetPoint("TOPLEFT", dkF, "BOTTOMLEFT", 0, -5)
-        evokerF:SetPoint("TOPLEFT", dhF, "BOTTOMLEFT", 0, -5)
-        hunterF:SetPoint("TOPLEFT", druidF, "BOTTOMLEFT", 0, -5)
-        mageF:SetPoint("TOPLEFT", evokerF, "BOTTOMLEFT", 0, -5)
-        monkF:SetPoint("TOPLEFT", hunterF, "BOTTOMLEFT", 0, -5)
-        paladinF:SetPoint("TOPLEFT", mageF, "BOTTOMLEFT", 0, -5)
-        priestF:SetPoint("TOPLEFT", monkF, "BOTTOMLEFT", 0, -5)
-        rogueF:SetPoint("TOPLEFT", paladinF, "BOTTOMLEFT", 0, -5)
-        shamanF:SetPoint("TOPLEFT", priestF, "BOTTOMLEFT", 0, -5)
-        warlockF:SetPoint("TOPLEFT", rogueF, "BOTTOMLEFT", 0, -5)
-        warriorF:SetPoint("TOPLEFT", shamanF, "BOTTOMLEFT", 0, -5)
-        petF:SetPoint("TOPLEFT", warlockF, "BOTTOMLEFT", 0, -5)
-        vehicleF:SetPoint("TOPLEFT", warriorF, "BOTTOMLEFT", 0, -5)
-        npcF:SetPoint("TOPLEFT", petF, "BOTTOMLEFT", 0, -5)
-
-    elseif Cell.isMists then
-        P.Height(powerFilters, 180)
-
-        dkF = CreatePowerFilter(powerFilters, "DEATHKNIGHT", CLASS_ROLES["DEATHKNIGHT"])
-        monkF = CreatePowerFilter(powerFilters, "MONK", CLASS_ROLES["MONK"])
-
-        dkF:SetPoint("TOPLEFT", 5, -5)
-        druidF:SetPoint("TOPLEFT", 145, -5)
-        hunterF:SetPoint("TOPLEFT", dkF, "BOTTOMLEFT", 0, -5)
-        mageF:SetPoint("TOPLEFT", druidF, "BOTTOMLEFT", 0, -5)
-        monkF:SetPoint("TOPLEFT", hunterF, "BOTTOMLEFT", 0, -5)
-        paladinF:SetPoint("TOPLEFT", mageF, "BOTTOMLEFT", 0, -5)
-        priestF:SetPoint("TOPLEFT", monkF, "BOTTOMLEFT", 0, -5)
-        rogueF:SetPoint("TOPLEFT", paladinF, "BOTTOMLEFT", 0, -5)
-        shamanF:SetPoint("TOPLEFT", priestF, "BOTTOMLEFT", 0, -5)
-        warlockF:SetPoint("TOPLEFT", rogueF, "BOTTOMLEFT", 0, -5)
-        warriorF:SetPoint("TOPLEFT", shamanF, "BOTTOMLEFT", 0, -5)
-        petF:SetPoint("TOPLEFT", warlockF, "BOTTOMLEFT", 0, -5)
-        vehicleF:SetPoint("TOPLEFT", warriorF, "BOTTOMLEFT", 0, -5)
-        npcF:SetPoint("TOPLEFT", petF, "BOTTOMLEFT", 0, -5)
-
-    elseif Cell.isCata or Cell.isWrath then
-        P.Height(powerFilters, 180)
-
-        dkF =  CreatePowerFilter(powerFilters, "DEATHKNIGHT", CLASS_ROLES["DEATHKNIGHT"])
-
-        dkF:SetPoint("TOPLEFT", 5, -5)
-        druidF:SetPoint("TOPLEFT", 145, -5)
-        hunterF:SetPoint("TOPLEFT", dkF, "BOTTOMLEFT", 0, -5)
-        mageF:SetPoint("TOPLEFT", druidF, "BOTTOMLEFT", 0, -5)
-        paladinF:SetPoint("TOPLEFT", hunterF, "BOTTOMLEFT", 0, -5)
-        priestF:SetPoint("TOPLEFT", mageF, "BOTTOMLEFT", 0, -5)
-        rogueF:SetPoint("TOPLEFT", paladinF, "BOTTOMLEFT", 0, -5)
-        shamanF:SetPoint("TOPLEFT", priestF, "BOTTOMLEFT", 0, -5)
-        warlockF:SetPoint("TOPLEFT", rogueF, "BOTTOMLEFT", 0, -5)
-        warriorF:SetPoint("TOPLEFT", shamanF, "BOTTOMLEFT", 0, -5)
-        petF:SetPoint("TOPLEFT", warlockF, "BOTTOMLEFT", 0, -5)
-        vehicleF:SetPoint("TOPLEFT", warriorF, "BOTTOMLEFT", 0, -5)
-        npcF:SetPoint("TOPLEFT", petF, "BOTTOMLEFT", 0, -5)
-
-    elseif Cell.isTBC or Cell.isVanilla then
-        P.Height(powerFilters, 155)
-
-        druidF:SetPoint("TOPLEFT", 5, -5)
-        hunterF:SetPoint("TOPLEFT", 145, -5)
-        mageF:SetPoint("TOPLEFT", druidF, "BOTTOMLEFT", 0, -5)
-        paladinF:SetPoint("TOPLEFT", hunterF, "BOTTOMLEFT", 0, -5)
-        priestF:SetPoint("TOPLEFT", mageF, "BOTTOMLEFT", 0, -5)
-        rogueF:SetPoint("TOPLEFT", paladinF, "BOTTOMLEFT", 0, -5)
-        shamanF:SetPoint("TOPLEFT", priestF, "BOTTOMLEFT", 0, -5)
-        warlockF:SetPoint("TOPLEFT", rogueF, "BOTTOMLEFT", 0, -5)
-        warriorF:SetPoint("TOPLEFT", shamanF, "BOTTOMLEFT", 0, -5)
-        petF:SetPoint("TOPLEFT", warlockF, "BOTTOMLEFT", 0, -5)
-        vehicleF:SetPoint("TOPLEFT", warriorF, "BOTTOMLEFT", 0, -5)
-        npcF:SetPoint("TOPLEFT", petF, "BOTTOMLEFT", 0, -5)
-    end
+    dkF:SetPoint("TOPLEFT", 5, -5)
+    druidF:SetPoint("TOPLEFT", 145, -5)
+    hunterF:SetPoint("TOPLEFT", dkF, "BOTTOMLEFT", 0, -5)
+    mageF:SetPoint("TOPLEFT", druidF, "BOTTOMLEFT", 0, -5)
+    paladinF:SetPoint("TOPLEFT", hunterF, "BOTTOMLEFT", 0, -5)
+    priestF:SetPoint("TOPLEFT", mageF, "BOTTOMLEFT", 0, -5)
+    rogueF:SetPoint("TOPLEFT", paladinF, "BOTTOMLEFT", 0, -5)
+    shamanF:SetPoint("TOPLEFT", priestF, "BOTTOMLEFT", 0, -5)
+    warlockF:SetPoint("TOPLEFT", rogueF, "BOTTOMLEFT", 0, -5)
+    warriorF:SetPoint("TOPLEFT", shamanF, "BOTTOMLEFT", 0, -5)
+    petF:SetPoint("TOPLEFT", warlockF, "BOTTOMLEFT", 0, -5)
+    vehicleF:SetPoint("TOPLEFT", warriorF, "BOTTOMLEFT", 0, -5)
+    npcF:SetPoint("TOPLEFT", petF, "BOTTOMLEFT", 0, -5)
 end
 
 -------------------------------------------------
@@ -267,21 +182,16 @@ function F.ShowPowerFilters(l, lt)
         vehicleF:Load()
         npcF:Load()
 
-        if Cell.isRetail or Cell.isMists or Cell.isCata or Cell.isWrath then
-            dkF:Load()
-        end
-
-        if Cell.isRetail or Cell.isMists then
-            monkF:Load()
-        end
-
-        if Cell.isRetail then
-            dhF:Load()
-            evokerF:Load()
-        end
+        dkF:Load()
     end
 end
 
 function F.HidePowerFilters()
     powerFilters:Hide()
+    if Cell.frames.layoutsTab and Cell.frames.layoutsTab.mask then
+        Cell.frames.layoutsTab.mask:Hide()
+    end
+    if Cell.frames.layoutsTab and Cell.frames.layoutsTab.powerFilterBtn then
+        Cell.frames.layoutsTab.powerFilterBtn:SetFrameLevel(Cell.frames.layoutsTab:GetFrameLevel() + 1)
+    end
 end

@@ -6,18 +6,14 @@ local F = Cell.funcs
 local I = Cell.iFuncs
 
 -------------------------------------------------
--- CreateAoEHealing -- not support for npc
--------------------------------------------------
-local CombatLogGetCurrentEventInfo = CombatLogGetCurrentEventInfo
-
 local function Display(b)
     b.indicators.aoeHealing:Display()
 end
 
 local playerSummoned = {}
 local eventFrame = CreateFrame("Frame")
-eventFrame:SetScript("OnEvent", function()
-    local timestamp, subevent, _, sourceGUID, sourceName, sourceFlags, sourceRaidFlags, destGUID, destName, destFlags, destRaidFlags, spellId, spellName = CombatLogGetCurrentEventInfo()
+eventFrame:SetScript("OnEvent", function(self, event, ...)
+    local timestamp, subevent, sourceGUID, sourceName, sourceFlags, destGUID, destName, destFlags, spellId, spellName = ...
     -- if subevent == "SPELL_SUMMON" then print(subevent, sourceName, sourceGUID, destName, destGUID, spellName) end
     if subevent == "SPELL_SUMMON" then
         -- print(sourceGUID == Cell.vars.playerGUID, destGUID, spellName, spellId)
@@ -25,7 +21,7 @@ eventFrame:SetScript("OnEvent", function()
             local duration = I.GetSummonDuration(spellName)
             if duration then
                 playerSummoned[destGUID] = GetTime() + duration -- expirationTime
-                C_Timer.After(duration, function()
+                F.C_Timer.After(duration, function()
                     playerSummoned[destGUID] = nil
                 end)
             end
@@ -56,14 +52,12 @@ function I.CreateAoEHealing(parent)
 
     local ag = aoeHealing:CreateAnimationGroup()
     local a1 = ag:CreateAnimation("Alpha")
-    a1:SetFromAlpha(0)
-    a1:SetToAlpha(1)
+    F.AlphaSetFromTo(a1, 0, 1)
     a1:SetDuration(0.5)
     a1:SetOrder(1)
     a1:SetSmoothing("OUT")
     local a2 = ag:CreateAnimation("Alpha")
-    a2:SetFromAlpha(1)
-    a2:SetToAlpha(0)
+    F.AlphaSetFromTo(a2, 1, 0)
     a2:SetDuration(0.5)
     a2:SetOrder(2)
     a2:SetSmoothing("IN")
@@ -76,7 +70,7 @@ function I.CreateAoEHealing(parent)
     end)
 
     function aoeHealing:SetColor(r, g, b)
-        aoeHealing.tex:SetGradient("VERTICAL", CreateColor(r, g, b, 0), CreateColor(r, g, b, 0.77))
+        aoeHealing.tex:SetGradientAlpha("VERTICAL", r, g, b, 0, r, g, b, 0.77)
     end
 
     function aoeHealing:Display()

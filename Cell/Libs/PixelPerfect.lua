@@ -5,6 +5,7 @@
 local _, addon = ...
 addon.pixelPerfectFuncs = {}
 
+---@return number
 local function Round(num, numDecimalPlaces)
     if numDecimalPlaces and numDecimalPlaces >= 0 then
         local mult = 10 ^ numDecimalPlaces
@@ -23,10 +24,19 @@ local function Round(num, numDecimalPlaces)
     end
 end
 
-local Clamp = Clamp
+---@return number
+local function Clamp(value, min, max)
+	if value > max then
+		return max;
+	elseif value < min then
+		return min;
+	end
+	return value;
+end
 
 ---@class PixelPerfectFuncs
 local P = addon.pixelPerfectFuncs
+local PixelUtil = addon.funcs.PixelUtil
 
 function P.GetResolution()
     return string.match(({GetScreenResolutions()})[GetCurrentResolution()], "(%d+)x(%d+)")
@@ -149,35 +159,8 @@ end
 --     end
 -- end
 
-local function GetPixelToUIUnitFactor()
-	local physicalWidth, physicalHeight = P.GetResolution();
-	return 768.0 / physicalHeight
-end
-
-local function GetNearestPixelSize(uiUnitSize, layoutScale, minPixels)
-	if uiUnitSize == 0 and (not minPixels or minPixels == 0) then
-		return 0
-	end
-
-	local uiUnitFactor = GetPixelToUIUnitFactor();
-	local numPixels = Round((uiUnitSize * layoutScale) / uiUnitFactor)
-	if minPixels then
-		if uiUnitSize < 0.0 then
-			if numPixels > -minPixels then
-				numPixels = -minPixels
-			end
-		else
-			if numPixels < minPixels then
-				numPixels = minPixels
-			end
-		end
-	end
-
-	return numPixels * uiUnitFactor / layoutScale
-end
-
 function P.Scale(desiredPixels)
-    return GetNearestPixelSize(desiredPixels, CellParent:GetEffectiveScale())
+    return PixelUtil.GetNearestPixelSize(desiredPixels, CellParent:GetEffectiveScale())
 end
 
 function P.Size(frame, width, height)

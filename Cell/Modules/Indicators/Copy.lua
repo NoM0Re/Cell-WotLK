@@ -48,7 +48,7 @@ local function CreateIndicatorsCopyFrame()
     toText:SetText(L["To"])
 
     -- list
-    fromList = CreateFrame("Frame", nil, copyFrame, "BackdropTemplate")
+    fromList = CreateFrame("Frame", nil, copyFrame)
     Cell.StylizeFrame(fromList)
     fromList:SetPoint("TOPLEFT", toDropdown, "BOTTOMLEFT", 0, -5)
     fromList:SetPoint("TOPRIGHT", toDropdown, "BOTTOMRIGHT", 0, -5)
@@ -61,7 +61,7 @@ local function CreateIndicatorsCopyFrame()
     -- buttons
     copyBtn = Cell.CreateButton(copyFrame, L["Copy"], "green", {64, 20})
     copyBtn:SetPoint("BOTTOMLEFT", 5, 5)
-    copyBtn:SetEnabled(false)
+    F.SetEnabled(copyBtn, false)
     copyBtn:SetScript("OnClick", function()
         local last = #CellDB["layouts"][to]["indicators"]
         last = tonumber(string.match(CellDB["layouts"][to]["indicators"][last]["indicatorName"], "%d+")) or last
@@ -120,7 +120,7 @@ local function CreateIndicatorsCopyFrame()
         fromList.scrollFrame:Reset()
         fromDropdown:SetSelected()
         toDropdown:SetSelected()
-        copyBtn:SetEnabled(false)
+        F.SetEnabled(copyBtn, false)
         wipe(selectedIndicators)
         from, to = nil, nil
     end)
@@ -132,14 +132,14 @@ end
 Validate = function()
     from, to = fromDropdown:GetSelected(), toDropdown:GetSelected()
     if from and to and F.Getn(selectedIndicators) ~= 0 then
-        copyBtn:SetEnabled(true)
+        F.SetEnabled(copyBtn, true)
     else
-        copyBtn:SetEnabled(false)
+        F.SetEnabled(copyBtn, false)
     end
 end
 
 Toggle = function(index, isSelect, unhighlight)
-    b = indicatorButtons[index]
+    local b = indicatorButtons[index]
     if isSelect then
         selectedIndicators[index] = true
         b:SetBackdropColor(unpack(b.hoverColor))

@@ -16,7 +16,7 @@ icon.tex:SetTexCoord(0.12, 0.88, 0.12, 0.88)
 P.Point(icon.tex, "TOPLEFT", icon, "TOPLEFT", 1, -1)
 P.Point(icon.tex, "BOTTOMRIGHT", icon, "BOTTOMRIGHT", -1, 1)
 
-icon.tex:SetTexture(1022951)
+icon.tex:SetTexture("Interface\\AddOns\\Cell\\Media\\Icons\\Ability_Priest_WordsofMeaning")
 
 local frame = CreateFrame("Frame")
 frame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")

@@ -23,7 +23,7 @@ local function DoImport()
 end
 
 local function CreateClickCastingImportExportFrame()
-    importExportFrame = CreateFrame("Frame", "CellOptionsFrame_ClickCastingsImportExport", Cell.frames.clickCastingsTab, "BackdropTemplate")
+    importExportFrame = CreateFrame("Frame", "CellOptionsFrame_ClickCastingsImportExport", Cell.frames.clickCastingsTab)
     importExportFrame:Hide()
     Cell.StylizeFrame(importExportFrame, nil, Cell.GetAccentColorTable())
     importExportFrame:EnableMouse(true)
@@ -80,18 +80,18 @@ local function CreateClickCastingImportExportFrame()
                         if success and data then
                             title:SetText(L["Import"]..": "..F.GetClassColorStr(class)..F.GetLocalizedClassName(class))
                             imported = data
-                            importBtn:SetEnabled(class == Cell.vars.playerClass)
+                            F.SetEnabled(importBtn, class == Cell.vars.playerClass)
                         else
                             title:SetText(L["Import"]..": |cffff2222"..L["Error"])
-                            importBtn:SetEnabled(false)
+                            F.SetEnabled(importBtn, false)
                         end
                     else -- incompatible version
                         title:SetText(L["Import"]..": |cffff2222"..L["Incompatible Version"])
-                        importBtn:SetEnabled(false)
+                        F.SetEnabled(importBtn, false)
                     end
                 else
                     title:SetText(L["Import"]..": |cffff2222"..L["Error"])
-                    importBtn:SetEnabled(false)
+                    F.SetEnabled(importBtn, false)
                 end
             else
                 eb:SetText(exported)
@@ -138,7 +138,7 @@ function F.ShowClickCastingImportFrame()
     importExportFrame:Show()
     isImport = true
     importBtn:Show()
-    importBtn:SetEnabled(false)
+    F.SetEnabled(importBtn, false)
 
     exported = ""
     title:SetText(L["Import"])

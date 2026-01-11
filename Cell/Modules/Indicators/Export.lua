@@ -8,6 +8,7 @@ local LibDeflate = LibStub:GetLibrary("LibDeflate")
 local deflateConfig = {level = 9}
 
 local fromLayout
+local isImport
 local indicatorButtons = {}
 local selectedIndicators = {}
 local Toggle, Validate
@@ -18,7 +19,6 @@ local Toggle, Validate
 local exportParent = CreateFrame("Frame", "CellOptionsFrame_IndicatorsExport", Cell.frames.indicatorsTab)
 exportParent:Hide()
 exportParent:SetAllPoints(Cell.frames.indicatorsTab)
-exportParent:SetFrameLevel(Cell.frames.indicatorsTab:GetFrameLevel() + 50)
 
 -------------------------------------------------
 -- export
@@ -30,6 +30,7 @@ local function CreateIndicatorsExportFrame()
         Cell.CreateMask(Cell.frames.indicatorsTab, nil, {1, -1, -1, 1})
         Cell.frames.indicatorsTab.mask:Hide()
     end
+    exportParent:SetFrameLevel(Cell.frames.indicatorsTab.mask:GetFrameLevel() + 1)
 
     -- list
     local listParent = Cell.CreateFrame(nil, exportParent, 136, 525)
@@ -41,7 +42,7 @@ local function CreateIndicatorsExportFrame()
     from = listParent:CreateFontString(nil, "OVERLAY", "CELL_FONT_CLASS")
     from:SetPoint("TOPLEFT", 5, -5)
 
-    listFrame = CreateFrame("Frame", nil, listParent, "BackdropTemplate")
+    listFrame = CreateFrame("Frame", nil, listParent)
     Cell.StylizeFrame(listFrame)
     listFrame:SetPoint("TOPLEFT", 5, -20)
     listFrame:SetPoint("TOPRIGHT", -5, -5)
@@ -76,7 +77,7 @@ local function CreateIndicatorsExportFrame()
     -- list buttons
     exportBtn = Cell.CreateButton(listParent, L["Export"], "green", {64, 20})
     exportBtn:SetPoint("BOTTOMLEFT", 5, 5)
-    exportBtn:SetEnabled(false)
+    F.SetEnabled(exportBtn, false)
     exportBtn:SetScript("OnClick", function()
         exportFrame:Show()
 
@@ -112,11 +113,6 @@ local function CreateIndicatorsExportFrame()
             if name == "debuffs" then
                 data["related"]["debuffBlacklist"] = CellDB["debuffBlacklist"]
                 data["related"]["bigDebuffs"] = CellDB["bigDebuffs"]
-            -- elseif name == "raidDebuffs" then
-            --     if Cell.isRetail then
-            --         data["related"]["cleuAuras"] = CellDB["cleuAuras"]
-            --         data["related"]["cleuGlow"] = CellDB["cleuGlow"]
-            --     end
             elseif name == "targetedSpells" then
                 data["related"]["targetedSpellsList"] = CellDB["targetedSpellsList"]
                 data["related"]["targetedSpellsGlow"] = CellDB["targetedSpellsGlow"]
@@ -173,14 +169,14 @@ end
 -------------------------------------------------
 Validate = function()
     if F.Getn(selectedIndicators) ~= 0 then
-        exportBtn:SetEnabled(true)
+        F.SetEnabled(exportBtn, true)
     else
-        exportBtn:SetEnabled(false)
+        F.SetEnabled(exportBtn, false)
     end
 end
 
 Toggle = function(index, isSelect, unhighlight)
-    b = indicatorButtons[index]
+    local b = indicatorButtons[index]
     if isSelect then
         selectedIndicators[index] = true
         b:SetBackdropColor(unpack(b.hoverColor))

@@ -12,10 +12,10 @@ generalTab:Hide()
 -------------------------------------------------
 -- visibility
 -------------------------------------------------
-local hideBlizzardPartyCB, hideBlizzardRaidCB, hideRaidManagerCB
+local hideBlizzardPartyCB, hideBlizzardRaidCB, hideRaidManagerCB, showMinimapButtonCB
 
 local function CreateVisibilityPane()
-    local visibilityPane = Cell.CreateTitledPane(generalTab, L["Visibility"], 205, 80)
+    local visibilityPane = Cell.CreateTitledPane(generalTab, L["Visibility"], 205, 100)
     visibilityPane:SetPoint("TOPLEFT", generalTab, "TOPLEFT", 5, -5)
 
     -- showSoloCB = Cell.CreateCheckButton(visibilityPane, L["Show Solo"], function(checked, self)
@@ -65,6 +65,12 @@ local function CreateVisibilityPane()
         popup:SetPoint("TOPLEFT", generalTab, 117, -77)
     end, L["Hide Blizzard Frames"], L["Require reload of the UI"])
     hideRaidManagerCB:SetPoint("TOPLEFT", hideBlizzardRaidCB, "BOTTOMLEFT", 0, -7)
+
+    showMinimapButtonCB = Cell.CreateCheckButton(visibilityPane, L["Show Minimap Button"], function(checked)
+        CellDB["minimap"]["hide"] = not checked
+        F.UpdateMinimapButton()
+    end)
+    showMinimapButtonCB:SetPoint("TOPLEFT", hideRaidManagerCB, "BOTTOMLEFT", 0, -7)
 end
 
 -------------------------------------------------
@@ -74,19 +80,19 @@ local enableTooltipsCB, hideTooltipsInCombatCB, tooltipsAnchor, tooltipsAnchorTe
 
 local function UpdateTooltipsOptions()
     if strfind(CellDB["general"]["tooltipsPosition"][2], "Cursor") or CellDB["general"]["tooltipsPosition"][2] == "Default" then
-        tooltipsAnchor:SetEnabled(false)
+        F.SetEnabled(tooltipsAnchor, false)
         tooltipsAnchorText:SetTextColor(0.4, 0.4, 0.4)
     else
-        tooltipsAnchor:SetEnabled(true)
+        F.SetEnabled(tooltipsAnchor, true)
         tooltipsAnchorText:SetTextColor(1, 1, 1)
     end
 
     if CellDB["general"]["tooltipsPosition"][2] == "Cursor" or CellDB["general"]["tooltipsPosition"][2] == "Default" then
-        tooltipsX:SetEnabled(false)
-        tooltipsY:SetEnabled(false)
+        F.SetEnabled(tooltipsX, false)
+        F.SetEnabled(tooltipsY, false)
     else
-        tooltipsX:SetEnabled(true)
-        tooltipsY:SetEnabled(true)
+        F.SetEnabled(tooltipsX, true)
+        F.SetEnabled(tooltipsY, true)
     end
 end
 
@@ -96,12 +102,12 @@ local function CreateTooltipsPane()
 
     enableTooltipsCB = Cell.CreateCheckButton(tooltipsPane, L["Enabled"], function(checked, self)
         CellDB["general"]["enableTooltips"] = checked
-        hideTooltipsInCombatCB:SetEnabled(checked)
-        -- enableAuraTooltipsCB:SetEnabled(checked)
-        tooltipsAnchor:SetEnabled(checked)
-        tooltipsAnchoredTo:SetEnabled(checked)
-        tooltipsX:SetEnabled(checked)
-        tooltipsY:SetEnabled(checked)
+        F.SetEnabled(hideTooltipsInCombatCB, checked)
+        -- F.SetEnabled(enableAuraTooltipsCB, checked)
+        F.SetEnabled(tooltipsAnchor, checked)
+        F.SetEnabled(tooltipsAnchoredTo, checked)
+        F.SetEnabled(tooltipsX, checked)
+        F.SetEnabled(tooltipsY, checked)
         if checked then
             tooltipsAnchorText:SetTextColor(1, 1, 1)
             tooltipsAnchoredToText:SetTextColor(1, 1, 1)
@@ -122,7 +128,7 @@ local function CreateTooltipsPane()
     -- enableAuraTooltipsCB = Cell.CreateCheckButton(tooltipsPane, L["Enable Auras Tooltips"].." (pending)", function(checked, self)
     -- end)
     -- enableAuraTooltipsCB:SetPoint("TOPLEFT", hideTooltipsInCombatCB, "BOTTOMLEFT", 0, -7)
-    -- enableAuraTooltipsCB:SetEnabled(false)
+    -- F.SetEnabled(enableAuraTooltipsCB, false)
 
     -- position
     tooltipsAnchor = Cell.CreateDropdown(tooltipsPane, 137)
@@ -239,7 +245,7 @@ local function CreateNicknamePane()
     nicknameEB:SetPoint("TOPLEFT", 5, -27)
     nicknameEB:SetScript("OnTextChanged", function(self, userChanged)
         local text = strtrim(nicknameEB:GetText())
-        nicknameEB.tip:SetShown(text == "")
+        F.SetShown(nicknameEB.tip, text == "")
 
         if userChanged then
             if CellDB["nicknames"]["mine"] ~= "" then -- already set a nickname
@@ -314,7 +320,7 @@ local function CreateMiscPane()
         Cell.vars.alwaysUpdateAuras = checked
     end, L["Ignore UNIT_AURA payloads"], L["This may help solve issues of indicators not updating correctly"])
     alwaysUpdateAurasCB:SetPoint("TOPLEFT", 5, -27)
-    alwaysUpdateAurasCB:SetEnabled(Cell.isMists)
+    F.SetEnabled(alwaysUpdateAurasCB, false)
 
     useCleuCB = Cell.CreateCheckButton(miscPane, L["Faster Health Updates"], function(checked, self)
         CellDB["general"]["useCleuHealthUpdater"] = checked
@@ -337,6 +343,7 @@ local framePriorityWidget
 -- TODO: move to Widgets.lua
 local function CreateFramePriorityWidget(parent)
     local f = CreateFrame("Frame", nil, parent)
+    f:SetFrameLevel(parent:GetFrameLevel() + 1)
     P.Size(f, 336, 20)
 
     local function GetPriority(name)
@@ -363,7 +370,7 @@ local function CreateFramePriorityWidget(parent)
 
         buttons[name].cb = Cell.CreateCheckButton(buttons[name], "", function(checked, self)
             CellDB["general"]["framePriority"][GetPriority(name)][2] = checked
-            buttons[name]:SetEnabled(checked)
+            F.SetEnabled(buttons[name], checked)
             buttons[name]._enabled = checked
             sort(CellDB["general"]["framePriority"], Comparator)
             f:Load(CellDB["general"]["framePriority"])
@@ -388,8 +395,8 @@ local function CreateFramePriorityWidget(parent)
             self:StopMovingOrSizing()
             self:SetFrameStrata("LOW")
             -- self:Hide() --! Hide() will cause OnDragStop trigger TWICE!!!
-            C_Timer.After(0.05, function()
-                local b = F.GetMouseFocus()
+            F.C_Timer.After(0.05, function()
+                local b = GetMouseFocus()
                 if b ~= self and b and b._priority and b._enabled then
                     -- print(self._priorityName, "->", b._priorityName)
 
@@ -410,7 +417,7 @@ local function CreateFramePriorityWidget(parent)
             buttons[p[1]]:ClearAllPoints()
             buttons[p[1]]:SetPoint("TOPLEFT", (i-1)*(P.Scale(110)+P.Scale(3)), 0)
             buttons[p[1]]._enabled = p[2]
-            buttons[p[1]]:SetEnabled(p[2])
+            F.SetEnabled(buttons[p[1]], p[2])
             buttons[p[1]].cb:SetChecked(p[2])
             buttons[p[1]]._priority = i
         end
@@ -484,17 +491,17 @@ local function ShowTab(tab)
 
         -- tooltips
         enableTooltipsCB:SetChecked(CellDB["general"]["enableTooltips"])
-        hideTooltipsInCombatCB:SetEnabled(CellDB["general"]["enableTooltips"])
+        F.SetEnabled(hideTooltipsInCombatCB, CellDB["general"]["enableTooltips"])
         hideTooltipsInCombatCB:SetChecked(CellDB["general"]["hideTooltipsInCombat"])
-        -- enableAuraTooltipsCB:SetEnabled(CellDB["general"]["enableTooltips"])
+        -- F.SetEnabled(enableAuraTooltipsCB, CellDB["general"]["enableTooltips"])
         -- enableAuraTooltipsCB:SetChecked(CellDB["general"]["enableAurasTooltips"])
-        tooltipsAnchor:SetEnabled(CellDB["general"]["enableTooltips"])
+        F.SetEnabled(tooltipsAnchor, CellDB["general"]["enableTooltips"])
         tooltipsAnchor:SetSelectedValue(CellDB["general"]["tooltipsPosition"][1])
-        tooltipsAnchoredTo:SetEnabled(CellDB["general"]["enableTooltips"])
+        F.SetEnabled(tooltipsAnchoredTo, CellDB["general"]["enableTooltips"])
         tooltipsAnchoredTo:SetSelectedValue(CellDB["general"]["tooltipsPosition"][2])
-        tooltipsX:SetEnabled(CellDB["general"]["enableTooltips"])
+        F.SetEnabled(tooltipsX, CellDB["general"]["enableTooltips"])
         tooltipsX:SetValue(CellDB["general"]["tooltipsPosition"][4])
-        tooltipsY:SetEnabled(CellDB["general"]["enableTooltips"])
+        F.SetEnabled(tooltipsY, CellDB["general"]["enableTooltips"])
         tooltipsY:SetValue(CellDB["general"]["tooltipsPosition"][5])
         if CellDB["general"]["enableTooltips"] then
             tooltipsAnchorText:SetTextColor(1, 1, 1)
@@ -509,6 +516,7 @@ local function ShowTab(tab)
         hideBlizzardPartyCB:SetChecked(CellDB["general"]["hideBlizzardParty"])
         hideBlizzardRaidCB:SetChecked(CellDB["general"]["hideBlizzardRaid"])
         hideRaidManagerCB:SetChecked(CellDB["general"]["hideBlizzardRaidManager"])
+        showMinimapButtonCB:SetChecked(not CellDB["minimap"]["hide"])
 
         -- position
         lockCB:SetChecked(CellDB["general"]["locked"])

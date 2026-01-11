@@ -21,7 +21,7 @@ local queue
 
 local isInstantMode = true
 local isProcessing = false
-local modeBtn, assistantCB, processingFrame, progressBar, combatTips
+local modeBtn, processingFrame, progressBar, combatTips
 
 local function Reset(reload)
     -- print("RESET", reload)
@@ -78,18 +78,13 @@ local function CreateWidgets()
         "|cffffb5c5"..L["Right-Click"]..":|r "..L["discard changes"]
     )
 
-    -- SetEveryoneIsAssistant
-    assistantCB = Cell.CreateCheckButton(raidRosterFrame, "|TInterface\\GroupFrame\\UI-Group-AssistantIcon:16:16|t", function(checked)
-        SetEveryoneIsAssistant(checked)
-    end)
-    assistantCB:SetPoint("BOTTOMRIGHT", -25, 5)
-
     local tips = Cell.CreateScrollTextFrame(raidRosterFrame, "|cffb7b7b7"..L["raidRosterTips"], 0.02, nil, 2)
     tips:SetPoint("BOTTOMLEFT", raidRosterFrame, 5, 2)
-    tips:SetPoint("RIGHT", assistantCB, "LEFT", -5, 0)
+    tips:SetPoint("RIGHT", raidRosterFrame, -5, 0)
 end
 
 local function UpdateModeBtnPosition()
+    if not Cell.vars.currentLayoutTable then return end
     local anchor = Cell.vars.currentLayoutTable.main.anchor
     modeBtn:ClearAllPoints()
     if anchor == "TOPLEFT" then
@@ -106,12 +101,14 @@ end
 UpdateMode = function()
     -- update button
     if isInstantMode then
-        raidRosterFrame:RegisterEvent("GROUP_ROSTER_UPDATE")
+        raidRosterFrame:RegisterEvent("RAID_ROSTER_UPDATE")
+        raidRosterFrame:RegisterEvent("PARTY_MEMBERS_CHANGED")
         modeBtn:SetText(L["Instant Mode"])
         modeBtn.tex:SetTexture("Interface\\AddOns\\Cell\\Media\\Icons\\instant")
         LCG.PixelGlow_Stop(modeBtn)
     else
-        raidRosterFrame:UnregisterEvent("GROUP_ROSTER_UPDATE")
+        raidRosterFrame:UnregisterEvent("RAID_ROSTER_UPDATE")
+        raidRosterFrame:UnregisterEvent("PARTY_MEMBERS_CHANGED")
         modeBtn:SetText(L["Premade Mode"])
         modeBtn.tex:SetTexture("Interface\\AddOns\\Cell\\Media\\Icons\\premade")
         LCG.PixelGlow_Start(modeBtn, Cell.GetAccentColorTable(1), 12, 0.25, 10, 1)
@@ -120,7 +117,7 @@ end
 
 local function CreateProcessingFrame()
     -- processing
-    processingFrame = CreateFrame("Frame", nil, raidRosterFrame, "BackdropTemplate")
+    processingFrame = CreateFrame("Frame", nil, raidRosterFrame)
     processingFrame:SetPoint("TOPLEFT", P.Scale(1), P.Scale(-1))
     processingFrame:SetPoint("BOTTOMRIGHT", P.Scale(-1), P.Scale(1))
     Cell.StylizeFrame(processingFrame, {0.15, 0.15, 0.15, 0.7}, {0, 0, 0, 0})
@@ -129,7 +126,8 @@ local function CreateProcessingFrame()
     processingFrame:Hide()
 
     processingFrame:SetScript("OnShow", function()
-        processingFrame:RegisterEvent("GROUP_ROSTER_UPDATE")
+        processingFrame:RegisterEvent("RAID_ROSTER_UPDATE")
+        processingFrame:RegisterEvent("PARTY_MEMBERS_CHANGED")
         ProcessNext()
     end)
 
@@ -299,8 +297,31 @@ end
 -- roster
 -------------------------------------------------
 local movingGrid
+
+local function HandleGridDrop(target)
+    if movingGrid and movingGrid ~= target and target:IsMouseOver() then
+        if isInstantMode then
+            if not InCombatLockdown() then
+                if target.hasUnit then
+                    SwapRaidSubgroup(movingGrid.raidIndex, target.raidIndex)
+                else
+                    SetRaidSubgroup(movingGrid.raidIndex, target.subgroup)
+                end
+            end
+        else
+            if target.hasUnit then
+                PremadeSwap(movingGrid, target)
+            else
+                PremadeSet(movingGrid, target)
+            end
+        end
+        movingGrid = nil
+        return true
+    end
+end
+
 local function CreateRaidRosterGrid(parent, index)
-    local grid = CreateFrame("Button", parent:GetName().."Unit"..index, parent, "BackdropTemplate")
+    local grid = CreateFrame("Button", parent:GetName().."Unit"..index, parent)
     P.Size(grid, 100, 17)
     Cell.StylizeFrame(grid, {0.1, 0.1, 0.1, 0.5})
     grid.color = {0.5, 0.5, 0.5}
@@ -310,7 +331,7 @@ local function CreateRaidRosterGrid(parent, index)
     local roleIconBg = grid:CreateTexture(nil, "BORDER")
     roleIconBg:SetPoint("TOPLEFT", 2, -2)
     roleIconBg:SetSize(13, 13)
-    roleIconBg:SetColorTexture(0, 0, 0, 1)
+    roleIconBg:SetTexture(0, 0, 0, 1)
 
     local roleIcon = grid:CreateTexture(nil, "ARTWORK")
     roleIcon:SetPoint("TOPLEFT", roleIconBg, P.Scale(1), P.Scale(-1))
@@ -329,11 +350,11 @@ local function CreateRaidRosterGrid(parent, index)
         if IsAltKeyDown() then
             UninviteUnit(grid.name)
         else
-            if not UnitIsGroupLeader("player") then return end
+            if not UnitIsPartyLeader("player") then return end
 
-            if UnitIsGroupLeader(grid.unit) then return end
+            if UnitIsPartyLeader(grid.unit) then return end
 
-            if UnitIsGroupAssistant(grid.unit) then
+            if UnitIsRaidOfficer(grid.unit) then
                 DemoteAssistant(grid.unit)
             else
                 PromoteToAssistant(grid.unit)
@@ -367,35 +388,16 @@ local function CreateRaidRosterGrid(parent, index)
         grid:SetBackdropBorderColor(0, 0, 0, 1)
         grid:SetBackdropColor(0.1, 0.1, 0.1, 0.5)
         grid.isMoving = nil
-    end)
 
-    -- swap
-    grid:SetScript("OnShow", function()
-        grid:RegisterEvent("GLOBAL_MOUSE_UP")
-    end)
-    grid:SetScript("OnHide", function()
-        grid:UnregisterEvent("GLOBAL_MOUSE_UP")
-    end)
-    grid:SetScript("OnEvent", function(self, event)
-        if movingGrid and movingGrid ~= self and self:IsMouseOver() then
-            if isInstantMode then
-                if not InCombatLockdown() then
-                    if self.hasUnit then
-                        -- print("SWAP "..self:GetName().." WITH "..movingGrid:GetName())
-                        SwapRaidSubgroup(movingGrid.raidIndex, self.raidIndex)
-                    else
-                        SetRaidSubgroup(movingGrid.raidIndex, self.subgroup)
-                    end
-                end
-            else
-                if self.hasUnit then
-                    PremadeSwap(movingGrid, self)
-                else
-                    PremadeSet(movingGrid, self)
+        for groupIndex = 1, 8 do
+            for gridIndex = 1, 5 do
+                if HandleGridDrop(groups[groupIndex][gridIndex]) then
+                    return
                 end
             end
-            movingGrid = nil
         end
+
+        movingGrid = nil
     end)
 
     -- onupdate
@@ -415,18 +417,18 @@ local function CreateRaidRosterGrid(parent, index)
 
         roleIcon:Show()
         roleIconBg:Show()
-        if role == "NONE" then
-            roleIcon:SetTexture(134400)
+        if not grid.role or grid.role == "NONE" then
+            roleIcon:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
         else
             roleIcon:SetTexture(F.GetDefaultRoleIcon(grid.role))
         end
 
         if grid.isLeader then
-            roleIconBg:SetColorTexture(1, 0.84, 0, 1)
+            roleIconBg:SetTexture(1, 0.84, 0, 1)
         elseif grid.isAssistant then
-            roleIconBg:SetColorTexture(0.7, 0.7, 0.7, 1)
+            roleIconBg:SetTexture(0.7, 0.7, 0.7, 1)
         else
-            roleIconBg:SetColorTexture(0, 0, 0, 1)
+            roleIconBg:SetTexture(0, 0, 0, 1)
         end
     end
 
@@ -439,7 +441,7 @@ local function CreateRaidRosterGrid(parent, index)
 
         nameText:SetText("")
         nameText:SetTextColor(1, 1, 1)
-        roleIconBg:SetColorTexture(0, 0, 0, 1)
+        roleIconBg:SetTexture(0, 0, 0, 1)
         roleIconBg:Hide()
         roleIcon:Hide()
 
@@ -451,11 +453,11 @@ local function CreateRaidRosterGrid(parent, index)
     end
 
     function grid:Set(raidIndex)
-        local name, _, subgroup, _, _, classFileName, _, _, _, _, _, combatRole = GetRaidRosterInfo(raidIndex)
+        local name, _, subgroup, _, _, classFileName = GetRaidRosterInfo(raidIndex)
 
         if not name then
             -- unknown target, retry
-            C_Timer.After(0.5, function()
+            F.C_Timer.After(0.5, function()
                 grid:Set(raidIndex)
             end)
             return
@@ -478,10 +480,10 @@ local function CreateRaidRosterGrid(parent, index)
         grid.raidIndex = raidIndex
         grid.unit = "raid"..raidIndex
         grid.name = name
-        grid.role = combatRole
+        grid.role = F.UnitGroupRolesAssigned("raid"..raidIndex)
         grid.color[1], grid.color[2], grid.color[3] = F.GetClassColor(classFileName)
-        grid.isLeader = UnitIsGroupLeader(grid.unit)
-        grid.isAssistant = UnitIsGroupAssistant(grid.unit)
+        grid.isLeader = UnitIsPartyLeader(grid.unit)
+        grid.isAssistant = UnitIsRaidOfficer(grid.unit)
 
         -- update
         grid:Update()
@@ -492,7 +494,7 @@ local function CreateRaidRosterGrid(parent, index)
 end
 
 local function CreateRaidRosterGroup(parent, groupIndex)
-    local group = CreateFrame("Frame", parent:GetName().."Subgroup"..groupIndex, parent, "BackdropTemplate")
+    local group = CreateFrame("Frame", parent:GetName().."Subgroup"..groupIndex, parent)
     P.Size(group, 95, 81)
     Cell.StylizeFrame(group, {0.1, 0.1, 0.1, 0.5})
 
@@ -558,7 +560,7 @@ LoadRoster = function()
     end
 
     -- insert
-    for i = 1, GetNumGroupMembers() do
+    for i = 1, F.GetNumGroupMembers() do
         local subgroup = select(3, GetRaidRosterInfo(i))
         groups[subgroup]:Insert(i)
         -- premadeGroups[subgroup] = premadeGroups[subgroup] + 1
@@ -573,7 +575,7 @@ end
 -- scripts
 -------------------------------------------------
 local function CheckPermission()
-    if UnitIsGroupLeader("player") or UnitIsGroupAssistant("player") then
+    if UnitIsPartyLeader("player") or UnitIsRaidOfficer("player") then
         if raidRosterFrame.mask then raidRosterFrame.mask:Hide() end
     else
         Cell.CreateMask(raidRosterFrame, L["You don't have permission to do this"], {1, -1, -1, 1})
@@ -583,18 +585,18 @@ end
 raidRosterFrame:SetScript("OnEvent", function()
     LoadRoster()
     CheckPermission()
-    assistantCB:SetChecked(IsEveryoneAssistant())
 end)
 
 raidRosterFrame:SetScript("OnShow", function()
-    raidRosterFrame:RegisterEvent("GROUP_ROSTER_UPDATE")
+    raidRosterFrame:RegisterEvent("RAID_ROSTER_UPDATE")
+    raidRosterFrame:RegisterEvent("PARTY_MEMBERS_CHANGED")
     LoadRoster()
     CheckPermission()
-    assistantCB:SetChecked(IsEveryoneAssistant())
 end)
 
 raidRosterFrame:SetScript("OnHide", function()
-    raidRosterFrame:UnregisterEvent("GROUP_ROSTER_UPDATE")
+    raidRosterFrame:UnregisterEvent("RAID_ROSTER_UPDATE")
+    raidRosterFrame:UnregisterEvent("PARTY_MEMBERS_CHANGED")
     Reset()
 end)
 
@@ -605,6 +607,19 @@ local function GroupTypeChanged(groupType)
     raidRosterFrame:Hide()
 end
 Cell.RegisterCallback("GroupTypeChanged", "RaidRosterFrame_GroupTypeChanged", GroupTypeChanged)
+
+local roleUpdatePending
+Cell.RegisterCallback("GroupRoleChanged", "RaidRosterFrame_GroupRoleChanged", function()
+    if not raidRosterFrame:IsShown() or roleUpdatePending then return end
+
+    roleUpdatePending = true
+    F.C_Timer.After(0, function()
+        roleUpdatePending = nil
+        if raidRosterFrame:IsShown() then
+            LoadRoster()
+        end
+    end)
+end)
 
 local function UpdateLayout(layout, which)
     if Cell.vars.isHidden then

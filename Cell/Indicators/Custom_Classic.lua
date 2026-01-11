@@ -110,15 +110,28 @@ function I.RemoveIndicator(parent, indicatorName, auraType)
 end
 
 -- used for switching to a new layout
-function I.RemoveAllCustomIndicators(parent)
+function I.RemoveAllCustomIndicators(parent, indicatorTables)
     -- if parent ~= CellIndicatorsPreviewButton then
     --     wipe(enabledIndicators)
     --     wipe(customIndicators["buff"])
     --     wipe(customIndicators["debuff"])
     -- end
 
+    local reusableIndicators
+    if indicatorTables then
+        -- WotLK cannot destroy frames, so preserve matching indicators across layout changes.
+        reusableIndicators = {}
+        for i = Cell.defaults.builtIns + 1, #indicatorTables do
+            local t = indicatorTables[i]
+            reusableIndicators[t["indicatorName"]] = t["type"]
+        end
+    end
+
     for indicatorName, indicator in pairs(parent.indicators) do
-        if string.find(indicatorName, "^indicator") then
+        local indicatorType = indicator.configs and indicator.configs["type"]
+        if string.find(indicatorName, "^indicator")
+        and (not reusableIndicators or reusableIndicators[indicatorName] ~= indicatorType)
+        then
             indicator:ClearAllPoints()
             indicator:Hide()
             indicator:SetParent(nil)
@@ -211,27 +224,28 @@ end
 -- update
 -------------------------------------------------
 local function Update(indicator, indicatorTable, unit, spell, start, duration, debuffType, icon, count, refreshing)
+    local auraData = indicatorTable["auras"][spell] or indicatorTable["auras"][0]
     if indicatorTable["num"] then
         if indicatorTable["hasColor"] then
-            tinsert(indicatorTable["found"][unit], {indicatorTable["auras"][spell][1], start, duration, debuffType, icon, count, refreshing, indicatorTable["auras"][spell][2]})
+            tinsert(indicatorTable["found"][unit], {auraData[1], start, duration, debuffType, icon, count, refreshing, auraData[2]})
         else
-            tinsert(indicatorTable["found"][unit], {indicatorTable["auras"][spell], start, duration, debuffType, icon, count, refreshing})
+            tinsert(indicatorTable["found"][unit], {auraData, start, duration, debuffType, icon, count, refreshing})
         end
     else
         if indicatorTable["hasColor"] then
-            if indicatorTable["auras"][spell][1] < indicatorTable["topOrder"][unit] then
-                indicatorTable["topOrder"][unit] = indicatorTable["auras"][spell][1]
+            if auraData[1] < indicatorTable["topOrder"][unit] then
+                indicatorTable["topOrder"][unit] = auraData[1]
                 indicatorTable["top"][unit]["start"] = start
                 indicatorTable["top"][unit]["duration"] = duration
                 indicatorTable["top"][unit]["debuffType"] = debuffType
                 indicatorTable["top"][unit]["texture"] = icon
                 indicatorTable["top"][unit]["count"] = count
                 indicatorTable["top"][unit]["refreshing"] = refreshing
-                indicatorTable["top"][unit]["color"] = indicatorTable["auras"][spell][2]
+                indicatorTable["top"][unit]["color"] = auraData[2]
             end
         else
-            if indicatorTable["auras"][spell] < indicatorTable["topOrder"][unit] then
-                indicatorTable["topOrder"][unit] = indicatorTable["auras"][spell]
+            if auraData < indicatorTable["topOrder"][unit] then
+                indicatorTable["topOrder"][unit] = auraData
                 indicatorTable["top"][unit]["start"] = start
                 indicatorTable["top"][unit]["duration"] = duration
                 indicatorTable["top"][unit]["debuffType"] = debuffType
@@ -274,7 +288,11 @@ end
 -------------------------------------------------
 local sort = table.sort
 local function comparator(a, b)
-    return a[1] < b[1]
+    if a[1] and b[1] then
+        return a[1] < b[1]
+    else
+        return a[2] <= b[2]
+    end
 end
 
 function I.ShowCustomIndicators(unitButton, auraType)

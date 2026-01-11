@@ -9,7 +9,7 @@ local LoadList
 local customs = {}
 
 local function CreateCustomNicknamesFrame()
-    customNicknamesFrame = CreateFrame("Frame", "CellOptionsFrame_Nicknames", Cell.frames.generalTab, "BackdropTemplate")
+    customNicknamesFrame = CreateFrame("Frame", "CellOptionsFrame_Nicknames", Cell.frames.generalTab)
     Cell.StylizeFrame(customNicknamesFrame, nil, Cell.GetAccentColorTable())
     customNicknamesFrame:SetFrameLevel(Cell.frames.generalTab:GetFrameLevel() + 50)
     customNicknamesFrame:Hide()
@@ -98,7 +98,7 @@ local function CreateCustomNicknamesFrame()
             newItem.playerName.text = text
         end
 
-        newItem.add:SetEnabled(newItem.playerName.isValid and newItem.nickname.isValid)
+        F.SetEnabled(newItem.add, newItem.playerName.isValid and newItem.nickname.isValid)
     end)
     newItem.playerName:SetScript("OnTabPressed", function()
         newItem.nickname:SetFocus()
@@ -124,7 +124,7 @@ local function CreateCustomNicknamesFrame()
             newItem.nickname.text = text
         end
 
-        newItem.add:SetEnabled(newItem.playerName.isValid and newItem.nickname.isValid)
+        F.SetEnabled(newItem.add, newItem.playerName.isValid and newItem.nickname.isValid)
     end)
     newItem.nickname:SetScript("OnTabPressed", function()
         newItem.playerName:SetFocus()
@@ -170,7 +170,7 @@ local function CreateCustomNicknamesFrame()
         newItem.nickname:SetText("")
         newItem.nickname.tip:Show()
         newItem.nickname.isValid = nil
-        newItem.add:SetEnabled(false)
+        F.SetEnabled(newItem.add, false)
         newItem.add:SetText(L["Add"])
         newItem.updateIndex = nil
         newItem:Show()
@@ -203,7 +203,7 @@ LoadList = function()
             customs[i].separator1 = customs[i]:CreateTexture(nil, "ARTWORK")
             customs[i].separator1:SetPoint("TOP")
             customs[i].separator1:SetPoint("BOTTOM")
-            customs[i].separator1:SetColorTexture(0, 0, 0, 1)
+            customs[i].separator1:SetTexture(0, 0, 0, 1)
             P.Size(customs[i].separator1, 1, 1)
 
             -- nickname
@@ -216,7 +216,7 @@ LoadList = function()
             -- separator2
             -- customs[i].separator2 = customs[i]:CreateTexture(nil, "ARTWORK")
             -- customs[i].separator2:SetPoint("RIGHT", -17, 0)
-            -- customs[i].separator2:SetColorTexture(0, 0, 0, 1)
+            -- customs[i].separator2:SetTexture(0, 0, 0, 1)
             -- P.Size(customs[i].separator2, 1, 20)
 
             -- del
@@ -268,7 +268,7 @@ LoadList = function()
                 newItem.playerName.isValid = true
                 newItem.nickname:SetText(nickname)
                 newItem.nickname.isValid = true
-                newItem.add:SetEnabled(true)
+                F.SetEnabled(newItem.add, true)
                 newItem.add:SetText(_G.UPDATE)
                 newItem.updateIndex = i
                 newItem:Show()

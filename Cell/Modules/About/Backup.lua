@@ -104,7 +104,7 @@ end
 -- create frame
 ---------------------------------------------------------------------
 local function CreateBackupFrame()
-    backupFrame = CreateFrame("Frame", "CellOptionsFrame_Backup", Cell.frames.aboutTab, "BackdropTemplate")
+    backupFrame = CreateFrame("Frame", "CellOptionsFrame_Backup", Cell.frames.aboutTab)
     backupFrame:Hide()
     Cell.StylizeFrame(backupFrame, nil, Cell.GetAccentColorTable())
     backupFrame:EnableMouse(true)

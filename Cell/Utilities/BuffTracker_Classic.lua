@@ -13,10 +13,8 @@ local UnitIsDeadOrGhost = UnitIsDeadOrGhost
 local UnitIsUnit = UnitIsUnit
 local UnitIsPlayer = UnitIsPlayer
 local UnitGUID = UnitGUID
-local UnitClassBase = UnitClassBase
+local UnitClassBase = F.UnitClassBase
 local UnitLevel = UnitLevel
-local IsInGroup = IsInGroup
-local IsInRaid = IsInRaid
 
 local sort, tinsert, tconcat = table.sort, table.insert, table.concat
 
@@ -28,192 +26,75 @@ local requiredBuffs = {}
 local available = {}
 local unaffected = {}
 
-if Cell.isTBC or Cell.isVanilla then
-    buffs = {
-        -- 1243: Power Word: Fortitude
-        -- 21562: Prayer of Fortitude
-        ["PWF"] = {buff1 = 1243, buff2 = 21562, provider = "PRIEST", order = 1},
+buffs = {
+    -- 1243: Power Word: Fortitude
+    -- 21562: Prayer of Fortitude
+    ["PWF"] = {buff1 = 1243, buff2 = 21562, provider = "PRIEST", order = 1},
 
-        -- 14752: Divine Spirit
-        -- 27681: Prayer of Spirit
-        ["DS"] = {buff1 = 14752, buff2 = 27681, provider = "PRIEST", order = 8},
+    -- 14752: Divine Spirit
+    -- 27681: Prayer of Spirit
+    ["DS"] = {buff1 = 14752, buff2 = 27681, provider = "PRIEST", order = 8},
 
-        -- 976: Shadow Protection
-        -- 27683: Prayer of Shadow Protection
-        ["SP"] = {buff1 = 976, buff2 = 27683, provider = "PRIEST", order = 9},
+    -- 976: Shadow Protection
+    -- 27683: Prayer of Shadow Protection
+    ["SP"] = {buff1 = 976, buff2 = 27683, provider = "PRIEST", order = 9},
 
-        -- 1459: Arcane Intellect
-        -- 23028: Arcane Brilliance
-        ["AB"] = {buff1 = 1459, buff2 = 23028, provider = "MAGE", order = 2},
+    -- 1459: Arcane Intellect
+    -- 23028: Arcane Brilliance
+    ["AB"] = {buff1 = 1459, buff2 = 23028, provider = "MAGE", order = 2},
 
-        -- 6673: Battle Shout
-        -- ["BS"] = {buff1 = 6673, provider = "WARRIOR", order = 3},
+    -- 6673: Battle Shout
+    -- ["BS"] = {buff1 = 6673, provider="WARRIOR"},
 
-        -- 1126: Mark of the Wild
-        -- 21849: Gift of the Wild
-        ["MotW"] = {buff1 = 1126, buff2 = 21849, provider = "DRUID", order = 3},
+    -- 469: Commanding Shout
+    -- ["CS"] = {buff1 = 469, provider="WARRIOR"},
 
-        -- 20217: Blessing of Kings
-        -- 25898: Greater Blessing of Kings
-        ["BoK"] = {buff1 = 20217, buff2 = 25898, provider = "PALADIN", order = 4},
+    -- 1126: Mark of the Wild
+    -- 21849: Gift of the Wild
+    ["MotW"] = {buff1 = 1126, buff2 = 21849, provider = "DRUID", order = 3},
 
-        -- 19740: Blessing of Might
-        -- 25782: Greater Blessing of Might
-        ["BoM"] = {buff1 = 19740, buff2 = 25782, provider = "PALADIN", order = 5},
+    -- 20217: Blessing of Kings
+    -- 25898: Greater Blessing of Kings
+    ["BoK"] = {buff1 = 20217, buff2 = 25898, provider = "PALADIN", order = 4},
 
-        -- 19742: Blessing of Wisdom
-        -- 25894: Greater Blessing of Wisdom
-        ["BoW"] = {buff1 = 19742, buff2 = 25894, provider = "PALADIN", order = 6},
+    -- 19740: Blessing of Might
+    -- 25782: Greater Blessing of Might
+    ["BoM"] = {buff1 = 19740, buff2 = 25782, provider = "PALADIN", order = 5},
 
-        -- 20911: Blessing of Sanctuary
-        -- 25899: Greater Blessing of Sanctuary
-        ["BoS"] = {buff1 = 20911, buff2 = 25899, provider = "PALADIN", order = 7},
-    }
+    -- 19742: Blessing of Wisdom
+    -- 25894: Greater Blessing of Wisdom
+    ["BoW"] = {buff1 = 19742, buff2 = 25894, provider = "PALADIN", order = 6},
 
-    requiredBuffs = {
-        ["WARRIOR"] = {["PWF"] = true, ["MotW"] = true, ["BoK"] = true, ["BoM"] = true, ["BoS"] = true, ["SP"] = true},
-        ["PALADIN"] = {["PWF"] = true, ["AB"] = true, ["DS"] = true, ["MotW"] = true, ["BoK"] = true, ["BoM"] = true, ["BoW"] = true, ["BoS"] = true, ["SP"] = true},
-        ["HUNTER"] = {["PWF"] = true, ["AB"] = true, ["MotW"] = true, ["BoK"] = true, ["BoM"] = true, ["BoS"] = true, ["SP"] = true},
-        ["ROGUE"] = {["PWF"] = true, ["MotW"] = true, ["BoK"] = true, ["BoM"] = true, ["BoS"] = true, ["SP"] = true},
-        ["PRIEST"] = {["PWF"] = true, ["AB"] = true, ["DS"] = true, ["MotW"] = true, ["BoK"] = true, ["BoW"] = true, ["BoS"] = true, ["SP"] = true},
-        ["DEATHKNIGHT"] = {["PWF"] = true, ["MotW"] = true, ["BoK"] = true, ["BoM"] = true, ["BoS"] = true, ["SP"] = true},
-        ["SHAMAN"] = {["PWF"] = true, ["AB"] = true, ["DS"] = true, ["MotW"] = true, ["BoK"] = true, ["BoM"] = true, ["BoW"] = true, ["BoS"] = true, ["SP"] = true},
-        ["MAGE"] = {["PWF"] = true, ["AB"] = true, ["MotW"] = true, ["BoK"] = true, ["BoW"] = true, ["BoS"] = true, ["SP"] = true},
-        ["WARLOCK"] = {["PWF"] = true, ["AB"] = true, ["MotW"] = true, ["BoK"] = true, ["BoW"] = true, ["BoS"] = true, ["SP"] = true},
-        ["DRUID"] = {["PWF"] = true, ["AB"] = true, ["DS"] = true, ["MotW"] = true, ["BoK"] = true, ["BoM"] = true, ["BoW"] = true, ["BoS"] = true, ["SP"] = true},
-    }
+    -- 20911: Blessing of Sanctuary
+    -- 25899: Greater Blessing of Sanctuary
+    ["BoS"] = {buff1 = 20911, buff2 = 25899, provider = "PALADIN", order = 7},
+}
 
-    unaffected = {
-        ["PWF"] = {},
-        ["AB"] = {},
-        ["DS"] = {},
-        ["MotW"] = {},
-        ["BoK"] = {},
-        ["BoM"] = {},
-        ["BoW"] = {},
-        ["BoS"] = {},
-        ["SP"] = {},
-    }
+requiredBuffs = {
+    ["WARRIOR"] = {["PWF"] = true, ["MotW"] = true, ["BoK"] = true, ["BoM"] = true, ["BoS"] = true, ["SP"] = true},
+    ["PALADIN"] = {["PWF"] = true, ["AB"] = true, ["DS"] = true, ["MotW"] = true, ["BoK"] = true, ["BoM"] = true, ["BoW"] = true, ["BoS"] = true, ["SP"] = true},
+    ["HUNTER"] = {["PWF"] = true, ["MotW"] = true, ["BoK"] = true, ["BoM"] = true, ["BoS"] = true, ["SP"] = true},
+    ["ROGUE"] = {["PWF"] = true, ["MotW"] = true, ["BoK"] = true, ["BoM"] = true, ["BoS"] = true, ["SP"] = true},
+    ["PRIEST"] = {["PWF"] = true, ["AB"] = true, ["DS"] = true, ["MotW"] = true, ["BoK"] = true, ["BoW"] = true, ["BoS"] = true, ["SP"] = true},
+    ["DEATHKNIGHT"] = {["PWF"] = true, ["MotW"] = true, ["BoK"] = true, ["BoM"] = true, ["BoS"] = true, ["SP"] = true},
+    ["SHAMAN"] = {["PWF"] = true, ["AB"] = true, ["DS"] = true, ["MotW"] = true, ["BoK"] = true, ["BoM"] = true, ["BoW"] = true, ["BoS"] = true, ["SP"] = true},
+    ["MAGE"] = {["PWF"] = true, ["AB"] = true, ["MotW"] = true, ["BoK"] = true, ["BoW"] = true, ["BoS"] = true, ["SP"] = true},
+    ["WARLOCK"] = {["PWF"] = true, ["AB"] = true, ["MotW"] = true, ["BoK"] = true, ["BoW"] = true, ["BoS"] = true, ["SP"] = true},
+    ["DRUID"] = {["PWF"] = true, ["AB"] = true, ["DS"] = true, ["MotW"] = true, ["BoK"] = true, ["BoM"] = true, ["BoW"] = true, ["BoS"] = true, ["SP"] = true},
+}
 
-elseif Cell.isWrath then
-    buffs = {
-        -- 1243: Power Word: Fortitude
-        -- 21562: Prayer of Fortitude
-        ["PWF"] = {buff1 = 1243, buff2 = 21562, provider = "PRIEST", order = 1},
+unaffected = {
+    ["PWF"] = {},
+    ["AB"] = {},
+    ["DS"] = {},
+    ["MotW"] = {},
+    ["BoK"] = {},
+    ["BoM"] = {},
+    ["BoW"] = {},
+    ["BoS"] = {},
+    ["SP"] = {},
+}
 
-        -- 14752: Divine Spirit
-        -- 27681: Prayer of Spirit
-        ["DS"] = {buff1 = 14752, buff2 = 27681, provider = "PRIEST", order = 8},
-
-        -- 976: Shadow Protection
-        -- 27683: Prayer of Shadow Protection
-        ["SP"] = {buff1 = 976, buff2 = 27683, provider = "PRIEST", order = 9},
-
-        -- 1459: Arcane Intellect
-        -- 23028: Arcane Brilliance
-        ["AB"] = {buff1 = 1459, buff2 = 23028, provider = "MAGE", order = 2},
-
-        -- 6673: Battle Shout
-        -- ["BS"] = {buff1 = 6673, provider="WARRIOR"},
-
-        -- 469: Commanding Shout
-        -- ["CS"] = {buff1 = 469, provider="WARRIOR"},
-
-        -- 1126: Mark of the Wild
-        -- 21849: Gift of the Wild
-        ["MotW"] = {buff1 = 1126, buff2 = 21849, provider = "DRUID", order = 3},
-
-        -- 20217: Blessing of Kings
-        -- 25898: Greater Blessing of Kings
-        ["BoK"] = {buff1 = 20217, buff2 = 25898, provider = "PALADIN", order = 4},
-
-        -- 19740: Blessing of Might
-        -- 25782: Greater Blessing of Might
-        ["BoM"] = {buff1 = 19740, buff2 = 25782, provider = "PALADIN", order = 5},
-
-        -- 19742: Blessing of Wisdom
-        -- 25894: Greater Blessing of Wisdom
-        ["BoW"] = {buff1 = 19742, buff2 = 25894, provider = "PALADIN", order = 6},
-
-        -- 20911: Blessing of Sanctuary
-        -- 25899: Greater Blessing of Sanctuary
-        ["BoS"] = {buff1 = 20911, buff2 = 25899, provider = "PALADIN", order = 7},
-    }
-
-    requiredBuffs = {
-        ["WARRIOR"] = {["PWF"] = true, ["MotW"] = true, ["BoK"] = true, ["BoM"] = true, ["BoS"] = true, ["SP"] = true},
-        ["PALADIN"] = {["PWF"] = true, ["AB"] = true, ["DS"] = true, ["MotW"] = true, ["BoK"] = true, ["BoM"] = true, ["BoW"] = true, ["BoS"] = true, ["SP"] = true},
-        ["HUNTER"] = {["PWF"] = true, ["MotW"] = true, ["BoK"] = true, ["BoM"] = true, ["BoS"] = true, ["SP"] = true},
-        ["ROGUE"] = {["PWF"] = true, ["MotW"] = true, ["BoK"] = true, ["BoM"] = true, ["BoS"] = true, ["SP"] = true},
-        ["PRIEST"] = {["PWF"] = true, ["AB"] = true, ["DS"] = true, ["MotW"] = true, ["BoK"] = true, ["BoW"] = true, ["BoS"] = true, ["SP"] = true},
-        ["DEATHKNIGHT"] = {["PWF"] = true, ["MotW"] = true, ["BoK"] = true, ["BoM"] = true, ["BoS"] = true, ["SP"] = true},
-        ["SHAMAN"] = {["PWF"] = true, ["AB"] = true, ["DS"] = true, ["MotW"] = true, ["BoK"] = true, ["BoM"] = true, ["BoW"] = true, ["BoS"] = true, ["SP"] = true},
-        ["MAGE"] = {["PWF"] = true, ["AB"] = true, ["MotW"] = true, ["BoK"] = true, ["BoW"] = true, ["BoS"] = true, ["SP"] = true},
-        ["WARLOCK"] = {["PWF"] = true, ["AB"] = true, ["MotW"] = true, ["BoK"] = true, ["BoW"] = true, ["BoS"] = true, ["SP"] = true},
-        ["DRUID"] = {["PWF"] = true, ["AB"] = true, ["DS"] = true, ["MotW"] = true, ["BoK"] = true, ["BoM"] = true, ["BoW"] = true, ["BoS"] = true, ["SP"] = true},
-    }
-
-    unaffected = {
-        ["PWF"] = {},
-        ["AB"] = {},
-        ["DS"] = {},
-        ["MotW"] = {},
-        ["BoK"] = {},
-        ["BoM"] = {},
-        ["BoW"] = {},
-        ["BoS"] = {},
-        ["SP"] = {},
-    }
-
-elseif Cell.isCata then
-    buffs = {
-        -- 21562: Power Word: Fortitude
-        ["PWF"] = {buff1 = 21562, provider = "PRIEST", level = 14, order = 1},
-
-        -- 27683: Shadow Protection
-        ["SP"] = {buff1 = 27683, provider = "PRIEST", level = 52, order = 6},
-
-        -- 1459: Arcane Brilliance
-        ["AB"] = {buff1 = 1459, buff2 = 79058, provider = "MAGE", level = 58, order = 2},
-
-        -- 6673: Battle Shout
-        -- ["BS"] = {buff1 = 6673, provider = "WARRIOR", level = 20},
-
-        -- 469: Commanding Shout
-        -- ["CS"] = {buff1 = 469, provider = "WARRIOR", level = 68},
-
-        -- 1126: Mark of the Wild
-        ["MotW"] = {buff1 = 1126, provider = "DRUID", level = 30, order = 3},
-
-        -- 20217: Blessing of Kings
-        ["BoK"] = {buff1 = 20217, provider = "PALADIN", level = 22, order = 4},
-
-        -- 19740: Blessing of Might
-        ["BoM"] = {buff1 = 19740, provider = "PALADIN", level = 56, order = 5},
-    }
-
-    requiredBuffs = {
-        ["WARRIOR"] = {["PWF"] = true, ["MotW"] = true, ["BoK"] = true, ["BoM"] = true, ["SP"] = true},
-        ["PALADIN"] = {["PWF"] = true, ["AB"] = true, ["MotW"] = true, ["BoK"] = true, ["BoM"] = true, ["SP"] = true},
-        ["HUNTER"] = {["PWF"] = true, ["MotW"] = true, ["BoK"] = true, ["BoM"] = true, ["SP"] = true},
-        ["ROGUE"] = {["PWF"] = true, ["MotW"] = true, ["BoK"] = true, ["BoM"] = true, ["SP"] = true},
-        ["PRIEST"] = {["PWF"] = true, ["AB"] = true, ["MotW"] = true, ["BoK"] = true, ["SP"] = true},
-        ["DEATHKNIGHT"] = {["PWF"] = true, ["MotW"] = true, ["BoK"] = true, ["BoM"] = true, ["SP"] = true},
-        ["SHAMAN"] = {["PWF"] = true, ["AB"] = true, ["MotW"] = true, ["BoK"] = true, ["BoM"] = true, ["SP"] = true},
-        ["MAGE"] = {["PWF"] = true, ["AB"] = true, ["MotW"] = true, ["BoK"] = true, ["SP"] = true},
-        ["WARLOCK"] = {["PWF"] = true, ["AB"] = true, ["MotW"] = true, ["BoK"] = true, ["SP"] = true},
-        ["DRUID"] = {["PWF"] = true, ["AB"] = true, ["MotW"] = true, ["BoK"] = true, ["BoM"] = true, ["SP"] = true},
-    }
-
-    unaffected = {
-        ["PWF"] = {},
-        ["AB"] = {},
-        ["MotW"] = {},
-        ["BoK"] = {},
-        ["BoM"] = {},
-        ["SP"] = {},
-    }
-end
 
 ---------------------------------------------------------------------
 -- prepare
@@ -305,10 +186,10 @@ end
 ---------------------------------------------------------------------
 -- frame
 ---------------------------------------------------------------------
-local buffTrackerFrame = CreateFrame("Frame", "CellBuffTrackerFrame", Cell.frames.mainFrame, "BackdropTemplate")
+local buffTrackerFrame = CreateFrame("Frame", "CellBuffTrackerFrame", Cell.frames.mainFrame)
 Cell.frames.buffTrackerFrame = buffTrackerFrame
 P.Size(buffTrackerFrame, 102, 50)
-PixelUtil.SetPoint(buffTrackerFrame, "BOTTOMLEFT", CellParent, "CENTER", 1, 1)
+F.PixelUtil.SetPoint(buffTrackerFrame, "BOTTOMLEFT", CellParent, "CENTER", 1, 1)
 buffTrackerFrame:SetClampedToScreen(true)
 buffTrackerFrame:SetMovable(true)
 buffTrackerFrame:RegisterForDrag("LeftButton")
@@ -339,7 +220,7 @@ fakeIconsFrame:Hide()
 local fakeIcons = {}
 local function CreateFakeIcon(spellIcon)
     local bg = fakeIconsFrame:CreateTexture(nil, "BORDER")
-    bg:SetColorTexture(0, 0, 0, 1)
+    bg:SetTexture(0, 0, 0, 1)
     P.Size(bg, 32, 32)
 
     local icon = fakeIconsFrame:CreateTexture(nil, "ARTWORK")
@@ -386,9 +267,7 @@ Cell.RegisterCallback("ShowMover", "BuffTracker_ShowMover", ShowMover)
 ---------------------------------------------------------------------
 local sendChannel
 local function UpdateSendChannel()
-    if IsInGroup(LE_PARTY_CATEGORY_INSTANCE) then
-        sendChannel = "INSTANCE_CHAT"
-    elseif IsInRaid() then
+    if F.IsInRaid() then
         sendChannel = "RAID"
     else
         sendChannel = "PARTY"
@@ -396,7 +275,7 @@ local function UpdateSendChannel()
 end
 
 local function CreateBuffButton(parent, size, spell1, spell2, icon, index)
-    local b = CreateFrame("Button", nil, parent, "SecureActionButtonTemplate,BackdropTemplate")
+    local b = CreateFrame("Button", nil, parent, "SecureActionButtonTemplate")
     if parent then b:SetFrameLevel(parent:GetFrameLevel() + 1) end
     P.Size(b, size[1], size[2])
 
@@ -419,6 +298,7 @@ local function CreateBuffButton(parent, size, spell1, spell2, icon, index)
     end)
 
     b.texture = b:CreateTexture(nil, "OVERLAY")
+    F.FixTextureDesaturation(b.texture)
     P.Point(b.texture, "TOPLEFT", b, "TOPLEFT", 1, -1)
     P.Point(b.texture, "BOTTOMRIGHT", b, "BOTTOMRIGHT", -1, 1)
     b.texture:SetTexture(icon)
@@ -604,7 +484,26 @@ end, unpack(fadeOuts))
 ---------------------------------------------------------------------
 -- find aura
 ---------------------------------------------------------------------
-local GetAuraDataBySpellName = C_UnitAuras.GetAuraDataBySpellName
+local function GetAuraDataBySpellName(unit, spellName, filter)
+    for i = 1, 40 do
+        local name, _, icon, count, debuffType, duration, expirationTime, sourceUnit, isStealable, _, spellId = UnitAura(unit, i, filter)
+        if not name then
+            return
+        elseif name == spellName then
+            return {
+                name = name,
+                icon = icon,
+                applications = count,
+                dispelName = debuffType,
+                duration = duration,
+                expirationTime = expirationTime,
+                sourceUnit = sourceUnit,
+                isStealable = isStealable,
+                spellId = spellId,
+            }
+        end
+    end
+end
 
 local function UnitBuffExists(unit, buff)
     local name = buffs[buff]["buff1"]["name"]
@@ -652,7 +551,7 @@ local function ShowMissingBuffs(unit)
             I.ShowMissingBuff(unit, buffsProvidedByMe[buff][2])
         end
     else
-        I.ShowMissingBuff(unit, 254882)
+        I.ShowMissingBuff(unit, "Interface\\Icons\\INV_Sigil_Freya")
     end
 end
 
@@ -754,7 +653,7 @@ end
 local timer
 function buffTrackerFrame:GROUP_ROSTER_UPDATE(immediate)
     if timer then timer:Cancel() end
-    if IsInGroup() then
+    if F.IsInGroup() then
         buffTrackerFrame:RegisterEvent("READY_CHECK")
         buffTrackerFrame:RegisterEvent("UNIT_FLAGS")
         buffTrackerFrame:RegisterEvent("PLAYER_UNGHOST")
@@ -777,9 +676,11 @@ function buffTrackerFrame:GROUP_ROSTER_UPDATE(immediate)
     if immediate then
         IterateAllUnits()
     else
-        timer = C_Timer.NewTimer(2, IterateAllUnits)
+        timer = F.C_Timer.NewTimer(2, IterateAllUnits)
     end
 end
+buffTrackerFrame.RAID_ROSTER_UPDATE = buffTrackerFrame.GROUP_ROSTER_UPDATE
+buffTrackerFrame.PARTY_MEMBERS_CHANGED = buffTrackerFrame.GROUP_ROSTER_UPDATE
 
 function buffTrackerFrame:READY_CHECK()
     buffTrackerFrame:GROUP_ROSTER_UPDATE(true)
@@ -802,7 +703,7 @@ end
 -- end
 
 function buffTrackerFrame:UNIT_AURA(unit)
-    if IsInRaid() then
+    if F.IsInRaid() then
         if unit:find("^raid%d+$") then
             CheckUnit(unit, true)
         end
@@ -830,7 +731,8 @@ local function UpdateTools(which)
     if not which or which == "buffTracker" then
         if CellDB["tools"]["buffTracker"][1] then
             buffTrackerFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
-            buffTrackerFrame:RegisterEvent("GROUP_ROSTER_UPDATE")
+            buffTrackerFrame:RegisterEvent("RAID_ROSTER_UPDATE")
+            buffTrackerFrame:RegisterEvent("PARTY_MEMBERS_CHANGED")
 
             if which == "buffTracker" then -- already in world, manually enabled
                 buffTrackerFrame:GROUP_ROSTER_UPDATE(true)

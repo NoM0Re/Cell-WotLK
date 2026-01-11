@@ -1,4 +1,5 @@
 local _, Cell = ...
+---@class CellFuncs
 local L = Cell.L
 local F = Cell.funcs
 
@@ -15,7 +16,9 @@ end
 
 local function Deserialize(encoded)
     local decoded = LibDeflate:DecodeForWoWAddonChannel(encoded) -- decode
-    local decompressed = LibDeflate:DecompressDeflate(decoded) -- decompress
+    if not decoded then return end
+
+    local decompressed, errorMsg = LibDeflate:DecompressDeflate(decoded) -- decompress
     if not decompressed then
         F.Debug("Error decompressing: " .. errorMsg)
         return
@@ -42,9 +45,7 @@ end
 -----------------------------------------
 local sendChannel
 local function UpdateSendChannel()
-    if IsInGroup(LE_PARTY_CATEGORY_INSTANCE) then
-        sendChannel = "INSTANCE_CHAT"
-    elseif IsInRaid() then
+    if F.IsInRaid() then
         sendChannel = "RAID"
     else
         sendChannel = "PARTY"
@@ -59,14 +60,17 @@ eventFrame:SetScript("OnEvent", function(self, event, ...)
     self[event](self, ...)
 end)
 
-eventFrame:RegisterEvent("GROUP_ROSTER_UPDATE")
-function eventFrame:GROUP_ROSTER_UPDATE()
-    if IsInGroup() then
-        eventFrame:UnregisterEvent("GROUP_ROSTER_UPDATE")
+eventFrame:RegisterEvent("RAID_ROSTER_UPDATE")
+eventFrame:RegisterEvent("PARTY_MEMBERS_CHANGED")
+function eventFrame:RAID_ROSTER_UPDATE()
+    if F.IsInGroup() then
+        eventFrame:UnregisterEvent("RAID_ROSTER_UPDATE")
+        eventFrame:UnregisterEvent("PARTY_MEMBERS_CHANGED")
         UpdateSendChannel()
         Comm:SendCommMessage("CELL_VERSION", Cell.version, sendChannel, nil, "NORMAL")
     end
 end
+eventFrame.PARTY_MEMBERS_CHANGED = eventFrame.RAID_ROSTER_UPDATE
 
 eventFrame:RegisterEvent("PLAYER_LOGIN")
 function eventFrame:PLAYER_LOGIN()
@@ -81,7 +85,7 @@ Comm:RegisterComm("CELL_VERSION", function(prefix, message, channel, sender)
     local myVersion = tonumber(string.match(Cell.version, "%d+"))
     if (not CellDB["lastVersionCheck"] or time()-CellDB["lastVersionCheck"]>=25200) and version and myVersion and myVersion < version then
         CellDB["lastVersionCheck"] = time()
-        F.Print(L["New version found (%s). Please visit %s to get the latest version."]:format(message, "|cFF00CCFFhttps://www.curseforge.com/wow/addons/cell|r"))
+        F.Print(L["New version found (%s). Please visit %s to get the latest version."]:format(message, "|cFF00CCFFhttps://github.com/NoM0Re/Cell-WotLK|r"))
     end
 end)
 
@@ -127,26 +131,26 @@ Cell.hasHighestPriority = false
 
 local function UpdatePriority()
     myPriority = 99
-    if UnitIsGroupLeader("player") then
+    if UnitIsPartyLeader("player") then
         myPriority = 0
     else
-        if IsInRaid() then
-            for i = 1, GetNumGroupMembers() do
+        if F.IsInRaid() then
+            for i = 1, F.GetNumGroupMembers() do
                 if UnitIsUnit("player", "raid"..i) then
                     myPriority = i
                     break
                 end
             end
-        elseif IsInGroup() then -- party
+        elseif F.IsInGroup() then -- party
             local players = {}
-            local pName, pRealm = UnitFullName("player")
-            pRealm = pRealm or GetRealmName()
+            local pName, pRealm = UnitName("player")
+            pRealm = F.GetNormalizedRealmName(pRealm)
             pName = pName.."-"..pRealm
             tinsert(players, pName)
 
-            for i = 1, GetNumGroupMembers()-1 do
-                local name, realm = UnitFullName("party"..i)
-                tinsert(players, name.."-"..(realm or pRealm))
+            for i = 1, F.GetNumGroupMembers()-1 do
+                local name, realm = UnitName("party"..i)
+                tinsert(players, name.."-"..(F.GetNormalizedRealmName(realm) or pRealm))
             end
             table.sort(players)
 
@@ -158,45 +162,44 @@ local function UpdatePriority()
             end
         end
     end
-
 end
 
 local t_check, t_send, t_update
 function F.CheckPriority()
     UpdatePriority()
     -- NOTE: needs time to calc myPriority
-    C_Timer.After(1, function()
+    F.C_Timer.After(1, function()
         UpdateSendChannel()
         Comm:SendCommMessage("CELL_CPRIO", "chk", sendChannel, nil, "ALERT")
     end)
     -- if t_check then t_check:Cancel() end
-    -- t_check = C_Timer.NewTimer(2, function()
+    -- t_check = F.C_Timer.NewTimer(2, function()
     --     UpdateSendChannel()
     --     Comm:SendCommMessage("CELL_CPRIO", "chk", sendChannel, nil, "BULK")
     -- end)
 end
 
 Comm:RegisterComm("CELL_CPRIO", function(prefix, message, channel, sender)
-    if not myPriority then return end -- receive CELL_CPRIO just after GOURP_JOINED
+    if not myPriority then return end -- receive CELL_CPRIO just after GROUP_JOINED
     highestPriority = 99
 
     -- NOTE: wait for check requests
     if t_send then t_send:Cancel() end
-    t_send = C_Timer.NewTimer(2, function()
+    t_send = F.C_Timer.NewTimer(2, function()
         UpdateSendChannel()
         Comm:SendCommMessage("CELL_PRIO", tostring(myPriority), sendChannel, nil, "ALERT")
     end)
 end)
 
 Comm:RegisterComm("CELL_PRIO", function(prefix, message, channel, sender)
-    if not myPriority then return end -- receive CELL_PRIO just after GOURP_JOINED
+    if not myPriority then return end -- receive CELL_PRIO just after GROUP_JOINED
 
     local p = tonumber(message)
     if p then
         highestPriority = highestPriority < p and highestPriority or p
 
         if t_update then t_update:Cancel() end
-        t_update = C_Timer.NewTimer(2, function()
+        t_update = F.C_Timer.NewTimer(2, function()
             Cell.hasHighestPriority = myPriority <= highestPriority
             Cell.Fire("UpdatePriority", Cell.hasHighestPriority)
             F.Debug("|cff00ff00UpdatePriority:|r", Cell.hasHighestPriority)
@@ -209,7 +212,7 @@ end)
 -----------------------------------------
 local function CrossRealmSendCommMessage(prefix, message, playerName, priority, callbackFn)
     -- NOTE: unit needs to be in your group, or it will always return true
-    if UnitIsSameServer(playerName) then
+    if UnitIsSameServer("player", playerName) then
         Comm:SendCommMessage(prefix, message, "WHISPER", playerName, priority, callbackFn)
     else
         if UnitInParty(playerName) then
@@ -226,25 +229,25 @@ end
 local function filterFunc(self, event, msg, player, arg1, arg2, arg3, flag, channelId, ...)
     local newMsg = ""
 
-    local type = msg:match("%[Cell:(.+): .+]")
+    local type = msg:match("%[Cell[%.:]([^:]+): .+%]")
     if type == "Debuffs" then
-        local bossName, instanceName, playerName = msg:match("%[Cell:Debuffs: (.+) %((.+)%) %- ([^%s]+%-[^%s]+)%]")
+        local bossName, instanceName, playerName = msg:match("%[Cell[%.:]Debuffs: (.+) %((.+)%) %- ([^%s]+%-[^%s]+)%]")
         if bossName and instanceName and playerName then
-            newMsg = "|Hgarrmission:cell-debuffs|h|cFFFF0066["..L[type]..": "..bossName.." ("..instanceName..") - "..playerName.."]|h|r"
+            newMsg = "|HBNplayer::cell-debuffs|h|cFFFF0066["..L[type]..": "..bossName.." ("..instanceName..") - "..playerName.."]|h|r"
         else
-            instanceName, playerName = msg:match("%[Cell:Debuffs: (.+) %- ([^%s]+%-[^%s]+)%]")
+            instanceName, playerName = msg:match("%[Cell[%.:]Debuffs: (.+) %- ([^%s]+%-[^%s]+)%]")
             if instanceName and playerName then
-                newMsg = "|Hgarrmission:cell-debuffs|h|cFFFF0066["..L[type]..": "..instanceName.." - "..playerName.."]|h|r"
+                newMsg = "|HBNplayer::cell-debuffs|h|cFFFF0066["..L[type]..": "..instanceName.." - "..playerName.."]|h|r"
             end
         end
     elseif type == "Layout" then
-        local layoutName, playerName = msg:match("%[Cell:Layout: (.+) %- ([^%s]+%-[^%s]+)%]")
+        local layoutName, playerName = msg:match("%[Cell[%.:]Layout: (.+) %- ([^%s]+%-[^%s]+)%]")
         if layoutName and playerName then
             if layoutName == "default" then
                 -- NOTE: convert "default"
                 layoutName = _G.DEFAULT
             end
-            newMsg = "|Hgarrmission:cell-layout|h|cFFFF0066["..L[type]..": "..layoutName.." - "..playerName.."]|h|r"
+            newMsg = "|HBNplayer::cell-layout|h|cFFFF0066["..L[type]..": "..layoutName.." - "..playerName.."]|h|r"
         end
     end
 
@@ -266,8 +269,6 @@ ChatFrame_AddMessageEventFilter("CHAT_MSG_WHISPER", filterFunc)
 ChatFrame_AddMessageEventFilter("CHAT_MSG_WHISPER_INFORM", filterFunc)
 ChatFrame_AddMessageEventFilter("CHAT_MSG_BN_WHISPER", filterFunc)
 ChatFrame_AddMessageEventFilter("CHAT_MSG_BN_WHISPER_INFORM", filterFunc)
-ChatFrame_AddMessageEventFilter("CHAT_MSG_INSTANCE_CHAT", filterFunc)
-ChatFrame_AddMessageEventFilter("CHAT_MSG_INSTANCE_CHAT_LEADER", filterFunc)
 
 local isRequesting
 
@@ -395,16 +396,20 @@ end
 
 hooksecurefunc("SetItemRef", function(link, text)
     if isRequesting then return end
-    if link == "garrmission:cell-debuffs" then
-        local bossName, instanceName, playerName = text:match("|Hgarrmission:cell%-debuffs|h|cFFFF0066%[.+: (.+) %((.+)%) %- ([^%s]+%-[^%s]+)%]|h|r")
+    if link == "BNplayer::cell-debuffs" then
+        local bossName, instanceName, playerName = text:match("|HBNplayer::cell%-debuffs|h|cFFFF0066%[.+: (.+) %((.+)%) %- ([^%s]+%-[^%s]+)%]|h|r")
         if bossName and instanceName and playerName then
             ShowReceivingFrame("Debuffs", playerName, instanceName, bossName)
         else
-            instanceName, playerName = text:match("|Hgarrmission:cell%-debuffs|h|cFFFF0066%[.+: (.+) %- ([^%s]+%-[^%s]+)%]|h|r")
-            ShowReceivingFrame("Debuffs", playerName, instanceName)
+            instanceName, playerName = text:match("|HBNplayer::cell%-debuffs|h|cFFFF0066%[.+: (.+) %- ([^%s]+%-[^%s]+)%]|h|r")
+            if instanceName and playerName then
+                ShowReceivingFrame("Debuffs", playerName, instanceName)
+            end
         end
-    elseif link == "garrmission:cell-layout" then
-        local layoutName, playerName = text:match("|Hgarrmission:cell%-layout|h|cFFFF0066%[.+: (.+) %- ([^%s]+%-[^%s]+)%]|h|r")
-        ShowReceivingFrame("Layout", playerName, layoutName)
+    elseif link == "BNplayer::cell-layout" then
+        local layoutName, playerName = text:match("|HBNplayer::cell%-layout|h|cFFFF0066%[.+: (.+) %- ([^%s]+%-[^%s]+)%]|h|r")
+        if layoutName and playerName then
+            ShowReceivingFrame("Layout", playerName, layoutName)
+        end
     end
 end)

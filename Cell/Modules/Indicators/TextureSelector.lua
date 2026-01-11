@@ -14,7 +14,7 @@ local function CreateTextureSelector()
         Cell.frames.indicatorsTab.mask:Hide()
     end
 
-    textureSelector = CreateFrame("Frame", "CellOptionsFrame_TextureSelector", Cell.frames.indicatorsTab, "BackdropTemplate")
+    textureSelector = CreateFrame("Frame", "CellOptionsFrame_TextureSelector", Cell.frames.indicatorsTab)
     Cell.StylizeFrame(textureSelector, nil, Cell.GetAccentColorTable())
     textureSelector:SetFrameLevel(Cell.frames.indicatorsTab:GetFrameLevel() + 50)
     textureSelector:SetPoint("TOPLEFT", P.Scale(1), -100)
@@ -102,7 +102,7 @@ LoadTextures = function()
     for i, path in pairs(textures) do
         local b = buttons[i]
         if not b then
-            b = CreateFrame("Button", nil, scrollFrame.content, "BackdropTemplate")
+            b = CreateFrame("Button", nil, scrollFrame.content)
             buttons[i] = b
             P.Size(b, 50, 50)
             b:SetBackdrop({bgFile = Cell.vars.whiteTexture, edgeFile = Cell.vars.whiteTexture, edgeSize = P.Scale(1)})
@@ -158,11 +158,7 @@ LoadTextures = function()
         end
 
         -- texture
-        if strfind(strlower(path), "^interface") then
-            b.tex:SetTexture(path)
-        else
-            b.tex:SetAtlas(path)
-        end
+        F.SetTexture(b.tex, path)
 
         -- onclick
         b:SetScript("OnClick", function(self, button)

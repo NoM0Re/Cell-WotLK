@@ -281,18 +281,36 @@ function I.CreateTankActiveMitigation(parent)
 
     bar:SetStatusBarTexture(Cell.vars.whiteTexture)
     bar:GetStatusBarTexture():SetAlpha(0)
-    bar:SetReverseFill(true)
+    bar.reverseFill = true
 
     local tex = bar:CreateTexture(nil, "BORDER", nil, -1)
     bar.tex = tex
-    tex:SetColorTexture(F.GetClassColor(Cell.vars.playerClass))
+    tex:SetTexture(F.GetClassColor(Cell.vars.playerClass))
     tex:SetPoint("TOPLEFT")
     tex:SetPoint("BOTTOMRIGHT", bar:GetStatusBarTexture(), "BOTTOMLEFT")
 
     local elapsedTime = 0
     bar:SetScript("OnUpdate", function(self, elapsed)
+        if not bar.startTime or not bar.duration then
+            bar.startTime = nil
+            bar.duration = nil
+            bar:Hide()
+            return
+        end
+
         if elapsedTime >= 0.1 then
-            bar:SetValue(bar:GetValue() + elapsedTime)
+            local value = GetTime() - bar.startTime
+            if value >= bar.duration then
+                bar.startTime = nil
+                bar.duration = nil
+                bar:Hide()
+                return
+            end
+            if bar.reverseFill then
+                value = bar.duration - value
+            end
+            value = max(0, min(bar.duration, value))
+            bar:SetValue(value)
             elapsedTime = 0
         end
         elapsedTime = elapsedTime + elapsed
@@ -300,13 +318,20 @@ function I.CreateTankActiveMitigation(parent)
 
     function bar:SetCooldown(start, duration)
         if bar.cType == "class_color" then
-            if not parent.states.class then parent.states.class = UnitClassBase(parent.states.unit) end --? why sometimes parent.states.class == nil ???
-            tex:SetColorTexture(F.GetClassColor(parent.states.class))
+            if not parent.states.class then parent.states.class = F.UnitClassBase(parent.states.unit) end --? why sometimes parent.states.class == nil ???
+            tex:SetTexture(F.GetClassColor(parent.states.class))
         else
-            tex:SetColorTexture(bar.cTable[1], bar.cTable[2], bar.cTable[3])
+            tex:SetTexture(bar.cTable[1], bar.cTable[2], bar.cTable[3])
         end
+        bar.startTime = start
+        bar.duration = duration
         bar:SetMinMaxValues(0, duration)
-        bar:SetValue(GetTime()-start)
+        local value = GetTime() - start
+        if bar.reverseFill then
+            value = duration - value
+        end
+        value = max(0, min(duration, value))
+        bar:SetValue(value)
         bar:Show()
     end
 
@@ -438,19 +463,11 @@ local function Debuffs_ShowTooltip(debuffs, show)
             debuffs[i]:SetScript("OnLeave", function()
                 GameTooltip:Hide()
             end)
-
-            -- https://warcraft.wiki.gg/wiki/API_ScriptRegion_EnableMouse
-            if not debuffs.enableBlacklistShortcut then
-                debuffs[i]:SetMouseClickEnabled(false)
-            end
+            debuffs[i]:EnableMouse(true)
         else
             debuffs[i]:SetScript("OnEnter", nil)
             debuffs[i]:SetScript("OnLeave", nil)
-            if debuffs.enableBlacklistShortcut then
-                debuffs[i]:SetMouseMotionEnabled(false)
-            else
-                debuffs[i]:EnableMouse(false)
-            end
+            debuffs[i]:EnableMouse(debuffs.enableBlacklistShortcut)
         end
     end
 end
@@ -476,13 +493,10 @@ local function Debuffs_EnableBlacklistShortcut(debuffs, enabled)
                     F.ReloadIndicatorOptions(Cell.defaults.indicatorIndices.debuffs)
                 end
             end)
+            debuffs[i]:EnableMouse(true)
         else
             debuffs[i]:SetScript("OnMouseUp", nil)
-            if debuffs.showTooltip then
-                debuffs[i]:SetMouseClickEnabled(false)
-            else
-                debuffs[i]:EnableMouse(false)
-            end
+            debuffs[i]:EnableMouse(debuffs.showTooltip)
         end
     end
 end
@@ -601,7 +615,7 @@ local function Dispels_SetDispels(self, dispelTypes)
                     self.highlight:SetVertexColor(r, g, b, 1)
                 elseif self.highlightType == "gradient" or self.highlightType == "gradient-half" then
                     self.highlight:SetTexture(Cell.vars.whiteTexture)
-                    self.highlight:SetGradient("VERTICAL", CreateColor(r, g, b, 1), CreateColor(r, g, b, 0))
+                    self.highlight:SetGradientAlpha("VERTICAL", r, g, b, 1, r, g, b, 0)
                 end
                 self.highlight:Show()
             end
@@ -904,6 +918,7 @@ local function RaidDebuffs_ShowTooltip(raidDebuffs, show)
             raidDebuffs[i]:SetScript("OnLeave", function()
                 GameTooltip:Hide()
             end)
+            raidDebuffs[i]:EnableMouse(true)
         else
             raidDebuffs[i]:SetScript("OnEnter", nil)
             raidDebuffs[i]:SetScript("OnLeave", nil)
@@ -939,72 +954,6 @@ function I.CreateRaidDebuffs(parent)
         tinsert(raidDebuffs, frame)
         -- frame:SetScript("OnShow", raidDebuffs.UpdateSize)
         -- frame:SetScript("OnHide", raidDebuffs.UpdateSize)
-    end
-end
-
--------------------------------------------------
--- private auras
--------------------------------------------------
-local function PrivateAuras_UpdatePrivateAuraAnchor(self, unit)
-    -- remove old
-    if self.auraAnchorID then
-        C_UnitAuras.RemovePrivateAuraAnchor(self.auraAnchorID)
-        self.unit = nil
-        self.auraAnchorID = nil
-    end
-
-    -- add new
-    if unit then
-        local _showCountdownFrame, _showCountdownNumbers = true, false
-        if type(self.showCountdownFrame) == "boolean" then _showCountdownFrame = self.showCountdownFrame end
-        if type(self.showCountdownNumbers) == "boolean" then _showCountdownNumbers = self.showCountdownNumbers end
-
-        self.unit = unit
-        self.auraAnchorID = C_UnitAuras.AddPrivateAuraAnchor({
-            unitToken = unit,
-            auraIndex = 1,
-            parent = self,
-            showCountdownFrame = _showCountdownFrame,
-            showCountdownNumbers = _showCountdownNumbers,
-            iconInfo = {
-                iconWidth = self:GetWidth(),
-                iconHeight = self:GetHeight(),
-                iconAnchor = {
-                    point = "CENTER",
-                    relativeTo = self,
-                    relativePoint = "CENTER",
-                    offsetX = 0,
-                    offsetY = 0,
-                },
-            },
-            -- durationAnchor = {
-            --     point = "BOTTOMRIGHT",
-            --     relativeTo = self,
-            --     relativePoint = "BOTTOMRIGHT",
-            --     offsetX = 0,
-            --     offsetY = 0,
-            -- },
-        })
-    end
-end
-
-function I.CreatePrivateAuras(parent)
-    local privateAuras = CreateFrame("Frame", parent:GetName().."PrivateAuraParent", parent.widgets.indicatorFrame)
-    parent.indicators.privateAuras = privateAuras
-    privateAuras:Hide()
-
-    privateAuras.UpdatePrivateAuraAnchor = PrivateAuras_UpdatePrivateAuraAnchor
-    privateAuras._SetSize = privateAuras.SetSize
-
-    function privateAuras:SetSize(width, height)
-        privateAuras:_SetSize(width, height)
-        privateAuras:UpdatePrivateAuraAnchor(privateAuras.unit)
-    end
-
-    function privateAuras:UpdateOptions(t)
-        self.showCountdownFrame = t[1]
-        self.showCountdownNumbers = t[2]
-        privateAuras:UpdatePrivateAuraAnchor(privateAuras.unit)
     end
 end
 
@@ -1179,10 +1128,10 @@ function I.CreateNameText(parent)
                     nameText.name:SetText("|cffbbbbbb7-|r"..nameText.name:GetText())
                 end
             else
-                if IsInRaid() and nameText.showGroupNumber then
+                if F.IsInRaid() and nameText.showGroupNumber then
                     local raidIndex = UnitInRaid(parent.states.unit)
                     if raidIndex then
-                        local subgroup = select(3, GetRaidRosterInfo(raidIndex))
+                        local subgroup = select(3, GetRaidRosterInfo(raidIndex + 1))
                         -- nameText.name:SetText("|TInterface\\AddOns\\Cell\\Media\\Icons\\group"..subgroup..":0:0:0:-1:64:64:6:58:6:58|t"..nameText.name:GetText())
                         nameText.name:SetText("|cffbbbbbb"..subgroup.."-|r"..nameText.name:GetText())
                     end
@@ -1340,19 +1289,19 @@ local function StatusText_SetPosition(self, point, yOffset, justify)
         self.text:SetJustifyH("LEFT")
         self.timer:SetPoint("RIGHT")
         self.timer:SetJustifyH("RIGHT")
-        self.bg:SetGradient("HORIZONTAL", CreateColor(0, 0, 0, 0.777), CreateColor(0, 0, 0, 0))
+        self.bg:SetGradientAlpha("HORIZONTAL", 0, 0, 0, 0.777, 0, 0, 0, 0)
     elseif justify == "left" then
         self.text:SetPoint("LEFT")
         self.text:SetJustifyH("LEFT")
         self.timer:SetPoint("LEFT", self.text, "RIGHT", 2, 0)
         self.timer:SetJustifyH("LEFT")
-        self.bg:SetGradient("HORIZONTAL", CreateColor(0, 0, 0, 0.777), CreateColor(0, 0, 0, 0))
+        self.bg:SetGradientAlpha("HORIZONTAL", 0, 0, 0, 0.777, 0, 0, 0, 0)
     else
         self.text:SetPoint("RIGHT")
         self.text:SetJustifyH("RIGHT")
         self.timer:SetPoint("RIGHT", self.text, "LEFT", -2, 0)
         self.timer:SetJustifyH("RIGHT")
-        self.bg:SetGradient("HORIZONTAL", CreateColor(0, 0, 0, 0), CreateColor(0, 0, 0, 0.777))
+        self.bg:SetGradientAlpha("HORIZONTAL", 0, 0, 0, 0, 0, 0, 0, 0.777)
     end
 
     self:SetHeight(self.text:GetHeight()+P.Scale(1)*2)
@@ -1369,7 +1318,7 @@ local function StatusText_ShowTimer(self)
 
     if not startTimeCache[self.parent.states.guid] then startTimeCache[self.parent.states.guid] = GetTime() end
 
-    self.ticker = C_Timer.NewTicker(1, function()
+    self.ticker = F.C_Timer.NewTicker(1, function()
         if not self.parent.states.guid and self.parent.states.unit then -- ElvUI AFK mode
             self.parent.states.guid = UnitGUID(self.parent.states.unit)
         end
@@ -1393,7 +1342,6 @@ end
 function I.CreateStatusText(parent)
     local statusText = CreateFrame("Frame", parent:GetName().."StatusText", parent.widgets.indicatorFrame)
     parent.indicators.statusText = statusText
-    statusText:SetIgnoreParentAlpha(true)
     statusText:Hide()
 
     statusText.parent = parent
@@ -1916,8 +1864,6 @@ function I.CreateReadyCheckIcon(parent)
     local readyCheckIcon = CreateFrame("Frame", parent:GetName().."ReadyCheckIcon", parent.widgets.indicatorFrame)
     parent.indicators.readyCheckIcon = readyCheckIcon
     readyCheckIcon:Hide()
-    readyCheckIcon:SetIgnoreParentAlpha(true)
-
     readyCheckIcon.tex = readyCheckIcon:CreateTexture(nil, "ARTWORK")
     readyCheckIcon.tex:SetAllPoints(readyCheckIcon)
 
@@ -1933,7 +1879,7 @@ end
 -- aggro border
 -------------------------------------------------
 function I.CreateAggroBorder(parent)
-    local aggroBorder = CreateFrame("Frame", parent:GetName().."AggroBorder", parent, "BackdropTemplate")
+    local aggroBorder = CreateFrame("Frame", parent:GetName().."AggroBorder", parent)
     parent.indicators.aggroBorder = aggroBorder
     P.Point(aggroBorder, "TOPLEFT", parent, "TOPLEFT", 1, -1)
     P.Point(aggroBorder, "BOTTOMRIGHT", parent, "BOTTOMRIGHT", -1, 1)
@@ -1964,16 +1910,16 @@ function I.CreateAggroBorder(parent)
     right:SetPoint("BOTTOMRIGHT")
     right:SetWidth(5)
 
-    top:SetGradient("VERTICAL", CreateColor(1, 0.1, 0.1, 0.2), CreateColor(1, 0.1, 0.1, 1))
-    bottom:SetGradient("VERTICAL", CreateColor(1, 0.1, 0.1, 1), CreateColor(1, 0.1, 0.1, 0.2))
-    left:SetGradient("HORIZONTAL", CreateColor(1, 0.1, 0.1, 1), CreateColor(1, 0.1, 0.1, 0.2))
-    right:SetGradient("HORIZONTAL", CreateColor(1, 0.1, 0.1, 0.2), CreateColor(1, 0.1, 0.1, 1))
+    top:SetGradientAlpha("VERTICAL", 1, 0.1, 0.1, 0.2, 1, 0.1, 0.1, 1)
+    bottom:SetGradientAlpha("VERTICAL", 1, 0.1, 0.1, 1, 1, 0.1, 0.1, 0.2)
+    left:SetGradientAlpha("HORIZONTAL", 1, 0.1, 0.1, 1, 1, 0.1, 0.1, 0.2)
+    right:SetGradientAlpha("HORIZONTAL", 1, 0.1, 0.1, 0.2, 1, 0.1, 0.1, 1)
 
     function aggroBorder:ShowAggro(r, g, b)
-        top:SetGradient("VERTICAL", CreateColor(r, g, b, 0.2), CreateColor(r, g, b, 1))
-        bottom:SetGradient("VERTICAL", CreateColor(r, g, b, 1), CreateColor(r, g, b, 0.2))
-        left:SetGradient("HORIZONTAL", CreateColor(r, g, b, 1), CreateColor(r, g, b, 0.2))
-        right:SetGradient("HORIZONTAL", CreateColor(r, g, b, 0.2), CreateColor(r, g, b, 1))
+        top:SetGradientAlpha("VERTICAL", r, g, b, 0.2, r, g, b, 1)
+        bottom:SetGradientAlpha("VERTICAL", r, g, b, 1, r, g, b, 0.2)
+        left:SetGradientAlpha("HORIZONTAL", r, g, b, 1, r, g, b, 0.2)
+        right:SetGradientAlpha("HORIZONTAL", r, g, b, 0.2, r, g, b, 1)
         aggroBorder:Show()
     end
 
@@ -1993,7 +1939,7 @@ end
 -- aggro blink
 -------------------------------------------------
 function I.CreateAggroBlink(parent)
-    local aggroBlink = CreateFrame("Frame", parent:GetName().."AggroBlink", parent.widgets.indicatorFrame, "BackdropTemplate")
+    local aggroBlink = CreateFrame("Frame", parent:GetName().."AggroBlink", parent.widgets.indicatorFrame)
     parent.indicators.aggroBlink = aggroBlink
     -- aggroBlink:SetPoint("TOPLEFT")
     -- aggroBlink:SetSize(10, 10)
@@ -2008,8 +1954,7 @@ function I.CreateAggroBlink(parent)
 
     local alpha = blink:CreateAnimation("Alpha")
     blink.alpha = alpha
-    alpha:SetFromAlpha(1)
-    alpha:SetToAlpha(0)
+    F.AlphaSetFromTo(alpha, 1, 0)
     alpha:SetDuration(0.5)
 
     aggroBlink:SetScript("OnShow", function(self)
@@ -2079,7 +2024,7 @@ local function ShieldBar_SetPoint(bar, point, anchorTo, anchorPoint, x, y)
 end
 
 function I.CreateShieldBar(parent)
-    local shieldBar = CreateFrame("Frame", parent:GetName().."ShieldBar", parent.widgets.indicatorFrame, "BackdropTemplate")
+    local shieldBar = CreateFrame("Frame", parent:GetName().."ShieldBar", parent.widgets.indicatorFrame)
     parent.indicators.shieldBar = shieldBar
     -- shieldBar:SetSize(4, 4)
     shieldBar:Hide()
@@ -2096,7 +2041,7 @@ function I.CreateShieldBar(parent)
     shieldBar.parentHealthBar = parent.widgets.healthBar
 
     function shieldBar:SetColor(r, g, b, a)
-        tex:SetColorTexture(r, g, b, a)
+        tex:SetTexture(r, g, b, a)
     end
 
     function shieldBar:UpdatePixelPerfect()
@@ -2147,7 +2092,7 @@ function I.CreateHealthThresholds(parent)
             else
                 healthThresholds.tex:SetPoint("BOTTOM", 0, Cell.vars.healthThresholds[found][1] * parent.widgets.healthBar:GetHeight())
             end
-            healthThresholds.tex:SetColorTexture(unpack(Cell.vars.healthThresholds[found][2]))
+            healthThresholds.tex:SetTexture(unpack(Cell.vars.healthThresholds[found][2]))
             healthThresholds:Show()
         else
             healthThresholds:Hide()
@@ -2161,7 +2106,7 @@ function I.CreateHealthThresholds(parent)
             for i, t in ipairs(Cell.vars.healthThresholds) do
                 healthThresholds[i] = healthThresholds[i] or healthThresholds:CreateTexture(nil, "ARTWORK")
                 P.Size(healthThresholds[i], healthThresholds.thickness, healthThresholds.thickness)
-                healthThresholds[i]:SetColorTexture(unpack(t[2]))
+                healthThresholds[i]:SetTexture(unpack(t[2]))
                 -- healthThresholds[i]:SetBlendMode("ADD")
 
                 healthThresholds[i]:ClearAllPoints()
@@ -2196,7 +2141,7 @@ end
 -- power word : shield 怀旧服API太落后，蛋疼！
 -------------------------------------------------
 function I.CreatePowerWordShield(parent)
-    local powerWordShield = CreateFrame("Frame", parent:GetName().."PowerWordShield", parent.widgets.indicatorFrame, "BackdropTemplate")
+    local powerWordShield = CreateFrame("Frame", parent:GetName().."PowerWordShield", parent.widgets.indicatorFrame)
     parent.indicators.powerWordShield = powerWordShield
     powerWordShield:Hide()
 
@@ -2204,47 +2149,51 @@ function I.CreatePowerWordShield(parent)
     powerWordShield:SetBackdropColor(0, 0, 0, 0.75)
 
     --! shield amount
-    local shieldAmount = CreateFrame("Cooldown", parent:GetName().."PowerWordShieldAmount", powerWordShield)
+    local shieldAmount = F.AcquireCooldown(powerWordShield)
     -- shieldAmount:SetAllPoints(powerWordShield)
-    shieldAmount:SetSwipeTexture([[Interface\AddOns\Cell\Media\Shapes\circle_filled.tga]])
-    -- shieldAmount:SetSwipeTexture(Cell.vars.whiteTexture)
-    shieldAmount:SetSwipeColor(1, 1, 0)
+    F.SetCooldownSwipeTexture(shieldAmount, [[Interface\AddOns\Cell\Media\Shapes\circle_filled.tga]])
+    -- F.SetCooldownSwipeTexture(shieldAmount, Cell.vars.whiteTexture)
+    F.SetCooldownSwipeColor(shieldAmount, 1, 1, 0)
     shieldAmount.noCooldownCount = true -- disable omnicc
-    shieldAmount:SetHideCountdownNumbers(true)
+    F.SetCooldownHideCountdownNumbers(shieldAmount, true)
 
     --! innerBG
-    local innerBG = shieldAmount:CreateTexture(nil, "OVERLAY")
+    local innerBGFrame = CreateFrame("Frame", nil, shieldAmount)
+    innerBGFrame:SetAllPoints(shieldAmount)
+    innerBGFrame:SetFrameLevel(shieldAmount:GetFrameLevel() + 2)
+
+    local innerBG = innerBGFrame:CreateTexture(nil, "ARTWORK")
     innerBG:SetPoint("CENTER")
-    innerBG:SetTexture([[Interface\AddOns\Cell\Media\Shapes\circle_filled.tga]], "CLAMP", "CLAMP", "TRILINEAR")
+    innerBG:SetTexture([[Interface\AddOns\Cell\Media\Shapes\circle_filled.tga]])
     innerBG:SetVertexColor(0, 0, 0, 1)
 
     --! shield duration
-    local shieldCooldown = CreateFrame("Cooldown", parent:GetName().."PowerWordShieldDuration", powerWordShield)
-    shieldCooldown:SetFrameLevel(shieldAmount:GetFrameLevel() + 1)
+    local shieldCooldown = F.AcquireCooldown(powerWordShield)
+    F.SetCooldownFrameLevel(shieldCooldown, innerBGFrame:GetFrameLevel() + 1)
     -- shieldCooldown:SetPoint("CENTER")
     shieldCooldown:SetPoint("TOPLEFT", P.Scale(1), P.Scale(-1))
     shieldCooldown:SetPoint("BOTTOMRIGHT", P.Scale(-1), P.Scale(1))
-    shieldCooldown:SetSwipeTexture([[Interface\AddOns\Cell\Media\Shapes\circle_filled.tga]])
-    shieldCooldown:SetSwipeColor(0, 1, 0)
+    F.SetCooldownSwipeTexture(shieldCooldown, [[Interface\AddOns\Cell\Media\Shapes\circle_filled.tga]])
+    F.SetCooldownSwipeColor(shieldCooldown, 0, 1, 0)
     shieldCooldown.noCooldownCount = true -- disable omnicc
-    shieldCooldown:SetHideCountdownNumbers(true)
+    F.SetCooldownHideCountdownNumbers(shieldCooldown, true)
     shieldCooldown:Hide()
-    shieldCooldown:SetScript("OnCooldownDone", function()
+    F.SetCooldownScript(shieldCooldown, "OnCooldownDone", function()
         shieldCooldown:Hide()
     end)
 
     --! weakened soul duration
-    local weakendedSoulCooldown = CreateFrame("Cooldown", parent:GetName().."WeakenedSoulDuration", powerWordShield)
-    weakendedSoulCooldown:SetFrameLevel(shieldAmount:GetFrameLevel() + 2)
+    local weakendedSoulCooldown = F.AcquireCooldown(powerWordShield)
+    F.SetCooldownFrameLevel(weakendedSoulCooldown, shieldCooldown:GetFrameLevel() + 1)
     -- weakendedSoulCooldown:SetPoint("CENTER")
     weakendedSoulCooldown:SetPoint("TOPLEFT", P.Scale(1), P.Scale(-1))
     weakendedSoulCooldown:SetPoint("BOTTOMRIGHT", P.Scale(-1), P.Scale(1))
-    weakendedSoulCooldown:SetSwipeTexture([[Interface\AddOns\Cell\Media\Shapes\circle_filled.tga]])
-    weakendedSoulCooldown:SetSwipeColor(1, 0, 0)
+    F.SetCooldownSwipeTexture(weakendedSoulCooldown, [[Interface\AddOns\Cell\Media\Shapes\circle_filled.tga]])
+    F.SetCooldownSwipeColor(weakendedSoulCooldown, 1, 0, 0)
     weakendedSoulCooldown.noCooldownCount = true -- disable omnicc
-    weakendedSoulCooldown:SetHideCountdownNumbers(true)
+    F.SetCooldownHideCountdownNumbers(weakendedSoulCooldown, true)
     weakendedSoulCooldown:Hide()
-    weakendedSoulCooldown:SetScript("OnCooldownDone", function()
+    F.SetCooldownScript(weakendedSoulCooldown, "OnCooldownDone", function()
         weakendedSoulCooldown:Hide()
     end)
 
@@ -2272,10 +2221,10 @@ function I.CreatePowerWordShield(parent)
         local tex = "Interface\\AddOns\\Cell\\Media\\Shapes\\"..shape.."_filled.tga"
         powerWordShield:SetBackdrop({bgFile = tex})
         powerWordShield:SetBackdropColor(0, 0, 0, 0.75)
-        shieldAmount:SetSwipeTexture(tex)
-        innerBG:SetTexture(tex, "CLAMP", "CLAMP", "TRILINEAR")
-        shieldCooldown:SetSwipeTexture(tex)
-        weakendedSoulCooldown:SetSwipeTexture(tex)
+        F.SetCooldownSwipeTexture(shieldAmount, tex)
+        innerBG:SetTexture(tex)
+        F.SetCooldownSwipeTexture(shieldCooldown, tex)
+        F.SetCooldownSwipeTexture(weakendedSoulCooldown, tex)
     end
 
     function powerWordShield:UpdateShield(value, max, resetMax)
@@ -2292,8 +2241,8 @@ function I.CreatePowerWordShield(parent)
         if value > 0 and powerWordShield.max then
             local progress = (powerWordShield.max - value) / powerWordShield.max
             local start = GetTime() - (progress * 100)
-            shieldAmount:SetCooldown(start, 100)
-            shieldAmount:Pause()
+            F.SetCooldown(shieldAmount, start, 100)
+            F.PauseCooldown(shieldAmount)
             shieldCooldown:SetPoint("CENTER")
             weakendedSoulCooldown:SetPoint("CENTER")
         else
@@ -2314,7 +2263,7 @@ function I.CreatePowerWordShield(parent)
         if start and duration then
             powerWordShield:Show()
             shieldCooldown:Show()
-            shieldCooldown:SetCooldown(start, duration)
+            F.SetCooldown(shieldCooldown, start, duration)
         else
             shieldCooldown:Hide()
             shieldAmount:Hide()
@@ -2326,7 +2275,7 @@ function I.CreatePowerWordShield(parent)
         if start and duration then
             powerWordShield:Show()
             weakendedSoulCooldown:Show()
-            weakendedSoulCooldown:SetCooldown(start, duration)
+            F.SetCooldown(weakendedSoulCooldown, start, duration)
         else
             weakendedSoulCooldown:Hide()
             Update()
@@ -2375,18 +2324,16 @@ function I.CreateCombatIcon(parent)
 
     combatIcon.tex = combatIcon:CreateTexture(nil, "ARTWORK", nil, 0)
     combatIcon.tex:SetAllPoints()
-    combatIcon.tex:SetTexture("Interface\\AddOns\\Cell\\Media\\Icons\\combat", nil, nil, "TRILINEAR")
+    combatIcon.tex:SetTexture("Interface\\AddOns\\Cell\\Media\\Icons\\combat")
     -- combatIcon.tex:SetAtlas("combat_swords-dynamicIcon")
 
     combatIcon.flashTex = combatIcon:CreateTexture(nil, "ARTWORK", nil, -5)
     combatIcon.flashTex:SetAllPoints()
-    combatIcon.flashTex:SetTexture("Interface\\AddOns\\Cell\\Media\\Icons\\combat_glow", nil, nil, "TRILINEAR")
+    combatIcon.flashTex:SetTexture("Interface\\AddOns\\Cell\\Media\\Icons\\combat_glow")
     -- combatIcon.flashTex:SetAtlas("combat_swords-flash")
     combatIcon.flashTex:SetBlendMode("ADD")
 
     A.CreateBlinkAnimation(combatIcon.flashTex, nil, true)
-
-    combatIcon:SetScript("OnEvent", CombatIcon_OnEvent)
 
     combatIcon.UpdatePixelPerfect = CombatIcon_UpdatePixelPerfect
 
@@ -2418,6 +2365,7 @@ function I.CreateMissingBuffs(parent)
 end
 
 local missingBuffsEnabled = false
+local missingBuffsFilters
 function I.EnableMissingBuffs(enabled)
     missingBuffsEnabled = enabled
 

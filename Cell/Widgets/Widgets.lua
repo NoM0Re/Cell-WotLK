@@ -1,12 +1,20 @@
 local addonName = ...
----@class Cell
+---@type Cell
 local Cell = select(2, ...)
 local L = Cell.L
 ---@type CellFuncs
 local F = Cell.funcs
 ---@type PixelPerfectFuncs
 local P = Cell.pixelPerfectFuncs
-local LCG = LibStub("LibCustomGlow-1.0")
+---@type ColorFuncs
+local ColorMixin = Cell.ColorMixin
+local CreateColor = F.CreateColor
+
+local function RaiseAboveParent(frame, parent, offset)
+    if parent and parent.GetFrameLevel and frame and frame.SetFrameLevel then
+        frame:SetFrameLevel(parent:GetFrameLevel() + (offset or 1))
+    end
+end
 
 -----------------------------------------
 -- Color
@@ -171,7 +179,7 @@ function Cell.ColorFontStringWithAccentColor(fs)
 end
 
 function Cell.WrapTextInAccentColor(text)
-    return WrapTextInColorCode(text, accentColor.s) -- FIXME: ("|c%s%s|r"):format(colorHexString, text)
+    return F.WrapTextInColorCode(text, accentColor.s) -- FIXME: ("|c%s%s|r"):format(colorHexString, text)
 end
 
 -----------------------------------------
@@ -186,13 +194,14 @@ function Cell.SetEnabled(isEnabled, ...)
                 w:SetTextColor(0.4, 0.4, 0.4, 1)
             end
         elseif w:IsObjectType("Texture") then
+            F.FixTextureDesaturation(w)
             if isEnabled then
                 w:SetDesaturated(false)
             else
                 w:SetDesaturated(true)
             end
-        elseif w.SetEnabled then
-            w:SetEnabled(isEnabled)
+        elseif w.Enable and w.Disable then
+            F.SetEnabled(w, isEnabled)
         elseif isEnabled then
             w:Show()
         else
@@ -226,7 +235,7 @@ function Cell.StartRainbowText(fs, reverse)
         -- NOTE: lua 正则匹配中文，不知道会不会有问题
         str = fs.text:gsub("[%z\1-\127\194-\244][\128-\191]*", function(char)
             colorSelect:SetColorHSV(hue,1,1)
-            col = CreateColor(colorSelect:GetColorRGB())
+            col = F.CreateColor(colorSelect:GetColorRGB())
             hue = (hue+step) > 360 and (hue+step)-360 or hue+step
             return col:WrapTextInColorCode(char)
         end)
@@ -263,11 +272,11 @@ function Cell.CreateSeparator(text, parent, width, color)
 
     local line = parent:CreateTexture()
     P.Size(line, width, 1)
-    line:SetColorTexture(unpack(color.t))
+    line:SetTexture(unpack(color.t))
     P.Point(line, "TOPLEFT", fs, "BOTTOMLEFT", 0, -2)
     local shadow = parent:CreateTexture()
     P.Size(shadow, width, 1)
-    shadow:SetColorTexture(0, 0, 0, 1)
+    shadow:SetTexture(0, 0, 0, 1)
     P.Point(shadow, "TOPLEFT", line, "TOPLEFT", 1, -1)
 
     return fs
@@ -276,7 +285,8 @@ end
 function Cell.CreateTitledPane(parent, text, width, height, color)
     if not color then color = {["r"]=accentColor.t[1], ["g"]=accentColor.t[2], ["b"]=accentColor.t[3], ["a"]=0.777, ["s"]=accentColor.s} end
 
-    local pane = CreateFrame("Frame", nil, parent, "BackdropTemplate")
+    local pane = CreateFrame("Frame", nil, parent)
+    RaiseAboveParent(pane, parent)
     P.Size(pane, width, height)
     -- Cell.StylizeFrame(pane, {0,1,0,0.1}, {0,0,0,0})
 
@@ -284,13 +294,13 @@ function Cell.CreateTitledPane(parent, text, width, height, color)
     local line = pane:CreateTexture()
     pane.line = line
     P.Height(line, 1)
-    line:SetColorTexture(color.r, color.g, color.b, color.a)
+    line:SetTexture(color.r, color.g, color.b, color.a)
     line:SetPoint("TOPLEFT", pane, "TOPLEFT", 0, P.Scale(-17))
     line:SetPoint("TOPRIGHT", pane, "TOPRIGHT", 0, P.Scale(-17))
 
     local shadow = pane:CreateTexture()
     P.Height(shadow, 1)
-    shadow:SetColorTexture(0, 0, 0, 1)
+    shadow:SetTexture(0, 0, 0, 1)
     shadow:SetPoint("TOPLEFT", line, "TOPLEFT", P.Scale(1), P.Scale(-1))
     shadow:SetPoint("TOPRIGHT", line, "TOPRIGHT", P.Scale(1), P.Scale(-1))
 
@@ -323,7 +333,13 @@ function Cell.StylizeFrame(frame, color, borderColor)
 end
 
 function Cell.CreateFrame(name, parent, width, height, isTransparent, template)
-    local f = CreateFrame("Frame", name, parent, template and template..",BackdropTemplate" or "BackdropTemplate")
+    local f
+    if template then
+        f = CreateFrame("Frame", name, parent, template)
+    else
+        f = CreateFrame("Frame", name, parent)
+    end
+    RaiseAboveParent(f, parent)
     f:Hide()
     if not isTransparent then Cell.StylizeFrame(f) end
     f:EnableMouse(true)
@@ -339,7 +355,7 @@ end
 
 
 function Cell.CreateMovableFrame(title, name, width, height, frameStrata, frameLevel, notUserPlaced)
-    local f = CreateFrame("Frame", name, CellParent, "BackdropTemplate")
+    local f = CreateFrame("Frame", name, CellParent)
     f:EnableMouse(true)
     -- f:SetResizable(false)
     f:SetMovable(true)
@@ -354,8 +370,9 @@ function Cell.CreateMovableFrame(title, name, width, height, frameStrata, frameL
     Cell.StylizeFrame(f)
 
     -- header
-    local header = CreateFrame("Frame", nil, f, "BackdropTemplate")
+    local header = CreateFrame("Frame", nil, f)
     f.header = header
+    RaiseAboveParent(header, f)
     header:EnableMouse(true)
     header:SetClampedToScreen(true)
     header:RegisterForDrag("LeftButton")
@@ -411,6 +428,8 @@ local function ShowTooltips(widget, anchor, x, y, tooltips)
 end
 
 function Cell.SetTooltips(widget, anchor, x, y, ...)
+    widget:EnableMouse(true)
+
     if not widget._tooltipsInited then
         widget._tooltipsInited = true
 
@@ -445,7 +464,7 @@ function Cell.ChangeSizeWithAnimation(frame, targetWidth, targetHeight, step, st
     local diffW = (targetWidth - currentWidth) / step
 
     local animationTimer
-    animationTimer = C_Timer.NewTicker(0.025, function()
+    animationTimer = F.C_Timer.NewTicker(0.025, function()
         if diffW ~= 0 then
             if diffW > 0 then
                 currentWidth = math.min(currentWidth + diffW, targetWidth)
@@ -477,8 +496,13 @@ end
 -- Button
 -----------------------------------------
 function Cell.CreateButton(parent, text, buttonColor, size, noBorder, noBackground, fontNormal, fontDisable, template, ...)
-    local b = CreateFrame("Button", nil, parent, template and template..",BackdropTemplate" or "BackdropTemplate")
-    if parent then b:SetFrameLevel(parent:GetFrameLevel()+1) end
+    local b
+    if template then
+        b = CreateFrame("Button", nil, parent, template)
+    else
+        b = CreateFrame("Button", nil, parent)
+    end
+    if parent then b:SetFrameLevel(parent:GetFrameLevel()+2) end
     b:SetText(text)
     P.Size(b, size[1], size[2])
 
@@ -589,11 +613,14 @@ function Cell.CreateButton(parent, text, buttonColor, size, noBorder, noBackgrou
         b:SetPushedTextOffset(0, 0)
     else
         if not noBackground then
-            local bg = b:CreateTexture()
-            bg:SetDrawLayer("BACKGROUND", -8)
+            local bgf = CreateFrame("Frame", nil, b)
+            bgf:SetFrameLevel(b:GetFrameLevel()-1)
+            bgf:SetAllPoints(b)
+            local bg = bgf:CreateTexture()
+            bg:SetDrawLayer("BACKGROUND")
             b.bg = bg
             bg:SetAllPoints(b)
-            bg:SetColorTexture(0.115, 0.115, 0.115, 1)
+            bg:SetTexture(0.115, 0.115, 0.115, 1)
         end
 
         b:SetBackdropBorderColor(0, 0, 0, 1)
@@ -612,32 +639,23 @@ function Cell.CreateButton(parent, text, buttonColor, size, noBorder, noBackgrou
     end
 
     -- click sound
-    if not Cell.isVanilla then
-        b:SetScript("PostClick", function(self, button, down)
-            if template and strfind(template, "SecureActionButtonTemplate") then
-                -- NOTE: ActionButtonUseKeyDown will affect OnClick
-                if down == GetCVarBool("ActionButtonUseKeyDown") then
-                    PlaySound(SOUNDKIT.U_CHAT_SCROLL_BUTTON)
-                end
-            else
-                PlaySound(SOUNDKIT.U_CHAT_SCROLL_BUTTON)
-            end
-        end)
-    else
-        b:SetScript("PostClick", function() PlaySound(SOUNDKIT.U_CHAT_SCROLL_BUTTON) end)
-    end
+    b:SetScript("PostClick", function() PlaySound("UChatScrollButton") end)
 
     Cell.SetTooltips(b, "ANCHOR_TOPLEFT", 0, 3, ...)
 
     -- texture
-    function b:SetTexture(tex, texSize, point, isAtlas, noPushDownEffect)
+    function b:SetTexture(tex, texSize, point, isAtlas, noPushDownEffect, texCoords)
         b.tex = b:CreateTexture(nil, "ARTWORK")
+        F.FixTextureDesaturation(b.tex)
         b.tex:SetPoint(unpack(point))
         b.tex:SetSize(unpack(texSize))
         if isAtlas then
-            b.tex:SetAtlas(tex)
+            F.SetTexture(b.tex, tex)
         else
             b.tex:SetTexture(tex)
+            if texCoords then
+                b.tex:SetTexCoord(unpack(texCoords))
+            end
         end
         -- update fontstring point
         if s then
@@ -789,10 +807,11 @@ function Cell.CreateCheckButton(parent, label, onClick, ...)
     -- InterfaceOptionsCheckButtonTemplate --> FrameXML\InterfaceOptionsPanels.xml line 19
     -- OptionsBaseCheckButtonTemplate -->  FrameXML\OptionsPanelTemplates.xml line 10
 
-    local cb = CreateFrame("CheckButton", nil, parent, "BackdropTemplate")
+    local cb = CreateFrame("CheckButton", nil, parent)
+    RaiseAboveParent(cb, parent)
     cb.onClick = onClick
     cb:SetScript("OnClick", function(self)
-        PlaySound(self:GetChecked() and SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON or SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_OFF)
+        PlaySound(self:GetChecked() and "igMainMenuOptionCheckBoxOn" or "igMainMenuOptionCheckBoxOff")
         if cb.onClick then cb.onClick(self:GetChecked() and true or false, self) end
     end)
 
@@ -811,12 +830,12 @@ function Cell.CreateCheckButton(parent, label, onClick, ...)
     cb:SetBackdropBorderColor(0, 0, 0, 1)
 
     local checkedTexture = cb:CreateTexture(nil, "ARTWORK")
-    checkedTexture:SetColorTexture(accentColor.t[1], accentColor.t[2], accentColor.t[3], 0.7)
+    checkedTexture:SetTexture(accentColor.t[1], accentColor.t[2], accentColor.t[3], 0.7)
     checkedTexture:SetPoint("TOPLEFT", P.Scale(1), P.Scale(-1))
     checkedTexture:SetPoint("BOTTOMRIGHT", P.Scale(-1), P.Scale(1))
 
     local highlightTexture = cb:CreateTexture(nil, "ARTWORK")
-    highlightTexture:SetColorTexture(accentColor.t[1], accentColor.t[2], accentColor.t[3], 0.1)
+    highlightTexture:SetTexture(accentColor.t[1], accentColor.t[2], accentColor.t[3], 0.1)
     highlightTexture:SetPoint("TOPLEFT", P.Scale(1), P.Scale(-1))
     highlightTexture:SetPoint("BOTTOMRIGHT", P.Scale(-1), P.Scale(1))
 
@@ -826,13 +845,13 @@ function Cell.CreateCheckButton(parent, label, onClick, ...)
 
     cb:SetScript("OnEnable", function()
         cb.label:SetTextColor(1, 1, 1)
-        checkedTexture:SetColorTexture(accentColor.t[1], accentColor.t[2], accentColor.t[3], 0.7)
+        checkedTexture:SetTexture(accentColor.t[1], accentColor.t[2], accentColor.t[3], 0.7)
         cb:SetBackdropBorderColor(0, 0, 0, 1)
     end)
 
     cb:SetScript("OnDisable", function()
         cb.label:SetTextColor(0.4, 0.4, 0.4)
-        checkedTexture:SetColorTexture(0.4, 0.4, 0.4)
+        checkedTexture:SetTexture(0.4, 0.4, 0.4)
         cb:SetBackdropBorderColor(0, 0, 0, 0.4)
     end)
 
@@ -854,7 +873,8 @@ end
 -- colorpicker
 -----------------------------------------
 function Cell.CreateColorPicker(parent, label, hasOpacity, onChange, onConfirm)
-    local cp = CreateFrame("Button", nil, parent, "BackdropTemplate")
+    local cp = CreateFrame("Button", nil, parent)
+    RaiseAboveParent(cp, parent)
     P.Size(cp, 14, 14)
     cp:SetBackdrop({bgFile = Cell.vars.whiteTexture, edgeFile = Cell.vars.whiteTexture, edgeSize = P.Scale(1)})
     cp:SetBackdropBorderColor(0, 0, 0, 1)
@@ -870,7 +890,7 @@ function Cell.CreateColorPicker(parent, label, hasOpacity, onChange, onConfirm)
     cp.label:SetPoint("LEFT", cp, "RIGHT", 5, 0)
 
     cp.mask = cp:CreateTexture(nil, "ARTWORK")
-    cp.mask:SetColorTexture(0.15, 0.15, 0.15, 0.7)
+    cp.mask:SetTexture(0.15, 0.15, 0.15, 0.7)
     cp.mask:SetPoint("TOPLEFT", P.Scale(1), P.Scale(-1))
     cp.mask:SetPoint("BOTTOMRIGHT", P.Scale(-1), P.Scale(1))
     cp.mask:Hide()
@@ -1014,7 +1034,8 @@ local function EditBox_AddConfirmButton(self, func, mode)
 end
 
 function Cell.CreateEditBox(parent, width, height, isTransparent, isMultiLine, isNumeric, font)
-    local eb = CreateFrame("EditBox", nil, parent, "BackdropTemplate")
+    local eb = CreateFrame("EditBox", nil, parent)
+    RaiseAboveParent(eb, parent)
     if not isTransparent then Cell.StylizeFrame(eb, {0.115, 0.115, 0.115, 0.9}) end
     eb:SetFontObject(font or font_name)
     eb:SetMultiLine(isMultiLine)
@@ -1042,6 +1063,7 @@ function Cell.CreateScrollEditBox(parent, onTextChanged, scrollStep)
     scrollStep = scrollStep or 1
 
     local frame = CreateFrame("Frame", nil, parent)
+    RaiseAboveParent(frame, parent)
     Cell.CreateScrollFrame(frame)
     Cell.StylizeFrame(frame.scrollFrame, {0.15, 0.15, 0.15, 0.9})
 
@@ -1082,6 +1104,7 @@ function Cell.CreateScrollEditBox(parent, onTextChanged, scrollStep)
     frame.scrollFrame:SetScript("OnMouseDown", function()
         frame.eb:SetFocus(true)
     end)
+    frame.scrollFrame:EnableMouse(true)
 
     function frame:SetText(text)
         frame.eb:SetText(text)
@@ -1094,7 +1117,7 @@ function Cell.CreateScrollEditBox(parent, onTextChanged, scrollStep)
     end
 
     function frame:SetEnabled(enabled)
-        frame.eb:SetEnabled(enabled)
+        F.SetEnabled(frame.eb, enabled)
     end
 
     return frame
@@ -1106,9 +1129,9 @@ end
 -- Interface\FrameXML\OptionsPanelTemplates.xml, line 76, OptionsSliderTemplate
 function Cell.CreateSlider(name, parent, low, high, width, step, onValueChangedFn, afterValueChangedFn, isPercentage, ...)
     local tooltips = {...}
-    local slider = CreateFrame("Slider", nil, parent, "BackdropTemplate")
+    local slider = CreateFrame("Slider", nil, parent)
+    RaiseAboveParent(slider, parent)
     slider:SetValueStep(step)
-    slider:SetObeyStepOnDrag(true)
     slider:SetOrientation("HORIZONTAL")
     P.Size(slider, width, 10)
     local unit = isPercentage and "%" or ""
@@ -1164,13 +1187,13 @@ function Cell.CreateSlider(name, parent, low, high, width, step, onValueChangedF
     highText:SetPoint("BOTTOM", currentEditBox)
 
     local tex = slider:CreateTexture(nil, "ARTWORK")
-    tex:SetColorTexture(accentColor.t[1], accentColor.t[2], accentColor.t[3], 0.7)
+    tex:SetTexture(accentColor.t[1], accentColor.t[2], accentColor.t[3], 0.7)
     tex:SetSize(8, 8)
     slider:SetThumbTexture(tex)
 
     local valueBeforeClick
     slider.onEnter = function()
-        tex:SetColorTexture(accentColor.t[1], accentColor.t[2], accentColor.t[3], 1)
+        tex:SetTexture(accentColor.t[1], accentColor.t[2], accentColor.t[3], 1)
         valueBeforeClick = slider:GetValue()
         if #tooltips > 0 then
             ShowTooltips(slider, "ANCHOR_TOPLEFT", 0, 3, tooltips)
@@ -1178,7 +1201,7 @@ function Cell.CreateSlider(name, parent, low, high, width, step, onValueChangedF
     end
     slider:SetScript("OnEnter", slider.onEnter)
     slider.onLeave = function()
-        tex:SetColorTexture(accentColor.t[1], accentColor.t[2], accentColor.t[3], 0.7)
+        tex:SetTexture(accentColor.t[1], accentColor.t[2], accentColor.t[3], 0.7)
         CellTooltip:Hide()
     end
     slider:SetScript("OnLeave", slider.onLeave)
@@ -1189,6 +1212,7 @@ function Cell.CreateSlider(name, parent, low, high, width, step, onValueChangedF
     -- if tooltip then slider.tooltipText = tooltip end
 
     local oldValue
+    slider._programmatic = false
     slider:SetScript("OnValueChanged", function(self, value, userChanged)
         if oldValue == value then return end
         oldValue = value
@@ -1199,8 +1223,16 @@ function Cell.CreateSlider(name, parent, low, high, width, step, onValueChangedF
 
         currentEditBox:SetText(value)
         currentEditBox.oldValue = value
-        if userChanged and slider.onValueChangedFn then slider.onValueChangedFn(value) end
+        local isUser = (userChanged == true) or (userChanged == nil and not self._programmatic)
+        if isUser and slider.onValueChangedFn then slider.onValueChangedFn(value) end
     end)
+
+    local origSetValue = slider.SetValue
+    slider.SetValue = function(self, value)
+        self._programmatic = true
+        origSetValue(self, value)
+        self._programmatic = false
+    end
 
     -- local valueBeforeClick
     -- slider:HookScript("OnEnter", function(self, button, isMouseOver)
@@ -1250,20 +1282,20 @@ function Cell.CreateSlider(name, parent, low, high, width, step, onValueChangedF
 
     slider:SetScript("OnDisable", function()
         label:SetTextColor(0.4, 0.4, 0.4)
-        currentEditBox:SetEnabled(false)
+        F.SetEnabled(currentEditBox, false)
         slider:SetScript("OnEnter", nil)
         slider:SetScript("OnLeave", nil)
-        tex:SetColorTexture(0.4, 0.4, 0.4, 0.7)
+        tex:SetTexture(0.4, 0.4, 0.4, 0.7)
         lowText:SetTextColor(0.4, 0.4, 0.4)
         highText:SetTextColor(0.4, 0.4, 0.4)
     end)
 
     slider:SetScript("OnEnable", function()
         label:SetTextColor(1, 1, 1)
-        currentEditBox:SetEnabled(true)
+        F.SetEnabled(currentEditBox, true)
         slider:SetScript("OnEnter", slider.onEnter)
         slider:SetScript("OnLeave", slider.onLeave)
-        tex:SetColorTexture(accentColor.t[1], accentColor.t[2], accentColor.t[3], 0.7)
+        tex:SetTexture(accentColor.t[1], accentColor.t[2], accentColor.t[3], 0.7)
         lowText:SetTextColor(unpack(colors.grey.t))
         highText:SetTextColor(unpack(colors.grey.t))
     end)
@@ -1284,7 +1316,9 @@ end
 -- switch
 -----------------------------------------
 function Cell.CreateSwitch(parent, size, leftText, leftValue, rightText, rightValue, func)
-    local switch = CreateFrame("Frame", nil, parent, "BackdropTemplate")
+    local switch = CreateFrame("Frame", nil, parent)
+    switch:EnableMouse(true)
+    RaiseAboveParent(switch, parent)
     P.Size(switch, size[1], size[2])
     Cell.StylizeFrame(switch, {0.115, 0.115, 0.115, 1})
 
@@ -1300,9 +1334,9 @@ function Cell.CreateSwitch(parent, size, leftText, leftValue, rightText, rightVa
 
     local highlight = switch:CreateTexture(nil, "ARTWORK")
     if class == "PRIEST" and not accentColorOverride then
-        highlight:SetColorTexture(accentColor.t[1], accentColor.t[2], accentColor.t[3], 0.35)
+        highlight:SetTexture(accentColor.t[1], accentColor.t[2], accentColor.t[3], 0.35)
     else
-        highlight:SetColorTexture(accentColor.t[1], accentColor.t[2], accentColor.t[3], 0.45)
+        highlight:SetTexture(accentColor.t[1], accentColor.t[2], accentColor.t[3], 0.45)
     end
 
     local function UpdateHighlight(which)
@@ -1360,17 +1394,17 @@ function Cell.CreateSwitch(parent, size, leftText, leftValue, rightText, rightVa
 
     switch:SetScript("OnEnter", function()
         if class == "PRIEST" and not accentColorOverride then
-            highlight:SetColorTexture(accentColor.t[1], accentColor.t[2], accentColor.t[3], 0.55)
+            highlight:SetTexture(accentColor.t[1], accentColor.t[2], accentColor.t[3], 0.55)
         else
-            highlight:SetColorTexture(accentColor.t[1], accentColor.t[2], accentColor.t[3], 0.65)
+            highlight:SetTexture(accentColor.t[1], accentColor.t[2], accentColor.t[3], 0.65)
         end
     end)
 
     switch:SetScript("OnLeave", function()
         if class == "PRIEST" and not accentColorOverride then
-            highlight:SetColorTexture(accentColor.t[1], accentColor.t[2], accentColor.t[3], 0.35)
+            highlight:SetTexture(accentColor.t[1], accentColor.t[2], accentColor.t[3], 0.35)
         else
-            highlight:SetColorTexture(accentColor.t[1], accentColor.t[2], accentColor.t[3], 0.45)
+            highlight:SetTexture(accentColor.t[1], accentColor.t[2], accentColor.t[3], 0.45)
         end
     end)
 
@@ -1378,15 +1412,17 @@ function Cell.CreateSwitch(parent, size, leftText, leftValue, rightText, rightVa
 end
 
 function Cell.CreateTripleSwitch(parent, size, func)
-    local switch = CreateFrame("Frame", nil, parent, "BackdropTemplate")
+    local switch = CreateFrame("Frame", nil, parent)
+    switch:EnableMouse(true)
+    RaiseAboveParent(switch, parent)
     P.Size(switch, size[1], size[2])
     Cell.StylizeFrame(switch, {0.115, 0.115, 0.115, 1})
 
     local highlight = switch:CreateTexture(nil, "ARTWORK")
     if class == "PRIEST" and not accentColorOverride then
-        highlight:SetColorTexture(accentColor.t[1], accentColor.t[2], accentColor.t[3], 0.35)
+        highlight:SetTexture(accentColor.t[1], accentColor.t[2], accentColor.t[3], 0.35)
     else
-        highlight:SetColorTexture(accentColor.t[1], accentColor.t[2], accentColor.t[3], 0.45)
+        highlight:SetTexture(accentColor.t[1], accentColor.t[2], accentColor.t[3], 0.45)
     end
 
     local function UpdateHighlight(which)
@@ -1453,17 +1489,17 @@ function Cell.CreateTripleSwitch(parent, size, func)
 
     switch:SetScript("OnEnter", function()
         if class == "PRIEST" and not accentColorOverride then
-            highlight:SetColorTexture(accentColor.t[1], accentColor.t[2], accentColor.t[3], 0.55)
+            highlight:SetTexture(accentColor.t[1], accentColor.t[2], accentColor.t[3], 0.55)
         else
-            highlight:SetColorTexture(accentColor.t[1], accentColor.t[2], accentColor.t[3], 0.65)
+            highlight:SetTexture(accentColor.t[1], accentColor.t[2], accentColor.t[3], 0.65)
         end
     end)
 
     switch:SetScript("OnLeave", function()
         if class == "PRIEST" and not accentColorOverride then
-            highlight:SetColorTexture(accentColor.t[1], accentColor.t[2], accentColor.t[3], 0.35)
+            highlight:SetTexture(accentColor.t[1], accentColor.t[2], accentColor.t[3], 0.35)
         else
-            highlight:SetColorTexture(accentColor.t[1], accentColor.t[2], accentColor.t[3], 0.45)
+            highlight:SetTexture(accentColor.t[1], accentColor.t[2], accentColor.t[3], 0.45)
         end
     end)
 
@@ -1471,15 +1507,17 @@ function Cell.CreateTripleSwitch(parent, size, func)
 end
 
 function Cell.CreateFourfoldSwitch(parent, size, func)
-    local switch = CreateFrame("Frame", nil, parent, "BackdropTemplate")
+    local switch = CreateFrame("Frame", nil, parent)
+    switch:EnableMouse(true)
+    RaiseAboveParent(switch, parent)
     P.Size(switch, size[1], size[2])
     Cell.StylizeFrame(switch, {0.115, 0.115, 0.115, 1})
 
     local highlight = switch:CreateTexture(nil, "ARTWORK")
     if class == "PRIEST" and not accentColorOverride then
-        highlight:SetColorTexture(accentColor.t[1], accentColor.t[2], accentColor.t[3], 0.35)
+        highlight:SetTexture(accentColor.t[1], accentColor.t[2], accentColor.t[3], 0.35)
     else
-        highlight:SetColorTexture(accentColor.t[1], accentColor.t[2], accentColor.t[3], 0.45)
+        highlight:SetTexture(accentColor.t[1], accentColor.t[2], accentColor.t[3], 0.45)
     end
 
     local function UpdateHighlight(value)
@@ -1541,17 +1579,17 @@ function Cell.CreateFourfoldSwitch(parent, size, func)
 
     switch:SetScript("OnEnter", function()
         if class == "PRIEST" and not accentColorOverride then
-            highlight:SetColorTexture(accentColor.t[1], accentColor.t[2], accentColor.t[3], 0.55)
+            highlight:SetTexture(accentColor.t[1], accentColor.t[2], accentColor.t[3], 0.55)
         else
-            highlight:SetColorTexture(accentColor.t[1], accentColor.t[2], accentColor.t[3], 0.65)
+            highlight:SetTexture(accentColor.t[1], accentColor.t[2], accentColor.t[3], 0.65)
         end
     end)
 
     switch:SetScript("OnLeave", function()
         if class == "PRIEST" and not accentColorOverride then
-            highlight:SetColorTexture(accentColor.t[1], accentColor.t[2], accentColor.t[3], 0.35)
+            highlight:SetTexture(accentColor.t[1], accentColor.t[2], accentColor.t[3], 0.35)
         else
-            highlight:SetColorTexture(accentColor.t[1], accentColor.t[2], accentColor.t[3], 0.45)
+            highlight:SetTexture(accentColor.t[1], accentColor.t[2], accentColor.t[3], 0.45)
         end
     end)
 
@@ -1562,7 +1600,8 @@ end
 -- status bar
 -----------------------------------------
 function Cell.CreateStatusBar(name, parent, width, height, maxValue, smooth, func, showText, texture, color)
-    local bar = CreateFrame("StatusBar", name, parent, "BackdropTemplate")
+    local bar = CreateFrame("StatusBar", name, parent)
+    RaiseAboveParent(bar, parent)
 
     if not color then color = {accentColor.t[1], accentColor.t[2], accentColor.t[3], 1} end
     if not texture then texture = Cell.vars.whiteTexture end
@@ -1586,7 +1625,7 @@ function Cell.CreateStatusBar(name, parent, width, height, maxValue, smooth, fun
 
     bar:SetMinMaxValues(0, maxValue)
     bar:SetValue(0)
-    if smooth then Mixin(bar, SmoothStatusBarMixin) end -- Interface\SharedXML\SmoothStatusBar.lua
+    if smooth then F.Mixin(bar, F.SmoothStatusBarMixin) end -- Interface\SharedXML\SmoothStatusBar.lua
 
     function bar:SetMaxValue(m)
         maxValue = m
@@ -1637,7 +1676,7 @@ function Cell.CreateStatusBarButton(parent, text, size, maxValue, template)
         b:SetBackdropBorderColor(0, 0, 0, 1)
     end)
 
-    local bar = CreateFrame("StatusBar", nil, b, "BackdropTemplate")
+    local bar = CreateFrame("StatusBar", nil, b)
     b.bar = bar
     bar:SetPoint("TOPLEFT", b)
     bar:SetPoint("BOTTOMRIGHT", b)
@@ -1699,7 +1738,7 @@ end
 -----------------------------------------
 function Cell.CreateMask(parent, text, points) -- points = {topleftX, topleftY, bottomrightX, bottomrightY}
     if not parent.mask then -- not init
-        parent.mask = CreateFrame("Frame", nil, parent, "BackdropTemplate")
+        parent.mask = CreateFrame("Frame", nil, parent)
         Cell.StylizeFrame(parent.mask, {0.15, 0.15, 0.15, 0.7}, {0, 0, 0, 0})
         -- parent.mask:SetFrameStrata("HIGH")
         parent.mask:SetFrameLevel(parent:GetFrameLevel()+30)
@@ -1733,7 +1772,7 @@ function Cell.CreateMask(parent, text, points) -- points = {topleftX, topleftY, 
 end
 
 function Cell.CreateCombatMask(parent, x1, y1, x2, y2)
-    local mask = CreateFrame("Frame", nil, parent, "BackdropTemplate")
+    local mask = CreateFrame("Frame", nil, parent)
     parent.combatMask = mask
 
     mask:SetPoint("TOPLEFT", P.Scale(x1 or 1), P.Scale(y1 or -1))
@@ -1759,7 +1798,7 @@ end
 -----------------------------------------
 function Cell.CreateConfirmPopup(parent, width, text, onAccept, onReject, mask, hasEditBox, dropdowns)
     if not parent.confirmPopup then -- not init
-        parent.confirmPopup = CreateFrame("Frame", nil, parent, "BackdropTemplate")
+        parent.confirmPopup = CreateFrame("Frame", nil, parent)
         parent.confirmPopup:SetSize(width, 100)
         Cell.StylizeFrame(parent.confirmPopup, {0.1, 0.1, 0.1, 0.95}, {accentColor.t[1], accentColor.t[2], accentColor.t[3], 1})
         parent.confirmPopup:EnableMouse(true)
@@ -1801,18 +1840,18 @@ function Cell.CreateConfirmPopup(parent, width, text, onAccept, onReject, mask, 
         end
         parent.confirmPopup.editBox:Show()
         -- disable yes if editBox empty
-        parent.confirmPopup.button1:SetEnabled(false)
+        F.SetEnabled(parent.confirmPopup.button1, false)
         parent.confirmPopup.editBox:SetScript("OnTextChanged", function()
             if not parent.confirmPopup.editBox:GetText() or strtrim(parent.confirmPopup.editBox:GetText()) == "" then
-                parent.confirmPopup.button1:SetEnabled(false)
+                F.SetEnabled(parent.confirmPopup.button1, false)
             else
-                parent.confirmPopup.button1:SetEnabled(true)
+                F.SetEnabled(parent.confirmPopup.button1, true)
             end
         end)
     elseif parent.confirmPopup.editBox then
         parent.confirmPopup.editBox:Hide()
         parent.confirmPopup.editBox:SetScript("OnTextChanged", nil)
-        parent.confirmPopup.button1:SetEnabled(true)
+        F.SetEnabled(parent.confirmPopup.button1, true)
     end
 
     if dropdowns then
@@ -1891,7 +1930,7 @@ end
 -----------------------------------------
 function Cell.CreateNotificationPopup(parent, width, text, mask)
     if not parent.notificationPopup then -- not init
-        parent.notificationPopup = CreateFrame("Frame", nil, parent, "BackdropTemplate")
+        parent.notificationPopup = CreateFrame("Frame", nil, parent)
         parent.notificationPopup:SetSize(width, 100)
         Cell.StylizeFrame(parent.notificationPopup, {0.1, 0.1, 0.1, 0.95}, {accentColor.t[1], accentColor.t[2], accentColor.t[3], 1})
         parent.notificationPopup:EnableMouse(true)
@@ -1954,7 +1993,7 @@ end
 -----------------------------------------
 function Cell.CreatePopupEditBox(parent, func, multiLine)
     if not parent.popupEditBox then
-        local eb = CreateFrame("EditBox", nil, parent, "BackdropTemplate")
+        local eb = CreateFrame("EditBox", nil, parent)
         parent.popupEditBox = eb
         eb:Hide()
         eb:SetAutoFocus(true)
@@ -1984,7 +2023,7 @@ function Cell.CreatePopupEditBox(parent, func, multiLine)
         tipsBackground:SetPoint("TOPLEFT", eb, "BOTTOMLEFT")
         tipsBackground:SetPoint("TOPRIGHT", eb, "BOTTOMRIGHT")
         tipsBackground:SetPoint("BOTTOM", tipsText, 0, -2)
-        tipsBackground:SetColorTexture(0.115, 0.115, 0.115, 0.9)
+        tipsBackground:SetTexture(0.115, 0.115, 0.115, 0.9)
         tipsBackground:Hide()
 
         function eb:SetTips(text)
@@ -2034,7 +2073,7 @@ function Cell.CreateDualPopupEditBox(parent, leftTip, rightTip, isNumeric, func)
         ok:SetPoint("TOPRIGHT")
 
         -- left
-        local left = CreateFrame("EditBox", nil, f, "BackdropTemplate")
+        local left = CreateFrame("EditBox", nil, f)
         f.left = left
         left:SetPoint("TOPLEFT")
         P.Size(left, 100, 20)
@@ -2068,7 +2107,7 @@ function Cell.CreateDualPopupEditBox(parent, leftTip, rightTip, isNumeric, func)
         left.tip:SetPoint("LEFT", 5, 0)
 
         -- right
-        local right = CreateFrame("EditBox", nil, f, "BackdropTemplate")
+        local right = CreateFrame("EditBox", nil, f)
         f.right = right
         right:SetPoint("TOPLEFT", left, "TOPRIGHT", P.Scale(1), 0)
         right:SetPoint("TOPRIGHT", ok, "TOPLEFT", P.Scale(-1), 0)
@@ -2195,7 +2234,7 @@ local function CreateItemButtons(items, itemTable, itemParent, level)
                 b.iconBg = b:CreateTexture(nil, "BORDER")
                 P.Size(b.iconBg, 16, 16)
                 b.iconBg:SetPoint("TOPLEFT", P.Scale(5), P.Scale(-1))
-                b.iconBg:SetColorTexture(0, 0, 0, 1)
+                b.iconBg:SetTexture(0, 0, 0, 1)
 
                 b.icon = b:CreateTexture(nil, "ARTWORK")
                 b.icon:SetPoint("TOPLEFT", b.iconBg, P.Scale(1), P.Scale(-1))
@@ -2258,7 +2297,7 @@ local function CreateItemButtons(items, itemTable, itemParent, level)
 
             -- clear parent menuItem's onClick
             b:SetScript("OnClick", function()
-                PlaySound(SOUNDKIT.U_CHAT_SCROLL_BUTTON)
+                PlaySound("UChatScrollButton")
                 if item.onClick then
                     menu:Hide()
                     item.onClick(item.text)
@@ -2274,7 +2313,7 @@ local function CreateItemButtons(items, itemTable, itemParent, level)
             end)
 
             b:SetScript("OnClick", function()
-                PlaySound(SOUNDKIT.U_CHAT_SCROLL_BUTTON)
+                PlaySound("UChatScrollButton")
                 menu:Hide()
                 if item.onClick then item.onClick(item.text) end
             end)
@@ -2318,7 +2357,7 @@ local function CreateItemButtons_Scroll(items, itemTable, limit, level)
                 b.iconBg = b:CreateTexture(nil, "BORDER")
                 P.Size(b.iconBg, 16, 16)
                 b.iconBg:SetPoint("TOPLEFT", P.Scale(5), P.Scale(-1))
-                b.iconBg:SetColorTexture(0, 0, 0, 1)
+                b.iconBg:SetTexture(0, 0, 0, 1)
 
                 b.icon = b:CreateTexture(nil, "ARTWORK")
                 b.icon:SetPoint("TOPLEFT", b.iconBg, P.Scale(1), P.Scale(-1))
@@ -2391,7 +2430,7 @@ local function CreateItemButtons_Scroll(items, itemTable, limit, level)
 
             -- clear parent menuItem's onClick
             b:SetScript("OnClick", function()
-                PlaySound(SOUNDKIT.U_CHAT_SCROLL_BUTTON)
+                PlaySound("UChatScrollButton")
                 if item.onClick then
                     menu:Hide()
                     item.onClick(item.text)
@@ -2407,7 +2446,7 @@ local function CreateItemButtons_Scroll(items, itemTable, limit, level)
             end)
 
             b:SetScript("OnClick", function()
-                PlaySound(SOUNDKIT.U_CHAT_SCROLL_BUTTON)
+                PlaySound("UChatScrollButton")
                 menu:Hide()
                 if item.onClick then item.onClick(item.text) end
             end)
@@ -2468,12 +2507,20 @@ function menu:ShowMenu()
     for i, m in ipairs(menu) do
         m:Hide()
     end
+    menu:SetFrameStrata("TOOLTIP")
+    menu:SetFrameLevel(100)
+    for _, b in pairs({menu:GetChildren()}) do
+        if b:GetObjectType() == "Button" then
+            b:SetFrameLevel(101)
+        end
+    end
     menu:Show()
 end
 
 function menu:SetMenuParent(parent)
     menu:SetParent(parent)
     menu:SetFrameStrata("TOOLTIP")
+    menu:SetFrameLevel(100)
 end
 
 -----------------------------------------
@@ -2500,20 +2547,17 @@ function Cell.CreateScrollTextFrame(parent, s, timePerScroll, scrollStep, delayT
     -- alpha changing animation
     local fadeIn = text:CreateAnimationGroup()
     local alpha = fadeIn:CreateAnimation("Alpha")
-    alpha:SetFromAlpha(0)
-    alpha:SetToAlpha(1)
+    F.AlphaSetFromTo(alpha, 0, 1)
     alpha:SetDuration(0.5)
 
     local fadeOutIn = text:CreateAnimationGroup()
     local alpha1 = fadeOutIn:CreateAnimation("Alpha")
     alpha1:SetStartDelay(delayTime)
-    alpha1:SetFromAlpha(1)
-    alpha1:SetToAlpha(0)
+    F.AlphaSetFromTo(alpha1, 1, 0)
     alpha1:SetDuration(0.5)
     alpha1:SetOrder(1)
     local alpha2 = fadeOutIn:CreateAnimation("Alpha")
-    alpha2:SetFromAlpha(0)
-    alpha2:SetToAlpha(1)
+    F.AlphaSetFromTo(alpha2, 0, 1)
     alpha2:SetDuration(0.5)
     alpha2:SetOrder(2)
     alpha2:SetStartDelay(0.1)
@@ -2587,8 +2631,9 @@ end
 -----------------------------------------------------------------------------------
 function Cell.CreateScrollFrame(parent, top, bottom, color, border)
     -- create scrollFrame & scrollbar seperately (instead of UIPanelScrollFrameTemplate), in order to custom it
-    local scrollFrame = CreateFrame("ScrollFrame", parent:GetName() and parent:GetName().."ScrollFrame" or nil, parent, "BackdropTemplate")
+    local scrollFrame = CreateFrame("ScrollFrame", parent:GetName() and parent:GetName().."ScrollFrame" or nil, parent)
     parent.scrollFrame = scrollFrame
+    RaiseAboveParent(scrollFrame, parent)
     top = top or 0
     bottom = bottom or 0
     scrollFrame:SetPoint("TOPLEFT", 0, top)
@@ -2606,14 +2651,16 @@ function Cell.CreateScrollFrame(parent, top, bottom, color, border)
     end
 
     -- content
-    local content = CreateFrame("Frame", nil, scrollFrame, "BackdropTemplate")
+    local content = CreateFrame("Frame", nil, scrollFrame)
+    RaiseAboveParent(content, scrollFrame)
     content:SetSize(scrollFrame:GetWidth(), 2)
     scrollFrame:SetScrollChild(content)
     scrollFrame.content = content
     -- content:SetFrameLevel(2)
 
     -- scrollbar
-    local scrollbar = CreateFrame("Frame", nil, scrollFrame, "BackdropTemplate")
+    local scrollbar = CreateFrame("Frame", nil, scrollFrame)
+    RaiseAboveParent(scrollbar, scrollFrame, 2)
     scrollbar:SetPoint("TOPLEFT", scrollFrame, "TOPRIGHT", 2, 0)
     scrollbar:SetPoint("BOTTOMRIGHT", scrollFrame, 7, 0)
     scrollbar:Hide()
@@ -2621,7 +2668,8 @@ function Cell.CreateScrollFrame(parent, top, bottom, color, border)
     scrollFrame.scrollbar = scrollbar
 
     -- scrollbar thumb
-    local scrollThumb = CreateFrame("Frame", nil, scrollbar, "BackdropTemplate")
+    local scrollThumb = CreateFrame("Frame", nil, scrollbar)
+    RaiseAboveParent(scrollThumb, scrollbar)
     scrollThumb:SetWidth(5) -- scrollbar's width is 5
     scrollThumb:SetHeight(scrollbar:GetHeight())
     scrollThumb:SetPoint("TOP")
@@ -2810,7 +2858,7 @@ end
 -- dropdown menu
 ------------------------------------------------
 local listInit, list, highlightTexture
-list = CreateFrame("Frame", addonName.."DropdownList", CellParent, "BackdropTemplate")
+list = CreateFrame("Frame", addonName.."DropdownList", CellParent)
 -- list:SetIgnoreParentScale(true)
 list:SetClampedToScreen(true)
 -- Cell.StylizeFrame(list, {0.115, 0.115, 0.115, 1})
@@ -2820,16 +2868,11 @@ list:Hide()
 list.items = {}
 
 -- highlight
-highlightTexture = CreateFrame("Frame", nil, list, "BackdropTemplate")
+highlightTexture = CreateFrame("Frame", nil, list)
 -- highlightTexture:SetBackdrop({edgeFile = Cell.vars.whiteTexture, edgeSize = P.Scale(1)})
 -- highlightTexture:SetBackdropBorderColor(unpack(accentColor.t))
 highlightTexture:Hide()
 
-list:SetScript("OnShow", function()
-    -- list:SetScale(list.menu:GetEffectiveScale())
-    list:SetFrameStrata(list.menu:GetFrameStrata())
-    list:SetFrameLevel(list.menu:GetFrameLevel() + 20) -- top
-end)
 list:SetScript("OnHide", function() list:Hide() end)
 
 -- close dropdown
@@ -2858,7 +2901,8 @@ local function SetHighlightItem(i)
 end
 
 function Cell.CreateDropdown(parent, width, dropdownType, isMini, isHorizontal)
-    local menu = CreateFrame("Frame", nil, parent, "BackdropTemplate")
+    local menu = CreateFrame("Frame", nil, parent)
+    RaiseAboveParent(menu, parent)
     P.Size(menu, width, 20)
     menu:EnableMouse(true)
     -- menu:SetFrameLevel(5)
@@ -3061,7 +3105,7 @@ function Cell.CreateDropdown(parent, width, dropdownType, isMini, isHorizontal)
                 fs:SetPoint("RIGHT", -5, 0)
             end
 
-            b:SetEnabled(not item.disabled)
+            F.SetEnabled(b, not item.disabled)
 
             -- texture
             if item.texture then
@@ -3085,7 +3129,7 @@ function Cell.CreateDropdown(parent, width, dropdownType, isMini, isHorizontal)
             end
 
             b:SetScript("OnClick", function()
-                PlaySound(SOUNDKIT.U_CHAT_SCROLL_BUTTON)
+                PlaySound("UChatScrollButton")
                 if dropdownType == "texture" then
                     menu:SetSelected(item.text, item.texture)
                 elseif dropdownType == "font" then
@@ -3121,6 +3165,8 @@ function Cell.CreateDropdown(parent, width, dropdownType, isMini, isHorizontal)
 
         -- update list size
         list.menu = menu -- menu's OnHide -> list:Hide
+        list:SetFrameStrata("TOOLTIP")
+        list:SetFrameLevel(10)
         list:ClearAllPoints()
 
         if isMini and isHorizontal then
@@ -3147,7 +3193,7 @@ function Cell.CreateDropdown(parent, width, dropdownType, isMini, isHorizontal)
     end
 
     function menu:SetEnabled(f)
-        menu.button:SetEnabled(f)
+        F.SetEnabled(menu.button, f)
         if f then
             menu.text:SetTextColor(1, 1, 1)
         else
@@ -3182,6 +3228,9 @@ function Cell.CreateDropdown(parent, width, dropdownType, isMini, isHorizontal)
                 if menu.selected then
                     SetHighlightItem(menu.selected)
                 end
+                list.menu = menu
+                list:SetFrameStrata("TOOLTIP")
+                list:SetFrameLevel(10)
             end
             list:Show()
         end
@@ -3198,7 +3247,7 @@ local function GetModifier()
     local alt = IsAltKeyDown()
     local ctrl = IsControlKeyDown()
     local shift = IsShiftKeyDown()
-    local meta = IsMetaKeyDown()
+    local meta = IsMetaKeyDown and IsMetaKeyDown()
 
     if alt then modifier = "alt-" end
     if ctrl then  modifier = modifier .. "ctrl-" end
@@ -3281,8 +3330,8 @@ end
 -- binding list button
 -----------------------------------------
 local function CreateGrid(parent, text, width)
-    local grid = CreateFrame("Button", nil, parent, "BackdropTemplate")
-    grid:SetFrameLevel(6)
+    local grid = CreateFrame("Button", nil, parent)
+    grid:SetFrameLevel(parent:GetFrameLevel() + 1)
     grid:SetSize(width, P.Scale(20))
     grid:SetBackdrop({bgFile = Cell.vars.whiteTexture, edgeFile = Cell.vars.whiteTexture, edgeSize = P.Scale(1)})
     grid:SetBackdropColor(0, 0, 0, 0)
@@ -3305,7 +3354,7 @@ local function CreateGrid(parent, text, width)
     end
 
     function grid:IsTruncated()
-        return grid.text:IsTruncated()
+        return F.IsFontStringTruncated(grid.text)
     end
 
     grid:RegisterForClicks("LeftButtonUp", "RightButtonUp")
@@ -3335,8 +3384,8 @@ local function CreateGrid(parent, text, width)
         parent:StopMovingOrSizing()
         parent:SetFrameStrata("LOW")
         -- self:Hide() --! Hide() will cause OnDragStop trigger TWICE!!!
-        C_Timer.After(0.05, function()
-            local b = F.GetMouseFocus()
+        F.C_Timer.After(0.05, function()
+            local b = GetMouseFocus()
             if b then b = b:GetParent() end
             F.MoveClickCastings(parent.clickCastingIndex, b and b.clickCastingIndex)
         end)
@@ -3346,8 +3395,8 @@ local function CreateGrid(parent, text, width)
 end
 
 function Cell.CreateBindingListButton(parent, modifier, bindKey, bindType, bindAction)
-    local b = CreateFrame("Button", nil, parent, "BackdropTemplate")
-    b:SetFrameLevel(5)
+    local b = CreateFrame("Button", nil, parent)
+    b:SetFrameLevel(parent:GetFrameLevel() + 1)
     P.Size(b, 100, 20)
     b:SetBackdrop({bgFile = Cell.vars.whiteTexture, edgeFile = Cell.vars.whiteTexture, edgeSize = P.Scale(1)})
     b:SetBackdropColor(0.115, 0.115, 0.115, 1)
@@ -3391,7 +3440,7 @@ function Cell.CreateBindingListButton(parent, modifier, bindKey, bindType, bindA
     local spellIconBg = actionGrid:CreateTexture(nil, "BORDER")
     P.Size(spellIconBg, 16, 16)
     spellIconBg:SetPoint("TOPLEFT", P.Scale(2), P.Scale(-2))
-    spellIconBg:SetColorTexture(0, 0, 0, 1)
+    spellIconBg:SetTexture(0, 0, 0, 1)
     spellIconBg:Hide()
 
     local spellIcon = actionGrid:CreateTexture(nil, "OVERLAY")
@@ -3401,7 +3450,7 @@ function Cell.CreateBindingListButton(parent, modifier, bindKey, bindType, bindA
     spellIcon:Hide()
 
     function b:ShowIcon(texture)
-        spellIcon:SetTexture(texture or 134400)
+        spellIcon:SetTexture(texture or "Interface\\Icons\\INV_Misc_QuestionMark")
         spellIconBg:Show()
         spellIcon:Show()
         -- actionGrid.text:ClearAllPoints()
@@ -3455,7 +3504,7 @@ end
 -- receiving frame
 -----------------------------------------
 function Cell.CreateReceivingFrame(parent)
-    local f = CreateFrame("Frame", "CellReceivingFrame", parent, "BackdropTemplate")
+    local f = CreateFrame("Frame", "CellReceivingFrame", parent)
     f:EnableMouse(true)
     f:SetMovable(true)
     f:SetUserPlaced(true)
@@ -3578,7 +3627,7 @@ function Cell.CreateReceivingFrame(parent)
         end)
 
         -- NOTE: you cannot send to yourself
-        requestBtn:SetEnabled(playerName ~= Cell.vars.playerNameFull)
+        F.SetEnabled(requestBtn, playerName ~= Cell.vars.playerNameFull)
         importBtn:Hide()
         dataLabel:Hide()
         dataText:Hide()
@@ -3599,7 +3648,7 @@ function Cell.CreateReceivingFrame(parent)
 
             infoMsg:Hide()
             -- NOTE: timeout in 10 sec if can't receive any data
-            timeout = C_Timer.NewTimer(10, function()
+            timeout = F.C_Timer.NewTimer(10, function()
                 if f:IsShown() and progressBar:GetValue() == 0 then
                     infoMsg:SetMsg(L["To transfer across realm, you need to be in the same group"], fromText)
                     Cell.ChangeSizeWithAnimation(f, 249, f.height+15+math.ceil(infoMsg:GetStringHeight()), 7, nil, function()
@@ -3632,7 +3681,7 @@ function Cell.CreateReceivingFrame(parent)
         Cell.ChangeSizeWithAnimation(importBtn, 125, 20, 7)
         progressBar:Hide()
         importBtn:Show()
-        importBtn:SetEnabled(false)
+        F.SetEnabled(importBtn, false)
 
         if status then
             if received["type"] == "Debuffs" then
@@ -3650,7 +3699,7 @@ function Cell.CreateReceivingFrame(parent)
                     f:Hide()
                 end)
 
-                C_Timer.After(0.5, function()
+                F.C_Timer.After(0.5, function()
                     if isCompatible then
                         infoMsg:SetMsg(L["This will overwrite your debuffs"], dataText)
                     else
@@ -3660,7 +3709,7 @@ function Cell.CreateReceivingFrame(parent)
                         dataLabel:Show()
                         dataText:Show()
                         infoMsg:Show()
-                        importBtn:SetEnabled(isCompatible)
+                        F.SetEnabled(importBtn, isCompatible)
                         if func then func() end
                     end)
                 end)
@@ -3689,7 +3738,7 @@ function Cell.CreateReceivingFrame(parent)
                     f:Hide()
                 end)
 
-                C_Timer.After(0.5, function()
+                F.C_Timer.After(0.5, function()
                     if isCompatible then
                         infoMsg:SetMsg(L["It will be renamed if this layout name already exists"], fromText)
                     else
@@ -3699,7 +3748,7 @@ function Cell.CreateReceivingFrame(parent)
                         dataLabel:Show()
                         dataText:Show()
                         infoMsg:Show()
-                        importBtn:SetEnabled(isCompatible)
+                        F.SetEnabled(importBtn, isCompatible)
                         if func then func() end
                     end)
                 end)

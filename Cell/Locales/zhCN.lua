@@ -2,6 +2,9 @@ if not LOCALE_zhCN then return end
 
 local L = select( 2, ...).L
 
+L["|cffeda55fLeft-Click|r to toggle showing the options window."] = "|cffeda55f左键|r显示或隐藏选项窗口。"
+L["Show Minimap Button"] = "显示小地图按钮"
+
 L["New version found (%s). Please visit %s to get the latest version."] = "发现新版本 (%s)。 请访问 %s 下载最新版本。"
 L["ABOUT"] = "Cell 团队框架的灵感来主要来自 CompactRaid 与 Grid2，同时也稍微参考了 Aptechka 和 VuhDo。\nCell 不轻量，也并非全能，其目标是提供相比以往更好的用户体验。"
 L["RESET"] = "从过旧的版本更新，需要重置Cell"
@@ -21,7 +24,6 @@ L["reset all Layouts and Indicators"] = "重置所有布局与指示器"
 L["reset all Click-Castings"] = "重置所有点击施法"
 L["reset all Raid Debuffs"] = "重置所有副本减益"
 L["reset all Code Snippets"] = "重置所有代码片段"
-L["reset Quick Assist for current spec"] = "重置快速协助（当前专精）"
 L["reset all Cell settings"] = "重置所有Cell设置"
 
 -------------------------------------------------
@@ -70,11 +72,9 @@ L["DRINKING"] = "喝水"
 L["Can't change options in combat"] = "无法在战斗中更改设置"
 L["Yes"] = "是"
 L["No"] = "否"
-L["ON"] = "开"
 L["OFF"] = "关"
 L["Disabled"] = "禁用"
 L["Confirm"] = "确认"
-L["Reset"] = "重置"
 L["Reset All"] = "全部重置"
 
 -------------------------------------------------
@@ -82,13 +82,11 @@ L["Reset All"] = "全部重置"
 -------------------------------------------------
 L["refresh unit buttons"] = "刷新单位按钮"
 L["Unit buttons refreshed (%s)."] = "单位按钮已刷新（%s）。"
-L["Refreshing unit buttons (%s)..."] = "正在刷新单位按钮（%s）…"
 
 -------------------------------------------------
 -- general
 -------------------------------------------------
 L["General"] = "常规"
-L["Blizzard Frames"] = "暴雪框体"
 L["Hide Blizzard Party"] = "隐藏暴雪小队"
 L["Hide Blizzard Raid"] = "隐藏暴雪团队"
 L["Hide Raid Manager"] = "隐藏团队管理器"
@@ -105,12 +103,6 @@ L["Cursor Left"] = "指针左侧"
 L["Cursor Right"] = "指针右侧"
 L["Visibility"] = "可见性"
 L["Show Solo"] = "单人时显示"
-L["Show while not in a group"] = "当不在队伍时显示"
-L["To open options frame, use /cell options"] = "用 /cell options 来打开选项窗口"
-L["Show Party"] = "小队时显示"
-L["Show while in a party"] = "当在小队时显示"
-L["Show Raid"] = "团队时显示"
-L["Show while in a raid"] = "当在团队时显示"
 L["Position"] = "位置"
 L["Lock Cell Frames"] = "把它给我锁死"
 L["Fade Out Menu"] = "淡出菜单"
@@ -131,7 +123,6 @@ L["Translit Cyrillic to Latin"] = "将俄文转写为英文"
 -------------------------------------------------
 -- nickname
 -------------------------------------------------
-L["Nickname Options"] = "昵称选项"
 L["Name or Name-Server"] = "角色名 或 角色名-服务器名"
 L["Nickname"] = "昵称"
 L["My Nickname"] = "我的昵称"
@@ -150,9 +141,7 @@ L["Appearance"] = "外观"
 L["Scale"] = "缩放"
 L["Apply Recommended Scale"] = "应用推荐缩放"
 L["Strata"] = "层级"
-L["Non-integer scaling may result in abnormal display of options UI"] = "非整数缩放可能导致选项界面显示不正常"
 L["A UI reload is required.\nDo it now?"] = "需要重载界面。\n现在重载么？"
-L["Pixel Perfect"] = "像素精确"
 L["Options UI Accent Color"] = "选项界面强调色"
 L["Options UI Font Size"] = "选项界面字体尺寸"
 L["Use Game Font"] = "使用游戏字体"
@@ -174,7 +163,6 @@ L["Enable Death Color"] = "启用死亡颜色"
 L["Power Color"] = "能量颜色"
 L["Power Color (dark)"] = "能量颜色 (暗)"
 L["Bar Animation"] = "条动画"
-L["Gradient Colors"] = "渐变色"
 L["Flash"] = "闪光"
 L["Smooth"] = "平滑"
 L["Target Highlight Color"] = "目标高亮颜色"
@@ -191,7 +179,6 @@ L["Round Up Duration Text"] = "将持续时间文本向上取整"
 L["Display One Decimal Place When"] = "持续时间文本显示一位小数于"
 L["Color Duration Text"] = "对持续时间文本着色"
 L["Heal Prediction"] = "治疗预估"
-L["LibHealComm needs to be installed"] = "需要自行安装 LibHealComm"
 L["Heal Absorb"] = "治疗吸收"
 L["Invert Color"] = "使用反色"
 L["Shield Texture"] = "护盾材质"
@@ -225,7 +212,6 @@ L["Primary Talents"] = "主天赋"
 L["Secondary Talents"] = "副天赋"
 L["New"] = "新建"
 L["Save"] = "保存"
-L["Discard"] = "撤销"
 L["Conflicts Detected!"] = "发现冲突！"
 L["Remove"] = "移除"
 
@@ -251,8 +237,6 @@ L["Focus"] = "焦点"
 L["Assist"] = "协助"
 L["Menu"] = "菜单"
 
-L["T"] = "天赋"
-L["P"] = "PvP"
 L["C"] = "职业"
 L["S"] = "专精"
 L["H"] = "英雄"
@@ -271,7 +255,6 @@ L["Layouts"] = "布局"
 L["Layout"] = "布局"
 -- L["Currently Enabled"] = "当前启用"
 L["Share"] = "分享"
-L["Enable"] = "启用"
 L["Rename"] = "重命名"
 L["Delete"] = "删除"
 L["Rename layout"] = "重命名布局"
@@ -288,10 +271,7 @@ L["Friendly NPC Frame"] = "友方 NPC 框体"
 
 -- layout auto switch
 L["Layout Auto Switch"] = "布局自动切换"
-L["Role"] = "职责"
-L["Spec"] = "专精"
 L["No Spec"] = "无专精"
-L["use separate profile for current spec"] = "为当前专精使用独立配置"
 L["Solo"] = "单人"
 L["Outdoor"] = "野外"
 L["Arena"] = "竞技场"
@@ -320,7 +300,6 @@ L["Group Spacing"] = "队伍间距"
 L["Combine Groups"] = "合并队伍"
 L["Sort By Role"] = "按职责排序"
 L["Hide Self"] = "隐藏自己"
-L["%s is required"] = "需要%s"
 
 L["Use Same Size As Main"] = "使用与主框体相同的尺寸"
 L["Use Same Arrangement As Main"] = "使用与主框体相同的排列"
@@ -434,7 +413,6 @@ L["Health Text"] = "血量文字"
 L["Power Text"] = "能量文字"
 L["Status Icon"] = "状态图标"
 L["Role Icon"] = "职责图标"
-L["Party Assignment Icon"] = "职位图标"
 L["Leader Icon"] = "队长图标"
 L["Combat Icon"] = "战斗图标"
 L["Ready Check Icon"] = "就位确认图标"
@@ -449,15 +427,11 @@ L["AoE Healing"] = "AoE 治疗"
 L["External Cooldowns"] = "减伤 (来自他人)"
 L["Defensive Cooldowns"] = "减伤 (自身)"
 L["Externals + Defensives"] = "减伤 (全部)"
-L["Tank Active Mitigation"] = "坦克主动减伤"
 L["Dispels"] = "驱散"
 L["Debuffs"] = "减益"
-L["Private Auras"] = "个人光环" -- 私有光环？
 L["Targeted Spells"] = "被法术选中"
 L["Target Counter"] = "目标计数"
-L["Crowd Controls"] = "群体控制"
 L["Actions"] = "动作"
-L["Consumables"] = "消耗品"
 L["Health Thresholds"] = "血量阈值"
 L["Missing Buffs"] = "缺失增益"
 
@@ -466,8 +440,6 @@ L["Rename indicator"] = "重命名指示器"
 L["Delete indicator"] = "删除指示器"
 L["Buff"] = "增益"
 L["Debuff"] = "减益"
-L["Buff List"] = "增益列表"
-L["Debuff List"] = "减益列表"
 L["Spell List"] = "法术列表"
 L["Input spell id"] = "输入法术ID"
 L["Invalid"] = "无效"
@@ -489,7 +461,6 @@ L["Anchor Point"] = "锚点"
 L["Relative Point"] = "相对锚点"
 L["Relative To"] = "相对于"
 L["To UnitButton's"] = "到单位按钮的"
-L["To HealthBar's"] = "到血条的"
 L["vehicle name"] = "载具名称"
 L["Vehicle Name Position"] = "载具名称位置"
 L["Status Text Position"] = "状态文字位置"
@@ -501,16 +472,11 @@ L["Non-En"] = "中"
 L["En"] = "英"
 L["Name Width / UnitButton Width"] = "名字宽度 / 单位按钮宽度"
 L["Font"] = "字体"
-L["Font Outline"] = "字体轮廓"
-L["Font Size"] = "字体尺寸"
 L["Shadow"] = "阴影"
 L["Outline"] = "轮廓"
 L["Monochrome"] = "单色"
-L["stackFont"] = "层数字体"
 L["durationFont"] = "持续时间字体"
 L["This setting will be ignored, if the %1$s option in %2$s tab is enabled"] = "如果启用了%2$s页面下的%1$s选项，此设置将被忽略"
-L["Name Color"] = "名字颜色"
-L["Use Custom Textures"] = "使用自定义材质"
 L["BOTTOM"] = "下"
 L["BOTTOMLEFT"] = "左下"
 L["BOTTOMRIGHT"] = "右下"
@@ -543,7 +509,6 @@ L["Background Color"] = "背景颜色"
 L["Remaining Time"] = "剩余时间"
 L["sec"] = "秒"
 L["Always"] = "总是"
-L["hide icon animation"] = "隐藏图标动画"
 L["Anchor To"] = "定位到"
 L["Health Bar"] = "血条"
 L["Loss"] = "损失"
@@ -577,14 +542,11 @@ L["showGroupNumber"] = "显示队伍编号"
 L["showTimer"] = "显示计时器"
 L["showBackground"] = "显示背景"
 L["dispellableByMe"] = "只显示我能驱散的减益"
-L["castByMe"] = "只显示我施放的增益"
-L["buffByMe"] = "只显示我能施放的增益"
 L["trackByName"] = "匹配法术名称"
 L["showDuration"] = "显示持续时间文本"
 L["showAnimation"] = "显示动画"
 L["showStack"] = "显示层数文本"
 -- L["Show duration text instead of icon animation"] = "用持续时间文本取代图标动画"
-L["enableHighlight"] = "高亮单位按钮"
 L["onlyShowTopGlow"] = "仅为优先级最高的减益显示发光效果"
 L["circledStackNums"] = "用带圈数字显示层数"
 L["Require font support"] = "需要字体支持"
@@ -609,18 +571,13 @@ L["right-to-left"] = "从右到左"
 L["top-to-bottom"] = "从上到下"
 L["bottom-to-top"] = "从下到上"
 
-L["Show countdown swipe"] = "显示倒计时动画"
-L["Show countdown number"] = "显示倒计时文本"
-L["Due to restrictions of the private aura system, this indicator can only use Blizzard style."] = "由于个人光环系统的限制，该指示器只能使用暴雪样式。"
 
 L["You can config debuffs in %s"] = "你可以在 %s 里设置减益"
 L["Indicator settings are part of Layout settings which are account-wide."] = "指示器设置是布局设置的一部分，它们是账号配置而非角色。"
 L["The spells list of a icons indicator is unordered (no priority)."] = "图标组指示器的法术列表是无序的（无优先级）。"
 L["The priority of spells decreases from top to bottom."] = "法术优先级从上到下递减。"
 L["Check all visible enemy nameplates."] = "检查所有可见的敌方姓名板。"
-L["cleuAurasTips"] = "通过战斗记录事件匹配不可见的法术效果"
 L["%s in Utilities must be enabled to make this indicator work."] = "要使用此指示器，必须先启用工具页面下的%s功能。"
-L["If you are a paladin or warrior, and the unit has no buffs from you, a %s icon will be displayed."] = "如果你是圣骑士或战士，且该单位没有来自你的增益时，将会显示一个%s图标。"
 L["Play animation when the unit uses a specific spell/item. The list is global shared, not layout-specific."] = "当单位使用特定的法术/物品时，播放动画。这个列表是全局共享的，而非每个布局独立。"
 L["Display a gradient texture when the unit receives a heal from your certain healing spells."] = "当单位受到你特定治疗法术的治疗时，显示一个渐变材质。"
 
@@ -666,21 +623,15 @@ L["No custom debuffs to export!"] = "没有能够导出的减益！"
 L["This will overwrite your debuffs"] = "这将覆盖你的副本减益"
 L["Raid Debuffs updated: %s."] = "已更新副本减益：%s。"
 L["Reset debuffs?"] = "重置减益？"
-L["Current Season"] = "当前赛季"
-L["Want to help improve Raid Debuffs?"] = "想要帮忙完善副本减益么？"
-L["Use %s addon"] = "用这个插件 %s"
-L["Then create a PR or submit a ticket on GitHub"] = "然后在GitHub上提交PR或Issue就可以啦"
 
 -------------------------------------------------
 -- utilities
 -------------------------------------------------
 L["Utilities"] = "工具"
-L["Spotlight frames are not supported"] = "不支持特别关注框体"
 
 -------------------------------------------------
 -- raid tools
 -------------------------------------------------
-L["Tools"] = "工具"
 L["Raid Tools"] = "团队工具"
 L["only in group"] = "仅在队伍中"
 L["Only show when you have permission to do this"] = "仅在你有权限这样做时显示"
@@ -693,15 +644,12 @@ L["Pull in %d sec"] = "%d秒后开怪"
 L["Pull timer cancelled"] = "取消开怪"
 L["Marks Bar"] = "标记工具条"
 L["Target Marks"] = "目标标记"
-L["World Marks"] = "世界标记"
-L["Both"] = "全部"
 L["marksTips"] = "\n|r目标标记\n左键: |cffffffff在目标上设置标记|r\n右键: |cffffffff将标记锁定在目标上 (在你的队伍中)|r"
 L["Mover"] = "移动框"
 L["Unlock"] = "解锁"
 L["Lock"] = "锁定"
 L["Battle Res Timer"] = "战复计时器"
 L["Only show during encounter or in mythic+"] = "仅在首领战或者史诗钥石地下城中显示"
-L["BR"] = "战复"
 L["HIGH CPU USAGE"] = "高CPU占用"
 L["MODERATE CPU USAGE"] = "中等CPU占用"
 L["Death Report"] = "死亡通报"
@@ -722,9 +670,6 @@ L["|cffffb5c5Right-Click:|r report unaffected"] = "|cffffb5c5右键：|r报告�
 L["Unaffected"] = "未获得此增益"
 L["Missing Buff"] = "缺少增益"
 L["many"] = "很多"
-L["Use |cFFFFB5C5/cell buff X|r to set icon size"] = "用 |cFFFFB5C5/cell buff X|r 来设定图标尺寸"
-L["Buff Tracker icon size is set to %d."] = "将增益检查图标的尺寸设置为 %d。"
-L["A positive integer is required."] = "需要一个正整数。"
 L["Fade Out These Buttons"] = "淡出这些按钮"
 L["%s lock %s on %s."] = "%s将%s锁定在%s。"
 L["%s unlock %s from %s."] = "%s将%s从%s解锁。"
@@ -734,7 +679,6 @@ L["You"] = "你"
 -------------------------------------------------
 -- spell request
 -------------------------------------------------
-L["Glows"] = "发光"
 L["Type"] = "类型"
 L["Glow"] = "发光"
 L["Glow Options"] = "发光选项"
@@ -762,7 +706,6 @@ L["Contains"] = "包含"
 L["Spells"] = "法术"
 L["SPELL"] = "大宝剑"
 L["Add"] = "添加"
-L["[Alt+Left-Click] to edit"] = "[Alt+左键] 修改"
 L["Add new spell"] = "添加新法术"
 L["Edit spell"] = "修改法术"
 L["SpellId and BuffId are the same in most cases"] = "大部分情况下法术ID与增益ID是相同的"
@@ -778,56 +721,22 @@ L["DISPEL"] = "驱散"
 L["Dispellable By Me"] = "仅当我能驱散时"
 L["Respond to all dispellable debuffs"] = "响应所有的可驱散减益"
 L["Respond to specific dispellable debuffs"] = "仅响应指定的可驱散减益"
-L["IDs separated by whitespaces"] = "用空格分隔多个法术ID"
 L["Text Options"] = "文本选项"
 
 -------------------------------------------------
 -- quick assist
 -------------------------------------------------
 L["Quick Assist"] = "快速协助"
-L["Setup"] = "设置"
-L["Style"] = "样式"
-L["Name List"] = "名字列表"
 L["Units Per Row"] = "每行单位数"
-L["Max Rows"] = "最大行数"
 L["Units Per Column"] = "每列单位数"
-L["Max Columns"] = "最大列数"
-L["Filter Auto Switch"] = "过滤自动切换"
-L["Unit Filter"] = "单位过滤"
-L["Role Filter"] = "按职责"
-L["Class Filter"] = "按职业"
-L["Spec Filter"] = "按专精"
-L["Name Filter"] = "按名字"
-L["toggle"] = "切换"
 L["change the order"] = "调整顺序"
-L["Buffs Tracker"] = "增益监控"
 L["mine"] = "我的"
-L["Offensives Tracker"] = "爆发监控"
-L["Buffs"] = "增益"
-L["Casts"] = "施法"
-L["Reset Offensive Spells"] = "重置爆发法术"
 
 -------------------------------------------------
 -- quick cast
 -------------------------------------------------
-L["Quick Cast"] = "快捷施法"
-L["Create several buttons for quick casting and buff monitoring"] = "创建几个快捷施法按钮，并具有简单的增益监控功能"
-L["These settings are spec-specific"] = "这些设置是每个专精独立的"
-L["Max Buttons"] = "按钮数量"
 L["Spacing"] = "间距"
-L["Rows"] = "行数"
-L["Columns"] = "列数"
-L["cast Outer spell"] = "施放外圈法术"
-L["cast Inner spell"] = "施放内圈法术"
 L["set unit"] = "设置单位"
-L["clear unit"] = "清空单位"
-L["move"] = "移动"
-L["Outer Buff"] = "外圈增益"
-L["Inner Buff"] = "内圈增益"
-L["Glow Buffs"] = "增益发光"
-L["Glow Casts"] = "施法发光"
-L["Tip: right-click to delete"] = "提示：右键删除"
-L["You can't do that while in combat."] = "你不可以在战斗中这么做。"
 
 -------------------------------------------------
 -- about
@@ -838,7 +747,6 @@ L["Special Thanks"] = "特别感谢"
 L["Supporters"] = "感谢小伙伴们"
 L["Translators"] = "翻译"
 L["Slash Commands"] = "斜杠命令"
-L["Bug Report & Suggestion"] = "问题报告与建议"
 L["Links"] = "链接"
 L["Import & Export All Settings"] = "导入导出所有设置"
 L["Cell settings will be overwritten!"] = "Cell 设置将被覆盖！"
@@ -867,8 +775,6 @@ L["All snippets have been disabled, due to the version update"] = "由于版本�
 -- CHANGELOGS
 -------------------------------------------------
 L["Changelogs"] = "更新记录"
-L["Click to view recent changelogs"] = "点击查看近期更新记录"
-L["Click to view older changelogs"] = "点击查看远古更新记录"
 
 -- <h1>About the M+ Afflicted Souls</h1>
 -- <p>I've received some requests about showing Afflicted Souls on Cell. Simply put, due to the limitation of the plugin API, it is not possible. I can make them display on Cell, but these buttons will not be clickable, so there is no need. It is better to use WA.</p>
@@ -879,6 +785,26 @@ L["Click to view older changelogs"] = "点击查看远古更新记录"
 
 L["CHANGELOGS"] = [[
     <h2>更新后如果有各种问题，先排查代码片段。</h2>
+    <br/>
+
+    <h1>各位 Cell 的用户，感谢你们一直以来的支持！</h1>
+    <p>虽然现在才说有些晚了，但我仍想向大家致歉——我没能如约在上个月推出适配正式服的 Cell 新版本。</p>
+    <p>从二月底至今，我一直被工作压得喘不过气，完全没有时间和精力继续推进项目重构。</p>
+    <p>幸运的是，优秀的代码贡献者们为 Cell 带来了修复，让这个项目得以继续延续生命，对此我由衷地感激。</p>
+    <p>我也希望能尽快回归，为大家带来更好的作品。</p>
+    <p>感谢你们的支持与发电。</p>
+    <p>为了艾泽拉斯！</p>
+    <p>— enderneko</p>
+    <br/>
+
+    <p><a href="older">]]..L["Click to view older changelogs"]..[[</a></p>
+    <br/>
+]]
+
+L["OLDER_CHANGELOGS"] = [[
+    <h1>r274-release (2026-01-22 19:07 GMT+8)</h1>
+    <p>* 更新熔火之心的减益列表（感谢 露露缇娅）。</p>
+    <p>* 修复导致 LibGetFrame 无法获取敌对首领框体的异常。</p>
     <br/>
 
     <h1>r273-release (2025-12-29 17:40 GMT+8)</h1>
@@ -1154,11 +1080,6 @@ L["CHANGELOGS"] = [[
     <p>+ 更新本地化：德语、法语、葡萄牙语、俄语、繁中。</p>
     <br/>
 
-    <p><a href="older">]]..L["Click to view older changelogs"]..[[</a></p>
-    <br/>
-]]
-
-L["OLDER_CHANGELOGS"] = [[
     <h1>r238-release (Aug 7, 2024, 15:25 GMT+8)</h1>
     <p>* 修复可能缺失的指示器。</p>
     <p>* 更新本地化。</p>

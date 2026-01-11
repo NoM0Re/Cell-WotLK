@@ -1,40 +1,13 @@
-Cell Addon – Custom License / Permission Notice
-Copyright (c) 2026 enderneko
-All Rights Reserved.
+Copyright © 2026 enderneko <enderneko-dev@outlook.com>.
+Copyright © 2026 NoM0Re.
 
-This repository contains a modified and backported version of the "Cell"
-World of Warcraft addon.
+The contents of this addon, excluding third-party resources, are copyrighted to its authors with all rights reserved.
 
-The original author, enderneko (formerly 篠崎-影之哀伤), retains full
-copyright ownership of the addon and its source code.
-All rights not expressly granted remain reserved.
+The author of this addon hereby grants you the following rights:
 
-----------------------------------------------------------------
-LIMITED AUTHORIZATION FOR BACKPORTING AND DISTRIBUTION
-----------------------------------------------------------------
+	1.	You may make modifications to this addon for private use only, except if you have been granted explicit
+		permission by the author;
 
-Permission is hereby granted to NoM0Re to backport, modify, and distribute
-the "Cell" addon for use only,
-subject to the following conditions:
+	2.	Do not modify the name of this addon, including the addon folders.
 
-1. Addon Identity
-   - The addon name and top-level folder name must remain "Cell".
-
-2. Credits & Addon Page Information
-   - The "About", "Supporters", and "Links" sections may be modified.
-   - The original author credit must be retained.
-   - The author name may be displayed as "enderneko".
-   - Additional contributors may be listed in any order.
-
-3. Code & Module Modifications
-   - All modules, features, and code may be freely modified.
-
-4. Distribution Scope
-   - Distribution is permitted on any website or hosting platform.
-   - Use on official / retail Blizzard servers is explicitly excluded.
-
-----------------------------------------------------------------
-
-THIS SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT.
+All rights not explicitly addressed in this license are reserved by the copyright holder.

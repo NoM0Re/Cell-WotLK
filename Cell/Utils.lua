@@ -13,69 +13,42 @@ Cell.vars.playerFaction = UnitFactionGroup("player")
 -------------------------------------------------
 Cell.isAsian = LOCALE_zhCN or LOCALE_zhTW or LOCALE_koKR
 
-Cell.isRetail = WOW_PROJECT_ID == WOW_PROJECT_MAINLINE
-Cell.isVanilla = WOW_PROJECT_ID == WOW_PROJECT_CLASSIC
-Cell.isTBC = WOW_PROJECT_ID == WOW_PROJECT_BURNING_CRUSADE_CLASSIC
-Cell.isWrath = WOW_PROJECT_ID == WOW_PROJECT_WRATH_CLASSIC
-Cell.isCata = WOW_PROJECT_ID == WOW_PROJECT_CATACLYSM_CLASSIC
-Cell.isMists = WOW_PROJECT_ID == WOW_PROJECT_MISTS_CLASSIC
-Cell.isTWW = LE_EXPANSION_LEVEL_CURRENT == LE_EXPANSION_WAR_WITHIN
-
-if Cell.isRetail then
-    Cell.flavor = "retail"
-elseif Cell.isMists then
-    Cell.flavor = "mists"
-elseif Cell.isCata then
-    Cell.flavor = "cata"
-elseif Cell.isWrath then
-    Cell.flavor = "wrath"
-elseif Cell.isTBC then
-    Cell.flavor = "tbc"
-elseif Cell.isVanilla then
-    Cell.flavor = "vanilla"
-end
+Cell.isWrath = true
+Cell.flavor = "wrath"
 
 -------------------------------------------------
 -- class
 -------------------------------------------------
-local localizedClass
-if Cell.isRetail then
-    localizedClass = LocalizedClassList()
-else
-    localizedClass = {}
-    FillLocalizedClassList(localizedClass)
-end
+local localizedClass = {}
+FillLocalizedClassList(localizedClass)
 
-local sortedClasses = {}
-local classFileToID = {}
+local sortedClasses = {
+    "WARRIOR",
+    "PALADIN",
+    "HUNTER",
+    "ROGUE",
+    "PRIEST",
+    "DEATHKNIGHT",
+    "SHAMAN",
+    "MAGE",
+    "WARLOCK",
+    "DRUID",
+}
+local classFileToID = {
+    WARRIOR     = 1,
+    PALADIN     = 2,
+    HUNTER      = 3,
+    ROGUE       = 4,
+    PRIEST      = 5,
+    DEATHKNIGHT = 6,
+    SHAMAN      = 7,
+    MAGE        = 8,
+    WARLOCK     = 9,
+    DRUID       = 11,
+}
 local classIDToFile = {}
-
-do
-    -- WARRIOR = 1,
-    -- PALADIN = 2,
-    -- HUNTER = 3,
-    -- ROGUE = 4,
-    -- PRIEST = 5,
-    -- DEATHKNIGHT = 6,
-    -- SHAMAN = 7,
-    -- MAGE = 8,
-    -- WARLOCK = 9,
-    -- MONK = 10,
-    -- DRUID = 11,
-    -- DEMONHUNTER = 12,
-    -- EVOKER = 13,
-    --! GetNumClasses returns the highest class ID (NOT IN CLASSIC)
-    local highestClassID = GetNumClasses()
-    if highestClassID < 11 then highestClassID = 11 end
-    for i = 1, highestClassID do
-        local classFile, classID = select(2, GetClassInfo(i))
-        if classFile and classID == i then
-            tinsert(sortedClasses, classFile)
-            classFileToID[classFile] = i
-            classIDToFile[i] = classFile
-        end
-    end
-    sort(sortedClasses)
+for file, id in pairs(classFileToID) do
+    classIDToFile[id] = file
 end
 
 function F.GetClassID(classFile)
@@ -85,8 +58,10 @@ end
 function F.GetLocalizedClassName(classFileOrID)
     if type(classFileOrID) == "string" then
         return localizedClass[classFileOrID] or classFileOrID
-    elseif type(classFileOrID) == "number" and classIDToFile[classFileOrID] then
-        return localizedClass[classIDToFile[classFileOrID]] or classFileOrID
+
+    elseif type(classFileOrID) == "number" then
+        local classFile = classIDToFile[classFileOrID]
+        return classFile and localizedClass[classFile] or ""
     end
     return ""
 end
@@ -95,8 +70,9 @@ function F.IterateClasses()
     local i = 0
     return function()
         i = i + 1
-        if i <= GetNumClasses() then
-            return sortedClasses[i], classFileToID[sortedClasses[i]], i
+        local classFile = sortedClasses[i]
+        if classFile then
+            return classFile, classFileToID[classFile], i
         end
     end
 end
@@ -108,79 +84,23 @@ end
 -------------------------------------------------
 -- Classic
 -------------------------------------------------
-if Cell.isCata then
-    function F.GetActiveTalentInfo()
-        local which = GetActiveTalentGroup() == 1 and L["Primary Talents"] or L["Secondary Talents"]
-        return which, Cell.vars.playerSpecIcon, Cell.vars.playerSpecName
-    end
+function F.GetActiveTalentInfo()
+    local which = GetActiveTalentGroup() == 1 and L["Primary Talents"] or L["Secondary Talents"]
 
-elseif Cell.isWrath or Cell.isTBC or Cell.isVanilla then
-    function F.GetActiveTalentInfo()
-        local which = GetActiveTalentGroup() == 1 and L["Primary Talents"] or L["Secondary Talents"]
+    local maxPoints = 0
+    local specName, specIcon
 
-        local maxPoints = 0
-        local specName, specIcon, specFileName
-
-        for i = 1, GetNumTalentTabs() do
-            local id, name, description, icon, pointsSpent, background = GetTalentTabInfo(i)
-            if pointsSpent > maxPoints then
-                maxPoints = pointsSpent
-                specIcon = icon
-                specName = name
-            -- elseif pointsSpent == maxPoints then
-            --     specIcon = 132148
-            end
+    for i = 1, GetNumTalentTabs() do
+        local _, name, _, icon, pointsSpent = GetTalentTabInfo(i)
+        if pointsSpent > maxPoints then
+            maxPoints = pointsSpent
+            specIcon = icon
+            specName = name
         end
-
-        return which, specIcon or 134400, specName or L["No Spec"]
     end
+
+    return which, specIcon or [[Interface/Icons/INV_Misc_QuestionMark]], specName or L["No Spec"]
 end
-
--- local specRoles = {
---     ["DeathKnightBlood"] = "DAMAGER",
---     ["DeathKnightFrost"] = "TANK",
---     ["DeathKnightUnholy"] = "DAMAGER",
-
---     ["DruidRestoration"] = "HEALER",
---     ["DruidBalance"] = "DAMAGER",
---     -- ["DruidFeralCombat"] = nil,
-
---     ["HunterBeastMastery"] = "DAMAGER",
---     ["HunterSurvival"] = "DAMAGER",
---     ["HunterMarksmanship"] = "DAMAGER",
-
---     ["MageFrost"] = "DAMAGER",
---     ["MageArcane"] = "DAMAGER",
---     ["MageFire"] = "DAMAGER",
-
---     ["PaladinHoly"] = "HEALER",
---     ["PaladinCombat"] = "DAMAGER",
---     ["PaladinProtection"] = "TANK",
-
---     ["PriestShadow"] = "DAMAGER",
---     ["PriestHoly"] = "HEALER",
---     ["PriestDiscipline"] = "HEALER",
-
---     ["RogueCombat"] = "DAMAGER",
---     ["RogueSubtlety"] = "DAMAGER",
---     ["RogueAssassination"] = "DAMAGER",
-
---     ["ShamanElementalCombat"] = "DAMAGER",
---     ["ShamanEnhancement"] = "DAMAGER",
---     ["ShamanRestoration"] = "HEALER",
-
---     ["WarlockSummoning"] = "DAMAGER",
---     ["WarlockDestruction"] = "DAMAGER",
---     ["WarlockCurses"] = "DAMAGER",
-
---     ["WarriorArms"] = "DAMAGER",
---     ["WarriorFury"] = "DAMAGER",
---     ["WarriorProtection"] = "TANK",
--- }
-
--- function F.GetPlayerRole()
-
--- end
 
 -------------------------------------------------
 -- color
@@ -503,10 +423,18 @@ function F.Utf8sub(str, startChar, numChars)
     return str:sub(startIndex, currentIndex - 1)
 end
 
+function F.IsFontStringTruncated(fs)
+    if fs.IsTruncated then
+        return fs:IsTruncated()
+    end
+
+    return fs:GetStringWidth() > (fs:GetWidth() + 0.5)
+end
+
 function F.FitWidth(fs, text, alignment)
     fs:SetText(text)
 
-    if fs:IsTruncated() then
+    if F.IsFontStringTruncated(fs) then
         for i = 1, string.utf8len(text) do
             if strlower(alignment) == "right" then
                 fs:SetText("..."..string.utf8sub(text, i))
@@ -514,7 +442,7 @@ function F.FitWidth(fs, text, alignment)
                 fs:SetText(string.utf8sub(text, i).."...")
             end
 
-            if not fs:IsTruncated() then
+            if not F.IsFontStringTruncated(fs) then
                 break
             end
         end
@@ -671,7 +599,7 @@ end
 
 function F.StringToTable(s, sep, convertToNum)
     local t = {}
-    for i, v in pairs({string.split(sep, s)}) do
+    for i, v in pairs({strsplit(sep, s)}) do
         v = strtrim(v)
         if v ~= "" then
             if convertToNum then
@@ -806,9 +734,110 @@ end
 -------------------------------------------------
 -- general
 -------------------------------------------------
--- function F.GetRealmName()
---     return string.gsub(GetRealmName(), " ", "")
--- end
+function F.GetNormalizedRealmName(realm)
+    if realm then
+        return (string.gsub(realm, "[%s%-%.]", ""))
+    elseif GetNormalizedRealmName then
+        return GetNormalizedRealmName()
+    else
+        return (string.gsub(GetRealmName(), "[%s%-%.]", ""))
+    end
+end
+
+local LibGroupTalents = LibStub("LibGroupTalents-1.0", true) or {
+    GetUnitRole = function() return "" end,
+    RegisterCallback = function() end,
+}
+local GroupTalentRoles = {
+    tank = "TANK",
+    healer = "HEALER",
+    melee = "DAMAGER",
+    caster = "DAMAGER",
+}
+local UnitGroupRolesAssigned = UnitGroupRolesAssigned
+
+function F.UnitGroupRolesAssigned(unit, talentRole)
+    if not unit then
+        return "NONE"
+    end
+
+    local tank, healer, damage = UnitGroupRolesAssigned(unit)
+    if tank then
+        return "TANK"
+    elseif healer then
+        return "HEALER"
+    elseif damage then
+        return "DAMAGER"
+    end
+
+    talentRole = talentRole or LibGroupTalents:GetUnitRole(unit) or ""
+    return GroupTalentRoles[talentRole] or "NONE"
+end
+
+local GroupRoleEventFrame = CreateFrame("Frame")
+GroupRoleEventFrame:RegisterEvent("LFG_ROLE_UPDATE")
+GroupRoleEventFrame:RegisterEvent("PLAYER_ROLES_ASSIGNED")
+GroupRoleEventFrame:SetScript("OnEvent", function()
+    for unit in F.IterateGroupMembers() do
+        if UnitExists(unit) then
+            Cell.Fire("GroupRoleChanged", unit, UnitGUID(unit), F.UnitGroupRolesAssigned(unit))
+        end
+    end
+end)
+
+local GroupTalentsCallback = {}
+function GroupTalentsCallback:RoleChanged(_, guid, unit, role)
+    if unit then
+        F.C_Timer.After(0, function()
+            Cell.Fire("GroupRoleChanged", unit, guid, F.UnitGroupRolesAssigned(unit, role))
+        end)
+    end
+end
+
+LibGroupTalents.RegisterCallback(GroupTalentsCallback, "LibGroupTalents_RoleChange", "RoleChanged")
+
+local LibResComm = LibStub("LibResComm-1.0", true)
+local incomingResurrectionCallbacks = {}
+
+local function FireIncomingResurrectionChanged(name, event, resser, endTime, success)
+    for _, callback in pairs(incomingResurrectionCallbacks) do
+        callback(name, event, resser, endTime, success)
+    end
+end
+
+function F.RegisterIncomingResurrectionCallback(callbackName, callback)
+    incomingResurrectionCallbacks[callbackName] = callback
+end
+
+function F.UnregisterIncomingResurrectionCallback(callbackName)
+    incomingResurrectionCallbacks[callbackName] = nil
+end
+
+local IncomingResComm = {}
+function IncomingResComm:ResCommUpdate(event, resser, endTimeOrTarget, targetOrSuccess)
+    local name, endTime, success
+    if event == "ResComm_ResStart" then
+        name = targetOrSuccess
+        endTime = endTimeOrTarget
+    else
+        name = endTimeOrTarget
+        success = targetOrSuccess
+    end
+
+    if name then
+        FireIncomingResurrectionChanged(name, event, resser, endTime, success)
+    end
+end
+
+if LibResComm then
+    LibResComm.RegisterCallback(IncomingResComm, "ResComm_ResStart", "ResCommUpdate")
+    LibResComm.RegisterCallback(IncomingResComm, "ResComm_ResEnd", "ResCommUpdate")
+end
+
+function F.UnitHasIncomingResurrection(unit)
+    local name = unit and UnitName(unit)
+    return name and LibResComm and LibResComm:IsUnitBeingRessed(name)
+end
 
 function F.UnitFullName(unit)
     if not unit or not UnitIsPlayer(unit) then return end
@@ -817,7 +846,7 @@ function F.UnitFullName(unit)
 
     --? name might be nil in some cases?
     if name and not string.find(name, "-") then
-        local server = GetNormalizedRealmName()
+        local server = F.GetNormalizedRealmName()
         --? server might be nil in some cases?
         if server then
             name = name.."-"..server
@@ -927,10 +956,6 @@ function F.IterateAllUnitButtons(func, updateCurrentGroupOnly, updateQuickAssist
             end
         end
 
-        -- arena pet
-        for _, b in pairs(Cell.unitButtons.arena) do
-            func(b)
-        end
     end
 
     -- group pet
@@ -953,12 +978,6 @@ function F.IterateAllUnitButtons(func, updateCurrentGroupOnly, updateQuickAssist
             func(b)
         end
     end
-
-    if Cell.isRetail and updateQuickAssists then
-        for i = 1, 40 do
-            func(Cell.unitButtons.quickAssist[i])
-        end
-    end
 end
 
 function F.IterateSharedUnitButtons(func)
@@ -979,11 +998,7 @@ function F.GetUnitButtonByUnit(unit, getSpotlights, getQuickAssist)
     local normal, spotlights, quickAssist
 
     if Cell.vars.groupType == "raid" then
-        if Cell.vars.inBattleground == 5 then
-            normal = Cell.unitButtons.raid.units[unit] or Cell.unitButtons.npc.units[unit] or Cell.unitButtons.arena[unit]
-        else
-            normal = Cell.unitButtons.raid.units[unit] or Cell.unitButtons.npc.units[unit] or Cell.unitButtons.pet.units[unit]
-        end
+        normal = Cell.unitButtons.raid.units[unit] or Cell.unitButtons.npc.units[unit] or Cell.unitButtons.pet.units[unit]
     elseif Cell.vars.groupType == "party" then
         normal = Cell.unitButtons.party.units[unit] or Cell.unitButtons.npc.units[unit]
     else -- solo
@@ -1028,11 +1043,7 @@ function F.HandleUnitButton(type, unit, func, ...)
     local handled, normal
 
     if Cell.vars.groupType == "raid" then
-        if Cell.vars.inBattleground == 5 then
-            normal = Cell.unitButtons.raid.units[unit] or Cell.unitButtons.npc.units[unit] or Cell.unitButtons.arena[unit]
-        else
-            normal = Cell.unitButtons.raid.units[unit] or Cell.unitButtons.npc.units[unit] or Cell.unitButtons.pet.units[unit]
-        end
+        normal = Cell.unitButtons.raid.units[unit] or Cell.unitButtons.npc.units[unit] or Cell.unitButtons.pet.units[unit]
     elseif Cell.vars.groupType == "party" then
         normal = Cell.unitButtons.party.units[unit] or Cell.unitButtons.npc.units[unit]
     else -- solo
@@ -1111,56 +1122,56 @@ end
 -- global functions
 -------------------------------------------------
 local UnitGUID = UnitGUID
-local GetNumGroupMembers = GetNumGroupMembers
 local GetRaidRosterInfo = GetRaidRosterInfo
-local IsInRaid = IsInRaid
-local IsInGroup = IsInGroup
 local UnitIsPlayer = UnitIsPlayer
 local UnitIsUnit = UnitIsUnit
 local UnitInParty = UnitInParty
 local UnitInRaid = UnitInRaid
 local UnitPlayerOrPetInParty = UnitPlayerOrPetInParty
 local UnitPlayerOrPetInRaid = UnitPlayerOrPetInRaid
+local UnitPlayerControlled = UnitPlayerControlled
 local UnitClass = UnitClass
-local UnitClassBase = UnitClassBase
+local UnitClassBase = F.UnitClassBase
 local UnitName = UnitName
-local UnitIsGroupLeader = UnitIsGroupLeader
-local UnitIsGroupAssistant = UnitIsGroupAssistant
-local UnitInPartyIsAI = UnitInPartyIsAI or function() end
+local UnitIsPartyLeader = UnitIsPartyLeader
+local UnitIsRaidOfficer = UnitIsRaidOfficer
 
 -------------------------------------------------
 -- frame colors
 -------------------------------------------------
 local RAID_CLASS_COLORS = RAID_CLASS_COLORS
+local CUSTOM_CLASS_COLORS = CUSTOM_CLASS_COLORS
 function F.GetClassColor(class)
-    if class and class ~= "" and RAID_CLASS_COLORS[class] then
-        if CUSTOM_CLASS_COLORS and CUSTOM_CLASS_COLORS[class] then
-            return CUSTOM_CLASS_COLORS[class].r, CUSTOM_CLASS_COLORS[class].g, CUSTOM_CLASS_COLORS[class].b
-        else
-            return RAID_CLASS_COLORS[class]:GetRGB()
-        end
-    else
+    if not class or class == "" then
         return 1, 1, 1
     end
+    local c = (CUSTOM_CLASS_COLORS and CUSTOM_CLASS_COLORS[class])
+        or RAID_CLASS_COLORS[class]
+    if c then
+        return c.r, c.g, c.b
+    end
+    return 1, 1, 1
 end
 
 function F.GetClassColorStr(class)
-    if class and class ~= "" and RAID_CLASS_COLORS[class] then
-        if CUSTOM_CLASS_COLORS and CUSTOM_CLASS_COLORS[class] then
-            return "|c"..CUSTOM_CLASS_COLORS[class].colorStr
-        else
-            return "|c"..RAID_CLASS_COLORS[class].colorStr
-        end
-    else
+    if not class or class == "" then
         return "|cffffffff"
     end
+    local c = (CUSTOM_CLASS_COLORS and CUSTOM_CLASS_COLORS[class])
+        or RAID_CLASS_COLORS[class]
+    if c and c.colorStr then
+        return "|c" .. c.colorStr
+    elseif c then
+        return format("|cff%02x%02x%02x", c.r * 255, c.g * 255, c.b * 255)
+    end
+    return "|cffffffff"
 end
 
 function F.GetUnitClassColor(unit, class, guid)
     class = class or select(2, UnitClass(unit))
     guid = guid or UnitGUID(unit)
 
-    if UnitIsPlayer(unit) or UnitInPartyIsAI(unit) then -- player
+    if UnitIsPlayer(unit) then -- player
         return F.GetClassColor(class)
     elseif F.IsPet(guid, unit) then -- pet
         return 0.5, 0.5, 1
@@ -1168,7 +1179,6 @@ function F.GetUnitClassColor(unit, class, guid)
         return 0, 1, 0.2
     end
 end
-
 
 function F.GetPowerColor(unit)
     local r, g, b, t
@@ -1179,8 +1189,6 @@ function F.GetPowerColor(unit)
     local info = PowerBarColor[powerToken]
     if powerType == 0 then -- MANA
         info = {r=0, g=0.5, b=1} -- default mana color is too dark!
-    elseif powerType == 13 then -- INSANITY
-        info = {r=0.6, g=0.2, b=1}
     end
 
     if info then
@@ -1188,7 +1196,7 @@ function F.GetPowerColor(unit)
         r, g, b = info.r, info.g, info.b
     else
         if not altR then
-            -- Couldn't find a power token entry. Default to indexing by power type or just mana if  we don't have that either.
+            -- Couldn't find a power token entry. Default to indexing by power type or just mana if we don't have that either.
             info = PowerBarColor[powerType] or PowerBarColor["MANA"]
             r, g, b = info.r, info.g, info.b
         else
@@ -1305,7 +1313,7 @@ end
 -------------------------------------------------
 function F.GetNumSubgroupMembers(group)
     local n = 0
-    for i = 1, GetNumGroupMembers() do
+    for i = 1, F.GetNumGroupMembers() do
         local name, _, subgroup = GetRaidRosterInfo(i)
         if subgroup == group then
             n = n + 1
@@ -1316,9 +1324,9 @@ end
 
 function F.GetUnitsInSubGroup(group)
     local units = {}
-    for i = 1, GetNumGroupMembers() do
+    for i = 1, F.GetNumGroupMembers() do
         -- name, rank, subgroup, level, class, fileName, zone, online, isDead, role, isML, combatRole = GetRaidRosterInfo(raidIndex)
-        local name, _, subgroup = GetRaidRosterInfo(i)
+        local _, _, subgroup = GetRaidRosterInfo(i)
         if subgroup == group then
             tinsert(units, "raid"..i)
         end
@@ -1327,7 +1335,7 @@ function F.GetUnitsInSubGroup(group)
 end
 
 function F.GetRaidInfoByName(fullName)
-    for i = 1, GetNumGroupMembers() do
+    for i = 1, F.GetNumGroupMembers() do
         -- rank: Returns 2 if the raid member is the leader of the raid, 1 if the raid member is promoted to assistant, and 0 otherwise.
         local name, rank, subgroup = GetRaidRosterInfo(i)
         if name == fullName then
@@ -1338,7 +1346,7 @@ end
 
 function F.GetRaidInfoBySubgroupIndex(group, index)
     local currentIndex = 0
-    for i = 1, GetNumGroupMembers() do
+    for i = 1, F.GetNumGroupMembers() do
         local name, rank, subgroup = GetRaidRosterInfo(i)
         if subgroup == group then
             currentIndex = currentIndex + 1
@@ -1374,8 +1382,8 @@ function F.GetPlayerUnit(petUnit)
 end
 
 function F.IterateGroupMembers()
-    local groupType = IsInRaid() and "raid" or "party"
-    local numGroupMembers = GetNumGroupMembers()
+    local groupType = F.IsInRaid() and "raid" or "party"
+    local numGroupMembers = F.GetNumGroupMembers()
     local i
 
     if groupType == "party" then
@@ -1398,9 +1406,13 @@ function F.IterateGroupMembers()
 end
 
 function F.IterateGroupPets()
-    local groupType = IsInRaid() and "raid" or "party"
-    local numGroupMembers = GetNumGroupMembers()
+    local groupType = F.IsInRaid() and "raid" or "party"
+    local numGroupMembers = F.GetNumGroupMembers()
     local i = groupType == "party" and 0 or 1
+
+    if groupType == "party" then
+        numGroupMembers = numGroupMembers - 1
+    end
 
     return function()
         local ret
@@ -1415,9 +1427,9 @@ function F.IterateGroupPets()
 end
 
 function F.GetGroupType()
-    if IsInRaid() then
+    if F.IsInRaid() then
         return "raid"
-    elseif IsInGroup() then
+    elseif F.IsInGroup() then
         return "party"
     else
         return "solo"
@@ -1426,10 +1438,20 @@ end
 
 function F.UnitInGroup(unit, ignorePets)
     if ignorePets then
-        return UnitIsUnit(unit, "player") or UnitInParty(unit) or UnitInRaid(unit) or UnitInPartyIsAI(unit)
+        return UnitIsUnit(unit, "player") or UnitInParty(unit) or UnitInRaid(unit)
     else
-        return UnitIsUnit(unit, "player") or UnitIsUnit(unit, "pet") or UnitPlayerOrPetInParty(unit) or UnitPlayerOrPetInRaid(unit) or UnitInPartyIsAI(unit)
+        return UnitIsUnit(unit, "player") or UnitIsUnit(unit, "pet") or UnitPlayerOrPetInParty(unit) or UnitPlayerOrPetInRaid(unit)
     end
+end
+
+function F.UnitIsOtherPlayersPet(unit)
+    if not unit
+        or UnitIsPlayer(unit)
+        or UnitIsUnit(unit, "pet")
+    then
+        return
+    end
+    return UnitPlayerControlled(unit) == 1
 end
 
 -- UnitTokenFromGUID
@@ -1442,7 +1464,7 @@ function F.GetTargetUnitID(target)
 
     if not F.UnitInGroup(target) then return end
 
-    if UnitIsPlayer(target) or UnitInPartyIsAI(target) then
+    if UnitIsPlayer(target) then
         for unit in F.IterateGroupMembers() do
             if UnitIsUnit(target, unit) then
                 return unit
@@ -1464,7 +1486,7 @@ function F.GetTargetPetID(target)
 
     if not F.UnitInGroup(target) then return end
 
-    if UnitIsPlayer(target) or UnitInPartyIsAI(target) then
+    if UnitIsPlayer(target) then
         for unit in F.IterateGroupMembers() do
             if UnitIsUnit(target, unit) then
                 return F.GetPetUnit(unit)
@@ -1483,9 +1505,21 @@ function F.IsFriend(unitFlags)
     return (bit.band(unitFlags, OBJECT_AFFILIATION_MINE) ~= 0) or (bit.band(unitFlags, OBJECT_AFFILIATION_RAID) ~= 0) or (bit.band(unitFlags, OBJECT_AFFILIATION_PARTY) ~= 0)
 end
 
+local guidTypes = {
+    [0x000] = "player",
+    [0x003] = "npc",
+    [0x004] = "pet",
+    [0x005] = "vehicle",
+}
+
+local function GetGUIDUnitType(guid)
+    local typeField = tonumber(strsub(guid, 3, 5), 16)
+    return typeField and guidTypes[bit.band(typeField, 0x00F)]
+end
+
 function F.IsPlayer(guid)
     if guid then
-        return string.find(guid, "^Player")
+        return GetGUIDUnitType(guid) == "player"
     end
 end
 
@@ -1494,19 +1528,19 @@ function F.IsPet(guid, unit)
         return strfind(unit, "pet%d*$")
     end
     if guid then
-        return string.find(guid, "^Pet")
+        return GetGUIDUnitType(guid) == "pet"
     end
 end
 
 function F.IsNPC(guid)
     if guid then
-        return string.find(guid, "^Creature")
+        return GetGUIDUnitType(guid) == "npc"
     end
 end
 
 function F.IsVehicle(guid)
     if guid then
-        return string.find(guid, "^Vehicle")
+        return GetGUIDUnitType(guid) == "vehicle"
     end
 end
 
@@ -1518,8 +1552,8 @@ function F.GetTargetUnitInfo()
     end
     if not F.UnitInGroup("target") then return end
 
-    if IsInRaid() then
-        for i = 1, GetNumGroupMembers() do
+    if F.IsInRaid() then
+        for i = 1, F.GetNumGroupMembers() do
             if UnitIsUnit("target", "raid"..i) then
                 return "raid"..i, UnitName("raid"..i), UnitClassBase("raid"..i)
             end
@@ -1527,8 +1561,8 @@ function F.GetTargetUnitInfo()
                 return "raidpet"..i, UnitName("raidpet"..i)
             end
         end
-    elseif IsInGroup() then
-        for i = 1, GetNumGroupMembers()-1 do
+    elseif F.IsInGroup() then
+        for i = 1, F.GetNumGroupMembers()-1 do
             if UnitIsUnit("target", "party"..i) then
                 return "party"..i, UnitName("party"..i), UnitClassBase("party"..i)
             end
@@ -1540,8 +1574,8 @@ function F.GetTargetUnitInfo()
 end
 
 function F.HasPermission(isPartyMarkPermission)
-    if isPartyMarkPermission and IsInGroup() and not IsInRaid() then return true end
-    return UnitIsGroupLeader("player") or (IsInRaid() and UnitIsGroupAssistant("player"))
+    if isPartyMarkPermission and F.IsInGroup() and not F.IsInRaid() then return true end
+    return UnitIsPartyLeader("player") or (F.IsInRaid() and UnitIsRaidOfficer("player"))
 end
 
 -------------------------------------------------
@@ -1557,6 +1591,11 @@ LSM:Register("font", "Visitor", [[Interface\Addons\Cell\Media\Fonts\visitor.ttf]
 
 function F.GetBarTexture()
     --! update Cell.vars.texture for further use in UnitButton_OnLoad
+    if not CellDB or not CellDB["appearance"] then
+        Cell.vars.texture = "Interface\\AddOns\\Cell\\Media\\statusbar.tga"
+        return Cell.vars.texture
+    end
+
     if LSM:IsValid("statusbar", CellDB["appearance"]["texture"]) then
         Cell.vars.texture = LSM:Fetch("statusbar", CellDB["appearance"]["texture"])
     else
@@ -1657,15 +1696,19 @@ end
 
 -- https://wowpedia.fandom.com/wiki/Applying_affine_transformations_using_SetTexCoord
 local s2 = sqrt(2)
-local function CalculateCorner(degrees)
+local function CalculateCorner(degrees, left, right, top, bottom)
     local r = math.rad(degrees)
-    return 0.5 + math.cos(r) / s2, 0.5 + math.sin(r) / s2
+    local x = 0.5 + math.cos(r) / s2
+    local y = 0.5 + math.sin(r) / s2
+    return left + x * (right - left), top + y * (bottom - top)
 end
-function F.RotateTexture(texture, degrees)
-    local LRx, LRy = CalculateCorner(degrees + 45)
-    local LLx, LLy = CalculateCorner(degrees + 135)
-    local ULx, ULy = CalculateCorner(degrees + 225)
-    local URx, URy = CalculateCorner(degrees - 45)
+function F.RotateTexture(texture, degrees, left, right, top, bottom)
+    left, right, top, bottom = left or 0, right or 1, top or 0, bottom or 1
+
+    local LRx, LRy = CalculateCorner(degrees + 45, left, right, top, bottom)
+    local LLx, LLy = CalculateCorner(degrees + 135, left, right, top, bottom)
+    local ULx, ULy = CalculateCorner(degrees + 225, left, right, top, bottom)
+    local URx, URy = CalculateCorner(degrees - 45, left, right, top, bottom)
 
     texture:SetTexCoord(ULx, ULy, LLx, LLy, URx, URy, LRx, LRy)
 end
@@ -1688,6 +1731,47 @@ local wowAtlases = {
     "communities-chat-icon-plus",
     "communities-chat-icon-minus",
 }
+
+local wowAtlasTextures = {
+    ["playerpartyblip"] = {"Interface\\AddOns\\Cell\\Media\\Icons\\ObjectIconsAtlas.BLP", 0.475586, 0.506836, 0.805664, 0.836914},
+    ["Artifacts-PerkRing-WhiteGlow"] = {"Interface\\AddOns\\Cell\\Media\\Icons\\Artifacts.BLP", 0.948242, 0.99707, 0.000976562, 0.0498047},
+    ["AftLevelup-WhiteIconGlow"] = {"Interface\\AddOns\\Cell\\Media\\Icons\\Artifacts.BLP", 0.123047, 0.217773, 0.671875, 0.766602},
+    ["LootBanner-IconGlow"] = {"Interface\\AddOns\\Cell\\Media\\Icons\\BossBanner.BLP", 0.865234, 0.943359, 0.447266, 0.525391},
+    ["AftLevelup-WhiteStarBurst"] = {"Interface\\AddOns\\Cell\\Media\\Icons\\Artifacts.BLP", 0.800781, 0.930664, 0.869141, 0.999023},
+    ["ChallengeMode-WhiteSpikeyGlow"] = {"Interface\\AddOns\\Cell\\Media\\Icons\\ChallengeModeHud.BLP", 0.204102, 0.385742, 0.00195312, 0.410156},
+    ["UI-QuestPoiCampaign-OuterGlow"] = {"Interface\\AddOns\\Cell\\Media\\Icons\\QuestCampaignMapIcons2X.BLP", 0.00195312, 0.251953, 0.00390625, 0.503906},
+    ["vignettekill"] = {"Interface\\AddOns\\Cell\\Media\\Icons\\ObjectIconsAtlas.BLP", 0.262695, 0.325195, 0.192383, 0.254883},
+    ["PetJournal-FavoritesIcon"] = {"Interface\\AddOns\\Cell\\Media\\Icons\\FavoritesIcon.BLP", 0.03125, 0.8125, 0.03125, 0.8125},
+    ["dungeonskull"] = {"Interface\\AddOns\\Cell\\Media\\Icons\\ObjectIconsAtlas.BLP", 0.907227, 0.938477, 0.407227, 0.438477},
+    ["questnormal"] = {"Interface\\AddOns\\Cell\\Media\\Icons\\ObjectIconsAtlas.BLP", 0.842773, 0.905273, 0.12793, 0.19043},
+    ["questturnin"] = {"Interface\\AddOns\\Cell\\Media\\Icons\\ObjectIconsAtlas.BLP", 0.541992, 0.573242, 0.838867, 0.870117},
+    ["bags-icon-addslots"] = {"Interface\\AddOns\\Cell\\Media\\Icons\\Bags.BLP", 0.533203, 0.615234, 0.00390625, 0.167969},
+    ["communities-chat-icon-plus"] = {"Interface\\AddOns\\Cell\\Media\\Icons\\CommunitiesAddChat.BLP", 0.850586, 0.975586, 0.000976562, 0.12793},
+    ["communities-chat-icon-minus"] = {"Interface\\AddOns\\Cell\\Media\\Icons\\CommunitiesAddChat.BLP", 0.850586, 0.975586, 0.129883, 0.206055},
+    ["horde_icon_and_flag-dynamicIcon"] = {"Interface\\AddOns\\Cell\\Media\\Icons\\WorldStateUITextures.BLP", 0.716797, 0.779297, 0.00390625, 0.128906},
+    ["alliance_icon_and_flag-dynamicIcon"] = {"Interface\\AddOns\\Cell\\Media\\Icons\\WorldStateUITextures.BLP", 0.00195312, 0.0644531, 0.777344, 0.902344},
+}
+
+function F.GetTextureInfo(texture)
+    local info = wowAtlasTextures[texture]
+    if info then
+        return unpack(info)
+    end
+
+    local class = type(texture) == "string" and strmatch(texture, "^classicon%-(.+)$")
+    local coords = class and CLASS_ICON_TCOORDS and CLASS_ICON_TCOORDS[strupper(class)]
+    if coords then
+        return "Interface\\Glues\\CharacterCreate\\UI-CharacterCreate-Classes", unpack(coords)
+    end
+
+    return texture, 0, 1, 0, 1
+end
+
+function F.SetTexture(texture, textureName, degrees)
+    local path, left, right, top, bottom = F.GetTextureInfo(textureName)
+    texture:SetTexture(path)
+    F.RotateTexture(texture, degrees or 0, left, right, top, bottom)
+end
 
 -- wow textures
 local wowTextures = {
@@ -1769,17 +1853,6 @@ function F.GetDefaultRoleIconEscapeSequence(role, size)
 end
 
 -------------------------------------------------
--- frame
--------------------------------------------------
-function F.GetMouseFocus()
-    if GetMouseFoci then
-        return GetMouseFoci()[1]
-    else
-        return GetMouseFocus()
-    end
-end
-
--------------------------------------------------
 -- instance
 -------------------------------------------------
 function F.GetInstanceName()
@@ -1787,19 +1860,8 @@ function F.GetInstanceName()
         local name = GetInstanceInfo()
         if not name then name = GetRealZoneText() end
         return name
-    else
-        local mapID = C_Map.GetBestMapForUnit("player")
-        if type(mapID) ~= "number" or mapID < 1 then
-            return ""
-        end
-
-        local info = MapUtil.GetMapParentInfo(mapID, Enum.UIMapType.Continent, true)
-        if info then
-            return info.name, info.mapID
-        end
-
-        return ""
     end
+    return GetZoneText() or GetRealZoneText() or ""
 end
 
 -------------------------------------------------
@@ -1817,39 +1879,79 @@ end
 -- end
 
 -- https://wowpedia.fandom.com/wiki/Patch_10.0.2/API_changes
-local lines = {}
-function F.GetSpellTooltipInfo(spellId)
-    wipe(lines)
+--local lines = {}
+--function F.GetSpellTooltipInfo(spellId)
+--    wipe(lines)
+--
+--    local name, icon = F.GetSpellInfo(spellId)
+--    if not name then return end
+--
+--   local data = C_TooltipInfo.GetSpellByID(spellId)
+--   for i, line in ipairs(data.lines) do
+--       TooltipUtil.SurfaceArgs(line)
+--       -- line.leftText
+--       -- line.rightText
+--   end
+--
+--   return name, icon, table.concat(lines, "\n")
+--end
 
-    local name, icon = F.GetSpellInfo(spellId)
-    if not name then return end
+do
+    local MATCH_PATTERN, FORMAT_PATTERN = "Rank (%d+)", "Rank %d"
 
-    local data = C_TooltipInfo.GetSpellByID(spellId)
-    for i, line in ipairs(data.lines) do
-        TooltipUtil.SurfaceArgs(line)
-        -- line.leftText
-        -- line.rightText
+    if LOCALE_deDE or LOCALE_frFR then
+        MATCH_PATTERN, FORMAT_PATTERN = "Rang (%d+)", "Rang %d"
+    elseif LOCALE_esES or LOCALE_esMX then
+        MATCH_PATTERN, FORMAT_PATTERN = "Rango (%d+)", "Rango %d"
+    elseif LOCALE_koKR then
+        MATCH_PATTERN, FORMAT_PATTERN = "(%d+) 레벨", "%d 레벨"
+    elseif LOCALE_ptBR then
+        MATCH_PATTERN, FORMAT_PATTERN = "Grau (%d+)", "Grau %d"
+    elseif LOCALE_ruRU then
+        MATCH_PATTERN, FORMAT_PATTERN = "Уровень (%d+)", "Уровень %d"
+    elseif LOCALE_zhCN then
+        MATCH_PATTERN, FORMAT_PATTERN = "等级 (%d+)", "等级 %d"
+    elseif LOCALE_zhTW then
+        MATCH_PATTERN, FORMAT_PATTERN = "等級 (%d+)", "等級 %d"
     end
 
-    return name, icon, table.concat(lines, "\n")
-end
+    FORMAT_PATTERN = "(" .. FORMAT_PATTERN .. ")"
 
-if Cell.isRetail or Cell.isMists then
-    local GetSpellInfo = C_Spell.GetSpellInfo
-    local GetSpellTexture = C_Spell.GetSpellTexture
-    function F.GetSpellInfo(spellId)
-        if not spellId then return end
-        local info = GetSpellInfo(spellId)
-        if not info then return end
+    local MaxSpellRankCache = {}
 
-        if not info.iconID then -- when?
-            info.iconID = GetSpellTexture(spellId)
+    local wipe = table.wipe or wipe
+    local function BuildMaxSpellRankCache()
+        wipe(MaxSpellRankCache)
+
+        local totalSpells = 0
+        for tab = 1, GetNumSpellTabs() do
+            local _, _, _, numSpells = GetSpellTabInfo(tab)
+            totalSpells = totalSpells + numSpells
         end
 
-        return info.name, info.iconID
+        for i = 1, totalSpells do
+            local name, subText = GetSpellName(i, BOOKTYPE_SPELL)
+            if name and subText then
+                local rank = tonumber(subText:match(MATCH_PATTERN))
+                if rank then
+                    local cached = MaxSpellRankCache[name]
+                    if not cached or rank > cached then
+                        MaxSpellRankCache[name] = rank
+                    end
+                end
+            end
+        end
     end
-else
+
+    local f = CreateFrame("Frame")
+    f:RegisterEvent("PLAYER_LOGIN")
+    f:RegisterEvent("SPELLS_CHANGED")
+    f:SetScript("OnEvent", function()
+        BuildMaxSpellRankCache()
+    end)
+
     local GetSpellInfo = GetSpellInfo
+
     function F.GetSpellInfo(spellId)
         if not spellId then return end
         local rank
@@ -1857,98 +1959,24 @@ else
         local name, _, icon = GetSpellInfo(spellId)
         return name, icon, tonumber(rank)
     end
-end
-
-if Cell.isWrath or Cell.isTBC or Cell.isVanilla then
-    local GetSpellInfo = GetSpellInfo
-    local GetNumSpellTabs = GetNumSpellTabs
-    local GetSpellTabInfo = GetSpellTabInfo
-    local GetSpellBookItemName = GetSpellBookItemName
-
-    local MATCH_PATTERN, FORMAT_PATTERN = "Rank (%d+)", "Rank %d"
-    if LOCALE_deDE or LOCALE_frFR then
-        MATCH_PATTERN = "Rang (%d+)"
-        FORMAT_PATTERN = "Rang %d"
-    elseif LOCALE_esES or LOCALE_esMX then
-        MATCH_PATTERN = "Rango (%d+)"
-        FORMAT_PATTERN = "Rango %d"
-    -- elseif LOCALE_itIT then -- not supported in classic
-    --     MATCH_PATTERN = "Grado (%d+)"
-    --     FORMAT_PATTERN = "Grado %d"
-    elseif LOCALE_koKR then
-        MATCH_PATTERN = "(%d+) 레벨"
-        FORMAT_PATTERN = "%d 레벨"
-    elseif LOCALE_ptBR then
-        MATCH_PATTERN = "Grau (%d+)"
-        FORMAT_PATTERN = "Grau %d"
-    elseif LOCALE_ruRU then
-        MATCH_PATTERN = "Уровень (%d+)"
-        FORMAT_PATTERN = "Уровень %d"
-    elseif LOCALE_zhCN then
-        MATCH_PATTERN = "等级 (%d+)"
-        FORMAT_PATTERN = "等级 %d"
-    elseif LOCALE_zhTW then
-        MATCH_PATTERN = "等級 (%d+)"
-        FORMAT_PATTERN = "等級 %d"
-    end
-
-    FORMAT_PATTERN = "(" .. FORMAT_PATTERN .. ")"
 
     function F.GetRankSuffix(rank)
         return FORMAT_PATTERN:format(rank)
     end
 
     function F.GetMaxSpellRank(spellId)
-        local spellName = select(1, GetSpellInfo(spellId))
-        if not spellName then return end
-
-        local maxRank = 0
-        local bookType = BOOKTYPE_SPELL
-
-        local totalSpells = 0
-        for tab = 1, GetNumSpellTabs() do
-            local name, texture, offset, numSpells = GetSpellTabInfo(tab)
-            totalSpells = totalSpells + numSpells
+        if not next(MaxSpellRankCache) then
+            BuildMaxSpellRankCache()
         end
 
-        -- local spellSubText
-        for i = 1, totalSpells do
-            local name, subText = GetSpellBookItemName(i, bookType)
-            if name == spellName and subText then
-                local rank = tonumber(subText:match(MATCH_PATTERN))
-                -- spellSubText = subText
-                if rank and rank > maxRank then
-                    maxRank = rank
-                end
-            end
-        end
-
-        -- if spellSubText then
-        --     print("----------------------------------------------")
-        --     print(spellSubText, MATCH_PATTERN, tonumber(spellSubText:match(MATCH_PATTERN)))
-        --     print("Max Rank of " .. spellName .. ": " .. maxRank)
-        --     print("----------------------------------------------")
-        -- else
-        --     print("Rank info not found: " .. spellName)
-        -- end
-
-        return maxRank
+        local spellName = GetSpellInfo(spellId)
+        return spellName and MaxSpellRankCache[spellName]
     end
 end
 
-if C_Spell.GetSpellCooldown then
-    local GetSpellCooldown = C_Spell.GetSpellCooldown
-    F.GetSpellCooldown = function(spellId)
-        local info = GetSpellCooldown(spellId)
-        if info then
-            return info.startTime, info.duration
-        end
-    end
-else
-    F.GetSpellCooldown = function(spellId)
-        local start, duration = GetSpellCooldown(spellId)
-        return start, duration
-    end
+function F.GetSpellCooldown(spellId)
+    local start, duration = GetSpellCooldown(spellId)
+    return start, duration
 end
 
 function F.IsSpellReady(spellId)
@@ -1992,74 +2020,60 @@ end
 -------------------------------------------------
 -- auras
 -------------------------------------------------
--- name, icon, count, debuffType, duration, expirationTime, source, isStealable, nameplateShowPersonal, spellId, canApplyAura, isBossDebuff, castByPlayer, nameplateShowAll, timeMod = UnitAura
--- NOTE: FrameXML/AuraUtil.lua
--- AuraUtil.FindAura(predicate, unit, filter, predicateArg1, predicateArg2, predicateArg3)
--- predicate(predicateArg1, predicateArg2, predicateArg3, ...)
-local function predicate(...)
-    local idToFind = ...
-    local id = select(13, ...)
-    return idToFind == id
+-- Retail: name, icon, count, debuffType, duration, expirationTime, source, isStealable, nameplateShowPersonal, spellId, canApplyAura, isBossDebuff, castByPlayer, nameplateShowAll, timeMod = UnitAura
+-- BP: name, rank, icon, count, dispelType, duration, expirationTime, unitCaster, isStealable, shouldConsolidate, spellID = UnitAura
+function F.FindAuraById(unit, auraType, spellId)
+    for i = 1, 40 do
+        local name, rank, icon, count, debuffType, duration,
+            expirationTime, unitCaster, isStealable,
+            shouldConsolidate, spellID =
+            UnitAura(unit, i, auraType)
+
+        if not name then
+            return
+        end
+        if spellId == spellID then
+            return name, rank, icon, count, debuffType, duration,
+                expirationTime, unitCaster, isStealable,
+                shouldConsolidate, spellID
+        end
+    end
 end
 
-function F.FindAuraById(unit, type, spellId)
-    if type == "BUFF" then
-        return AuraUtil.FindAura(predicate, unit, "HELPFUL", spellId)
-    else
-        return AuraUtil.FindAura(predicate, unit, "HARMFUL", spellId)
+function F.FindDebuffByIds(unit, spellIds)
+    local debuffs = {}
+    for i = 1, 40 do
+        local name, rank, icon, count, debuffType, duration,
+            expirationTime, unitCaster, isStealable,
+            shouldConsolidate, spellId =
+            UnitAura(unit, i, "HARMFUL")
+        if not name then
+            break
+        end
+
+        if spellIds[spellId] then
+            debuffs[spellId] = I.CheckDebuffType(debuffType, spellId)
+        end
     end
+    return debuffs
 end
 
-if Cell.isRetail then
-    function F.FindDebuffByIds(unit, spellIds)
-        local debuffs = {}
-        AuraUtil.ForEachAura(unit, "HARMFUL", nil, function(name, icon, count, debuffType, duration, expirationTime, source, isStealable, nameplateShowPersonal, spellId)
-            if spellIds[spellId] then
-                debuffs[spellId] = I.CheckDebuffType(debuffType, spellId)
-            end
-        end)
-        return debuffs
-    end
-
-    function F.FindAuraByDebuffTypes(unit, types)
-        local debuffs = {}
-        AuraUtil.ForEachAura(unit, "HARMFUL", nil, function(name, icon, count, debuffType, duration, expirationTime, source, isStealable, nameplateShowPersonal, spellId)
-            if types == "all" or types[debuffType] then
-                debuffs[spellId] = I.CheckDebuffType(debuffType, spellId)
-            end
-        end)
-        return debuffs
-    end
-else
-    function F.FindDebuffByIds(unit, spellIds)
-        local debuffs = {}
-        for i = 1, 40 do
-            local name, icon, count, debuffType, duration, expirationTime, source, isStealable, nameplateShowPersonal, spellId = UnitDebuff(unit, i)
-            if not name then
-                break
-            end
-
-            if spellIds[spellId] then
-                debuffs[spellId] = I.CheckDebuffType(debuffType, spellId)
-            end
+function F.FindAuraByDebuffTypes(unit, types)
+    local debuffs = {}
+    for i = 1, 40 do
+        local name, rank, icon, count, debuffType, duration,
+            expirationTime, unitCaster, isStealable,
+            shouldConsolidate, spellId =
+            UnitAura(unit, i, "HARMFUL")
+        if not name then
+            break
         end
-        return debuffs
-    end
 
-    function F.FindAuraByDebuffTypes(unit, types)
-        local debuffs = {}
-        for i = 1, 40 do
-            local name, icon, count, debuffType, duration, expirationTime, source, isStealable, nameplateShowPersonal, spellId = UnitDebuff(unit, i)
-            if not name then
-                break
-            end
-
-            if types == "all" or types[debuffType] then
-                debuffs[spellId] = I.CheckDebuffType(s, spellId)
-            end
+        if types == "all" or types[debuffType] then
+            debuffs[spellId] = I.CheckDebuffType(debuffType, spellId)
         end
-        return debuffs
     end
+    return debuffs
 end
 
 -------------------------------------------------
@@ -2067,7 +2081,7 @@ end
 -------------------------------------------------
 function F.UpdateOmniCDPosition(frame)
     if OmniCD and OmniCD[1].db and OmniCD[1].db.position.uf == frame then
-        C_Timer.After(0.5, function()
+        F.C_Timer.After(0.5, function()
             OmniCD[1].Party:UpdatePosition()
         end)
     end
@@ -2158,52 +2172,31 @@ local UnitInRange = UnitInRange
 local UnitCanAssist = UnitCanAssist
 local UnitCanAttack = UnitCanAttack
 local UnitCanCooperate = UnitCanCooperate
-local IsSpellInRange = C_Spell.IsSpellInRange
-local IsItemInRange = C_Item.IsItemInRange
+local IsSpellInRange = IsSpellInRange
+local IsItemInRange = IsItemInRange
 local CheckInteractDistance = CheckInteractDistance
 local UnitIsDead = UnitIsDead
-local IsSpellKnownOrOverridesKnown = IsSpellKnownOrOverridesKnown
--- local GetSpellTabInfo = GetSpellTabInfo
--- local GetNumSpellTabs = GetNumSpellTabs
--- local GetSpellBookItemName = GetSpellBookItemName
--- local BOOKTYPE_SPELL = BOOKTYPE_SPELL
-local IsSpellBookKnown = C_SpellBook.IsSpellKnown
-
-local function IsSpellKnown(spellId)
-    return IsSpellKnownOrOverridesKnown(spellId) or IsSpellBookKnown(spellId)
-end
-
-local UnitInSamePhase
-if Cell.isRetail then
-    UnitInSamePhase = function(unit)
-        return not UnitPhaseReason(unit)
-    end
-else
-    UnitInSamePhase = UnitInPhase
-end
+local UnitIsConnected = UnitIsConnected
+local IsSpellKnown =  IsSpellKnown
+local InCombatLockdown = InCombatLockdown
 
 local playerClass = UnitClassBase("player")
 
 local friendSpells = {
     -- ["DEATHKNIGHT"] = 47541,
-    -- ["DEMONHUNTER"] = ,
-    ["DRUID"] = (Cell.isWrath or Cell.isTBC or Cell.isVanilla) and 5185 or 8936, -- 治疗之触 / 愈合
-    -- FIXME: [361469 活化烈焰] 会被英雄天赋 [431443 时序烈焰] 替代，但它而且有问题
-    -- IsSpellInRange 始终返回 nil
-    ["EVOKER"] = 355913, -- 翡翠之花
+    ["DRUID"] = 5185 , -- Healing Touch / Regrowth
     -- ["HUNTER"] = 136,
-    ["MAGE"] = 1459, -- 奥术智慧 / 奥术光辉
-    ["MONK"] = 116670, -- 活血术
-    ["PALADIN"] = Cell.isRetail and 19750 or 635, -- 圣光闪现 / 圣光术
-    ["PRIEST"] = (Cell.isWrath or Cell.isTBC or Cell.isVanilla) and 2050 or 2061, -- 次级治疗术 / 快速治疗
+    ["MAGE"] = 1459, -- Arcane Intellect / Arcane Brilliance
+    ["PALADIN"] = 635, -- Flash of Light / Holy Light
+    ["PRIEST"] = 2050, -- Lesser Heal / Flash Heal
     -- ["ROGUE"] = Cell.isWrath and 57934,
-    ["SHAMAN"] = Cell.isRetail and 8004 or 331, -- 治疗之涌 / 治疗波
-    ["WARLOCK"] = 5697, -- 无尽呼吸
-    -- ["WARRIOR"] = 3411, -- 援护
+    ["SHAMAN"] = 331, -- Healing Surge / Healing Wave
+    ["WARLOCK"] = 5697, -- Unending Breath
+    -- ["WARRIOR"] = 3411, -- Intervene
 }
 
 local deadSpells = {
-    ["EVOKER"] = 361227, -- resurrection range, need separately for evoker
+
 }
 
 local petSpells = {
@@ -2211,21 +2204,16 @@ local petSpells = {
 }
 
 local harmSpells = {
-    ["DEATHKNIGHT"] = 47541, -- 凋零缠绕
-    ["DEMONHUNTER"] = 185123, -- 投掷利刃
-    ["DRUID"] = 5176, -- 愤怒
-    -- FIXME: [361469 活化烈焰] 会被英雄天赋 [431443 时序烈焰] 替代，但它而且有问题
-    -- IsSpellInRange 始终返回 nil
-    ["EVOKER"] = 362969, -- 碧蓝打击
-    ["HUNTER"] = 75, -- 自动射击
-    ["MAGE"] = Cell.isRetail and 116 or 133, -- 寒冰箭 / 火球术
-    ["MONK"] = 117952, -- 碎玉闪电
-    ["PALADIN"] = 20271, -- 审判
-    ["PRIEST"] = Cell.isRetail and 589 or 585, -- 暗言术：痛 / 惩击
-    ["ROGUE"] = 1752, -- 影袭
-    ["SHAMAN"] = Cell.isRetail and 188196 or 403, -- 闪电箭
-    ["WARLOCK"] = 234153, -- 吸取生命
-    ["WARRIOR"] = 355, -- 嘲讽
+    ["DEATHKNIGHT"] = 47541, -- Death Coil
+    ["DRUID"] = 5176, -- Wrath
+    ["HUNTER"] = 75, -- Auto Shot
+    ["MAGE"] = 133, -- Fireball
+    ["PALADIN"] = 20271, -- Judgment
+    ["PRIEST"] = 585, -- Shadow Word: Pain / Smite
+    ["ROGUE"] = 1752, -- Sinister Strike
+    ["SHAMAN"] = 403, -- Lightning Bolt
+    ["WARLOCK"] = 234153, -- Drain Life
+    ["WARRIOR"] = 355, -- Taunt
 }
 
 -- local friendItems = {
@@ -2246,12 +2234,9 @@ local harmSpells = {
 
 local harmItems = {
     ["DEATHKNIGHT"] = 28767, -- 40y
-    ["DEMONHUNTER"] = 28767, -- 40y
     ["DRUID"] = 28767, -- 40y
-    ["EVOKER"] = 24268, -- 25y
     ["HUNTER"] = 28767, -- 40y
     ["MAGE"] = 28767, -- 40y
-    ["MONK"] = 28767, -- 40y
     ["PALADIN"] = 835, -- 30y
     ["PRIEST"] = 28767, -- 40y
     ["ROGUE"] = 28767, -- 40y
@@ -2260,38 +2245,8 @@ local harmItems = {
     ["WARRIOR"] = 28767, -- 40y
 }
 
--- local FindSpellIndex
--- if C_SpellBook and C_SpellBook.FindSpellBookSlotForSpell then
---     FindSpellIndex = function(spellName)
---         if not spellName or spellName == "" then return end
---         return C_SpellBook.FindSpellBookSlotForSpell(spellName)
---     end
--- else
---     local function GetNumSpells()
---         local _, _, offset, numSpells = GetSpellTabInfo(GetNumSpellTabs())
---         return offset + numSpells
---     end
-
---     FindSpellIndex = function(spellName)
---         if not spellName or spellName == "" then return end
---         for i = 1, GetNumSpells() do
---             local spell = GetSpellBookItemName(i, BOOKTYPE_SPELL)
---             if spell == spellName then
---                 return i
---             end
---         end
---     end
--- end
-
-local UnitInSpellRange
-if C_Spell and C_Spell.IsSpellInRange then
-    UnitInSpellRange = function(spellName, unit)
-        return IsSpellInRange(spellName, unit)
-    end
-else
-    UnitInSpellRange = function(spellName, unit)
-        return IsSpellInRange(spellName, unit) == 1
-    end
+local UnitInSpellRange = function(spellName, unit)
+    return IsSpellInRange(spellName, unit) == 1
 end
 
 local rc = CreateFrame("Frame")
@@ -2303,42 +2258,26 @@ CELL_RANGE_CHECK_HOSTILE = {}
 CELL_RANGE_CHECK_DEAD = {}
 CELL_RANGE_CHECK_PET = {}
 
-local function LoadSpellName(spellID, callback)
-    if spellID and IsSpellKnown(spellID) then
-        local spell = Spell:CreateFromSpellID(spellID)
-        spell:ContinueOnSpellLoad(function()
-            callback(spell:GetSpellName())
-            -- print("Loaded spell for range check:", spellID, spell:GetSpellName())
-        end)
-    else
-        callback(nil)
-    end
+local function LoadSpellName(spellID)
+    return spellID and IsSpellKnown(spellID) and GetSpellInfo(spellID)
 end
 
 local function SPELLS_CHANGED()
     local friend_id = CELL_RANGE_CHECK_FRIENDLY[playerClass] or friendSpells[playerClass]
-    local harm_id = CELL_RANGE_CHECK_HOSTILE[playerClass] or harmSpells[playerClass]
-    local dead_id = CELL_RANGE_CHECK_DEAD[playerClass] or deadSpells[playerClass]
-    local pet_id = CELL_RANGE_CHECK_PET[playerClass] or petSpells[playerClass]
+    local harm_id   = CELL_RANGE_CHECK_HOSTILE[playerClass]  or harmSpells[playerClass]
+    local dead_id   = CELL_RANGE_CHECK_DEAD[playerClass]     or deadSpells[playerClass]
+    local pet_id    = CELL_RANGE_CHECK_PET[playerClass]      or petSpells[playerClass]
 
-    LoadSpellName(friend_id, function(name) spell_friend = name end)
-    LoadSpellName(harm_id, function(name) spell_harm = name end)
-    LoadSpellName(dead_id, function(name) spell_dead = name end)
-    LoadSpellName(pet_id, function(name) spell_pet = name end)
-
-    -- F.Debug(
-    --     "[RANGE CHECK]",
-    --     "\nfriend:", spell_friend or "nil",
-    --     "\npet:", spell_pet or "nil",
-    --     "\nharm:", spell_harm or "nil",
-    --     "\ndead:", spell_dead or "nil"
-    -- )
+    spell_friend = LoadSpellName(friend_id)
+    spell_harm   = LoadSpellName(harm_id)
+    spell_dead   = LoadSpellName(dead_id)
+    spell_pet    = LoadSpellName(pet_id)
 end
 
 local timer
 local function DELAYED_SPELLS_CHANGED()
     if timer then timer:Cancel() end
-    timer = C_Timer.NewTimer(1, SPELLS_CHANGED)
+    timer = F.C_Timer.NewTimer(1, SPELLS_CHANGED)
 end
 
 rc:SetScript("OnEvent", DELAYED_SPELLS_CHANGED)
@@ -2354,15 +2293,15 @@ function F.IsInRange(unit, check)
     elseif not check and F.UnitInGroup(unit) then
         -- NOTE: UnitInRange only works with group players/pets
         --! but not available for PLAYER PET when SOLO
-        local inRange, checked = UnitInRange(unit)
-        if not checked then
-            return F.IsInRange(unit, true)
+        local inRange = UnitInRange(unit)
+        if inRange ~= nil then
+            return inRange
         end
-        return inRange
+        return F.IsInRange(unit, true)
 
     else
         if UnitCanAssist("player", unit) then -- or UnitCanCooperate("player", unit)
-            if not (UnitIsConnected(unit) and UnitInSamePhase(unit)) then
+            if not UnitIsConnected(unit) then
                 return false
             end
 
@@ -2374,8 +2313,8 @@ function F.IsInRange(unit, check)
                 return UnitInSpellRange(spell_friend, unit)
             end
 
-            local inRange, checked = UnitInRange(unit)
-            if checked then
+            local inRange = UnitInRange(unit)
+            if inRange ~= nil then
                 return inRange
             end
 
@@ -2401,95 +2340,13 @@ function F.IsInRange(unit, check)
     end
 end
 
--------------------------------------------------
--- RangeCheck debug
--------------------------------------------------
-local debug = CreateFrame("Frame", "CellRangeCheckDebug", CellParent, "BackdropTemplate")
-debug:SetBackdrop({bgFile = Cell.vars.whiteTexture})
-debug:SetBackdropColor(0.1, 0.1, 0.1, 0.9)
-debug:SetBackdropBorderColor(0, 0, 0, 1)
-debug:SetPoint("LEFT", 300, 0)
-debug:Hide()
-
-debug.text = debug:CreateFontString(nil, "OVERLAY")
-debug.text:SetFont(GameFontNormal:GetFont(), 13, "")
-debug.text:SetShadowColor(0, 0, 0)
-debug.text:SetShadowOffset(1, -1)
-debug.text:SetJustifyH("LEFT")
-debug.text:SetSpacing(5)
-debug.text:SetPoint("LEFT", 5, 0)
-
-local function GetResult1()
-    local inRange, checked = UnitInRange("target")
-
-    return "UnitID: " .. (F.GetTargetUnitID("target") or "target") ..
-        "\n|cffffff00F.IsInRange:|r " .. (F.IsInRange("target") and "true" or "false") ..
-        "\nUnitInRange: " .. (checked and "checked" or "unchecked") .. " " .. (inRange and "true" or "false") ..
-        "\nUnitIsVisible: " .. (UnitIsVisible("target") and "true" or "false") ..
-        "\n\nUnitCanAssist: " .. (UnitCanAssist("player", "target") and "true" or "false") ..
-        "\nUnitCanCooperate: " .. (UnitCanCooperate("player", "target") and "true" or "false") ..
-        "\nUnitCanAttack: " .. (UnitCanAttack("player", "target") and "true" or "false") ..
-        "\n\nUnitIsConnected: " .. (UnitIsConnected("target") and "true" or "false") ..
-        "\nUnitInSamePhase: " .. (UnitInSamePhase("target") and "true" or "false") ..
-        "\nUnitIsDead: " .. (UnitIsDead("target") and "true" or "false") ..
-        "\n\nspell_friend: " .. (spell_friend and (spell_friend .. " " .. (UnitInSpellRange(spell_friend, "target") and "true" or "false")) or "none") ..
-        "\nspell_dead: " .. (spell_dead and (spell_dead .. " " .. (UnitInSpellRange(spell_dead, "target") and "true" or "false")) or "none") ..
-        "\nspell_pet: " .. (spell_pet and (spell_pet .. " " .. (UnitInSpellRange(spell_pet, "target") and "true" or "false")) or "none") ..
-        "\nspell_harm: " .. (spell_harm and (spell_harm .. " " .. (UnitInSpellRange(spell_harm, "target") and "true" or "false")) or "none")
-end
-
-local function GetResult2()
-    if UnitCanAttack("player", "target") then
-        return "IsItemInRange: " .. (IsItemInRange(harmItems[playerClass], "target") and "true" or "false") ..
-            "\nCheckInteractDistance(28y): " .. (CheckInteractDistance("target", 4) and "true" or "false")
-    else
-        return "IsItemInRange: " .. (InCombatLockdown() and "notAvailable" or (IsItemInRange(harmItems[playerClass], "target") and "true" or "false")) ..
-            "\nCheckInteractDistance(28y): " .. (InCombatLockdown() and "notAvailable" or (CheckInteractDistance("target", 4) and "true" or "false"))
-    end
-end
-
-debug:SetScript("OnUpdate", function(self, elapsed)
-    self.elapsed = (self.elapsed or 0) + elapsed
-    if self.elapsed >= 0.25 then
-        self.elapsed = 0
-        local result = GetResult1() .. "\n\n" .. GetResult2()
-        result = string.gsub(result, "none", "|cffabababnone|r")
-        result = string.gsub(result, "true", "|cff00ff00true|r")
-        result = string.gsub(result, "false", "|cffff0000false|r")
-        result = string.gsub(result, " checked", " |cff00ff00checked|r")
-        result = string.gsub(result, "unchecked", "|cffff0000unchecked|r")
-
-        debug.text:SetText("|cffff0066Cell Range Check (Target)|r\n\n" .. result)
-
-        debug:SetSize(debug.text:GetStringWidth() + 10, debug.text:GetStringHeight() + 20)
-    end
-end)
-
-debug:SetScript("OnEvent", function()
-    if not UnitExists("target") then
-        debug:Hide()
-        return
-    end
-
-    debug:Show()
-end)
-
-SLASH_CELLRC1 = "/cellrc"
-function SlashCmdList.CELLRC()
-    if debug:IsEventRegistered("PLAYER_TARGET_CHANGED") then
-        debug:UnregisterEvent("PLAYER_TARGET_CHANGED")
-        debug:Hide()
-    else
-        debug:RegisterEvent("PLAYER_TARGET_CHANGED")
-        if UnitExists("target") then
-            debug:Show()
-        end
-    end
-end
-
----------------------------------------------------------------------
--- spec data
----------------------------------------------------------------------
-if Cell.isMists then
-
-end
+RAID_CLASS_COLORS.HUNTER.colorStr = "ffabd473"
+RAID_CLASS_COLORS.WARLOCK.colorStr = "ff8788ee"
+RAID_CLASS_COLORS.PRIEST.colorStr = "ffffffff"
+RAID_CLASS_COLORS.PALADIN.colorStr = "fff58cba"
+RAID_CLASS_COLORS.MAGE.colorStr = "ff3fc7eb"
+RAID_CLASS_COLORS.ROGUE.colorStr = "fffff569"
+RAID_CLASS_COLORS.DRUID.colorStr = "ffff7d0a"
+RAID_CLASS_COLORS.SHAMAN.colorStr = "ff0070de"
+RAID_CLASS_COLORS.WARRIOR.colorStr = "ffc79c6e"
+RAID_CLASS_COLORS.DEATHKNIGHT.colorStr = "ffc41f3b"

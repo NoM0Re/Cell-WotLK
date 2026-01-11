@@ -45,17 +45,25 @@ local function HideFrame(frame)
 end
 
 function F.HideBlizzardParty()
-    _G.UIParent:UnregisterEvent("GROUP_ROSTER_UPDATE")
+    _G.UIParent:UnregisterEvent("RAID_ROSTER_UPDATE")
+    _G.UIParent:UnregisterEvent("PARTY_MEMBERS_CHANGED")
 
     if _G.CompactPartyFrame then
         _G.CompactPartyFrame:UnregisterAllEvents()
+        _G.CompactPartyFrame:SetParent(hiddenParent)
     end
 
     if _G.PartyFrame then
         _G.PartyFrame:UnregisterAllEvents()
         _G.PartyFrame:SetScript("OnShow", nil)
-        for frame in _G.PartyFrame.PartyMemberFramePool:EnumerateActive() do
-            HideFrame(frame)
+        if _G.PartyFrame.PartyMemberFramePool then
+            for frame in _G.PartyFrame.PartyMemberFramePool:EnumerateActive() do
+                HideFrame(frame)
+            end
+        else
+            for i = 1, 4 do
+                HideFrame(_G["PartyMemberFrame"..i])
+            end
         end
         HideFrame(_G.PartyFrame)
     else
@@ -68,7 +76,8 @@ function F.HideBlizzardParty()
 end
 
 function F.HideBlizzardRaid()
-    _G.UIParent:UnregisterEvent("GROUP_ROSTER_UPDATE")
+    _G.UIParent:UnregisterEvent("RAID_ROSTER_UPDATE")
+    _G.UIParent:UnregisterEvent("PARTY_MEMBERS_CHANGED")
 
     if _G.CompactRaidFrameContainer then
         _G.CompactRaidFrameContainer:UnregisterAllEvents()

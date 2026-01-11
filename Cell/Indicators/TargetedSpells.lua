@@ -17,7 +17,7 @@ local UnitChannelInfo = UnitChannelInfo
 local casts = {}
 local castsOnUnit, sortedCastsOnUnit = {}, {}
 local recheck = {}
-local maxIcons, showAllSpells
+local maxIcons, showAllSpells, isEnabled
 local eventFrame = CreateFrame("Frame")
 
 local function Reset()
@@ -39,7 +39,7 @@ local function ShowCasts(b, showGlow, sortedCasts, num)
     num = min(maxIcons, num)
     for i = 1, num do
         local cast = sortedCasts[i]
-        b.indicators.targetedSpells[i].cooldown:SetReverse(not cast.isChanneling)
+        F.SetCooldownReverse(b.indicators.targetedSpells[i].cooldown, not cast.isChanneling)
         b.indicators.targetedSpells[i]:SetCooldown(cast.startTime, cast.endTime-cast.startTime, cast.icon, cast.count)
     end
     b.indicators.targetedSpells:UpdateSize(num)
@@ -156,10 +156,10 @@ local function CheckUnitCast(sourceUnit, isRecheck)
     end
 
     -- name, text, texture, startTimeMS, endTimeMS, isTradeSkill, castID, notInterruptible, spellId
-    local name, _, texture, startTimeMS, endTimeMS, _, _, notInterruptible, spellId = UnitCastingInfo(sourceUnit)
+    local name, _, _, texture, startTimeMS, endTimeMS, _, spellId, notInterruptible = UnitCastingInfo(sourceUnit)
     if not name then
         -- name, text, texture, startTimeMS, endTimeMS, isTradeSkill, notInterruptible, spellId
-        name, _, texture, startTimeMS, endTimeMS, _, notInterruptible, spellId = UnitChannelInfo(sourceUnit)
+        name, _, _, texture, startTimeMS, endTimeMS, _, spellId, notInterruptible = UnitChannelInfo(sourceUnit)
         isChanneling = true
     end
 
@@ -209,6 +209,39 @@ local function CheckUnitCast(sourceUnit, isRecheck)
     end
 end
 
+local affectedTargets = {}
+local scanUnits = {"target", "focus", "mouseover"}
+
+function I.RefreshTargetedSpells(rescanSources)
+    if not isEnabled then return end
+
+    wipe(affectedTargets)
+    local now = GetTime()
+
+    for sourceGUID, castInfo in pairs(casts) do
+        if castInfo["targetGUID"] then
+            affectedTargets[castInfo["targetGUID"]] = true
+        end
+        if castInfo["endTime"] <= now or not (showAllSpells or Cell.vars.targetedSpellsList[castInfo["spellId"]]) then
+            casts[sourceGUID] = nil
+            recheck[sourceGUID] = nil
+        end
+    end
+
+    if rescanSources then
+        for i = 1, #scanUnits do
+            CheckUnitCast(scanUnits[i])
+        end
+        for unit in F.IterateGroupMembers() do
+            CheckUnitCast(unit.."target")
+        end
+    end
+
+    for guid in pairs(affectedTargets) do
+        UpdateCastsOnUnit(guid)
+    end
+end
+
 -------------------------------------------------
 -- recheck
 -------------------------------------------------
@@ -248,12 +281,6 @@ end)
 -- events
 -------------------------------------------------
 eventFrame:SetScript("OnEvent", function(_, event, sourceUnit)
-    if event == "ENCOUNTER_END" then
-        Reset()
-        F.IterateAllUnitButtons(HideCasts, true)
-        return
-    end
-
     if sourceUnit and strfind(sourceUnit, "^soft") then return end
 
     if event == "PLAYER_TARGET_CHANGED" then
@@ -265,7 +292,7 @@ eventFrame:SetScript("OnEvent", function(_, event, sourceUnit)
     elseif event == "UNIT_SPELLCAST_STOP" or event == "UNIT_SPELLCAST_INTERRUPTED" or event == "UNIT_SPELLCAST_FAILED" or event == "UNIT_SPELLCAST_CHANNEL_STOP" then
         local sourceGUID = UnitGUID(sourceUnit)
         if casts[sourceGUID] then
-            previousTarget = casts[sourceGUID]["targetGUID"]
+            local previousTarget = casts[sourceGUID]["targetGUID"]
             casts[sourceGUID] = nil
             UpdateCastsOnUnit(previousTarget)
         end
@@ -273,7 +300,7 @@ eventFrame:SetScript("OnEvent", function(_, event, sourceUnit)
     elseif event == "NAME_PLATE_UNIT_REMOVED" then
         local sourceGUID = UnitGUID(sourceUnit)
         if casts[sourceGUID] and not casts[sourceGUID]["nonNameplate"] then
-            previousTarget = casts[sourceGUID]["targetGUID"]
+            local previousTarget = casts[sourceGUID]["targetGUID"]
             casts[sourceGUID] = nil
             UpdateCastsOnUnit(previousTarget)
         end
@@ -295,8 +322,8 @@ local function SetCooldown(frame, start, duration, icon, count)
 
     frame.border:Show()
     frame.cooldown:Show()
-    frame.cooldown:SetSwipeColor(unpack(Cell.vars.targetedSpellsGlow[2]))
-    frame.cooldown:SetCooldown(start, duration)
+    F.SetCooldownSwipeColor(frame.cooldown, unpack(Cell.vars.targetedSpellsGlow[2]))
+    F.SetCooldown(frame.cooldown, start, duration)
     frame.icon:SetTexture(icon)
     frame:Show()
 end
@@ -373,7 +400,7 @@ function I.CreateTargetedSpells(parent)
         frame.SetCooldown = SetCooldown
         -- frame:SetScript("OnShow", targetedSpells.UpdateSize)
         -- frame:SetScript("OnHide", targetedSpells.UpdateSize)
-        frame.cooldown:SetScript("OnCooldownDone", function()
+        F.SetCooldownScript(frame.cooldown, "OnCooldownDone", function()
             frame:Hide()
         end)
     end
@@ -389,6 +416,7 @@ local function EnterLeaveInstance()
 end
 
 function I.EnableTargetedSpells(enabled)
+    isEnabled = enabled
     if enabled then
         F.IterateAllUnitButtons(function(b)
             b.indicators.targetedSpells:Show()
@@ -396,7 +424,7 @@ function I.EnableTargetedSpells(enabled)
 
         -- UNIT_SPELLCAST_DELAYED UNIT_SPELLCAST_FAILED UNIT_SPELLCAST_INTERRUPTED UNIT_SPELLCAST_START UNIT_SPELLCAST_STOP
         -- UNIT_SPELLCAST_CHANNEL_START UNIT_SPELLCAST_CHANNEL_STOP
-        -- PLAYER_TARGET_CHANGED ENCOUNTER_END
+        -- PLAYER_TARGET_CHANGED
 
         eventFrame:RegisterEvent("UNIT_SPELLCAST_START")
         eventFrame:RegisterEvent("UNIT_SPELLCAST_STOP")
@@ -411,8 +439,7 @@ function I.EnableTargetedSpells(enabled)
         eventFrame:RegisterEvent("NAME_PLATE_UNIT_ADDED")
         eventFrame:RegisterEvent("NAME_PLATE_UNIT_REMOVED")
 
-        eventFrame:RegisterEvent("ENCOUNTER_END")
-
+        Cell.RegisterCallback("EncounterEnd", "TargetedSpells_EncounterEnd", EnterLeaveInstance)
         Cell.RegisterCallback("EnterInstance", "TargetedSpells_EnterInstance", EnterLeaveInstance)
         Cell.RegisterCallback("LeaveInstance", "TargetedSpells_LeaveInstance", EnterLeaveInstance)
     else
@@ -420,6 +447,7 @@ function I.EnableTargetedSpells(enabled)
         eventFrame:Hide()
         eventFrame:UnregisterAllEvents()
 
+        Cell.UnregisterCallback("EncounterEnd", "TargetedSpells_EncounterEnd")
         Cell.UnregisterCallback("EnterInstance", "TargetedSpells_EnterInstance")
         Cell.UnregisterCallback("LeaveInstance", "TargetedSpells_LeaveInstance")
 
@@ -431,9 +459,17 @@ function I.EnableTargetedSpells(enabled)
 end
 
 function I.ShowAllTargetedSpells(showAll)
+    local changed = isEnabled and showAll ~= showAllSpells
     showAllSpells = showAll
+    if changed then
+        I.RefreshTargetedSpells(showAll)
+    end
 end
 
 function I.UpdateTargetedSpellsNum(num)
+    local changed = isEnabled and maxIcons and num ~= maxIcons
     maxIcons = num
+    if changed then
+        I.RefreshTargetedSpells()
+    end
 end

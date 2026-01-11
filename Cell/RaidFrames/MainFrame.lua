@@ -18,7 +18,6 @@ Cell.unitButtons = {
     ["npc"] = {
         ["units"] = {}, -- NOTE: update on creation
     },
-    ["arena"] = {},
     ["spotlight"] = {},
     ["quickAssist"] = {
         ["units"] = {},
@@ -33,28 +32,34 @@ local tooltipPoint, tooltipRelativePoint, tooltipX, tooltipY
 local cellMainFrame = CreateFrame("Frame", "CellMainFrame", CellParent, "SecureFrameTemplate")
 Cell.frames.mainFrame = cellMainFrame
 
-local hoverFrame = CreateFrame("Frame", "CellMenuHoverDetector", cellMainFrame, "BackdropTemplate")
+local hoverFrame = CreateFrame("Frame", "CellMenuHoverDetector", cellMainFrame)
+hoverFrame:EnableMouse(true)
 -- Cell.StylizeFrame(hoverFrame, {1,0,0,0.3}, {0,0,0,0})
 
 local anchorFrame = CreateFrame("Frame", "CellAnchorFrame", cellMainFrame)
 Cell.frames.anchorFrame = anchorFrame
-PixelUtil.SetPoint(anchorFrame, "TOPLEFT", CellParent, "CENTER", 1, -1)
+F.PixelUtil.SetPoint(anchorFrame, "TOPLEFT", CellParent, "CENTER", 1, -1)
 P.Size(anchorFrame, 20, 10)
 anchorFrame:SetMovable(true)
 anchorFrame:SetClampedToScreen(true)
+
+local function StopMovingAnchor()
+    anchorFrame:StopMovingOrSizing()
+    anchorFrame:UnregisterEvent("PLAYER_REGEN_DISABLED")
+    P.SavePosition(anchorFrame, Cell.vars.currentLayoutTable["main"]["position"])
+end
+
+anchorFrame:SetScript("OnEvent", StopMovingAnchor)
 
 local function RegisterButtonEvents(frame)
     -- frame:RegisterForDrag("LeftButton")
     frame:SetScript("OnDragStart", function()
         if InCombatLockdown() then return end
+        anchorFrame:RegisterEvent("PLAYER_REGEN_DISABLED")
         anchorFrame:StartMoving()
         anchorFrame:SetUserPlaced(false)
     end)
-    frame:SetScript("OnDragStop", function()
-        if InCombatLockdown() then return end
-        anchorFrame:StopMovingOrSizing()
-        P.SavePosition(anchorFrame, Cell.vars.currentLayoutTable["main"]["position"])
-    end)
+    frame:SetScript("OnDragStop", StopMovingAnchor)
 
     frame:HookScript("OnEnter", function()
         hoverFrame:GetScript("OnEnter")(hoverFrame)
@@ -90,7 +95,11 @@ options:SetScript("OnClick", function(self, button)
 end)
 options:HookScript("OnEnter", function()
     CellTooltip:SetOwner(options, "ANCHOR_NONE")
-    CellTooltip:SetPoint(tooltipPoint, options, tooltipRelativePoint, tooltipX, tooltipY)
+    if tooltipPoint then
+        CellTooltip:SetPoint(tooltipPoint, options, tooltipRelativePoint, tooltipX, tooltipY)
+    else
+        CellTooltip:SetPoint("TOPLEFT", options, "BOTTOMLEFT", 0, -3)
+    end
     CellTooltip:AddLine(L["Options"])
     CellTooltip:AddLine("|cffffb5c5"..L["Right-Click"]..": |cffffffff"..L["refresh unit buttons"])
     CellTooltip:Show()
@@ -119,7 +128,7 @@ end)
 
 -- REVIEW: raid tool button
 --[===[
-local frame = CreateFrame("Frame", nil, cellMainFrame, "BackdropTemplate")
+local frame = CreateFrame("Frame", nil, cellMainFrame)
 Cell.StylizeFrame(frame)
 frame:SetSize(100, 100)
 frame:SetPoint("BOTTOMLEFT", cellMainFrame, "TOPLEFT", 0, 30)
@@ -129,13 +138,13 @@ local mark = Cell.CreateButton(frame, "", "accent-hover", {20, 20}, false, false
 mark:SetPoint("CENTER")
 mark:SetSize(20, 20)
 mark.texture = mark:CreateTexture(nil, "ARTWORK")
-mark.texture:SetColorTexture(1, 0, 0, 0.4)
+mark.texture:SetTexture(1, 0, 0, 0.4)
 mark.texture:SetAllPoints(mark)
 mark:SetAttribute("type", "worldmarker")
 mark:SetAttribute("marker", 1)
 
 -- local tools = Cell.CreateButton(menuFrame, "", "chartreuse", {20, 10}, false, true, nil, nil, "SecureHandlerAttributeTemplate,SecureHandlerClickTemplate")
-local tools = CreateFrame("Frame", nil, menuFrame, "BackdropTemplate,SecureHandlerMouseUpDownTemplate")
+local tools = CreateFrame("Frame", nil, menuFrame, "SecureHandlerMouseUpDownTemplate")
 Cell.StylizeFrame(tools)
 tools:SetSize(20, 10)
 tools:EnableMouse(true)
@@ -196,13 +205,18 @@ P.Point(loadingBar, "BOTTOMRIGHT", options, -1, 1)
 -------------------------------------------------
 local fadingIn, fadedIn, fadingOut, fadedOut
 menuFrame.fadeIn = menuFrame:CreateAnimationGroup()
+menuFrame.fadeIn.initialAlpha = menuFrame.fadeIn:CreateAnimation("alpha")
+menuFrame.fadeIn.initialAlpha:SetChange(-1)
+menuFrame.fadeIn.initialAlpha:SetDuration(0)
+menuFrame.fadeIn.initialAlpha:SetOrder(1)
 menuFrame.fadeIn.alpha = menuFrame.fadeIn:CreateAnimation("alpha")
-menuFrame.fadeIn.alpha:SetFromAlpha(0)
-menuFrame.fadeIn.alpha:SetToAlpha(1)
+F.AlphaSetFromTo(menuFrame.fadeIn.alpha, 0, 1)
 menuFrame.fadeIn.alpha:SetDuration(0.5)
 menuFrame.fadeIn.alpha:SetSmoothing("OUT")
+menuFrame.fadeIn.alpha:SetOrder(1)
 menuFrame.fadeIn:SetScript("OnPlay", function()
     menuFrame.fadeOut:Finish()
+    menuFrame:Show()
     fadingIn = true
 
     if Cell.frames.battleResFrame and not CellDB["tools"]["battleResTimer"][2] and CellDB["general"]["menuPosition"] == "top_bottom" then
@@ -214,7 +228,6 @@ menuFrame.fadeIn:SetScript("OnFinished", function()
     fadingOut = false
     fadedIn = true
     fadedOut = false
-    menuFrame:SetAlpha(1)
 
     if CellDB["general"]["fadeOut"] and not hoverFrame:IsMouseOver() then
         menuFrame.fadeOut:Play()
@@ -223,8 +236,7 @@ end)
 
 menuFrame.fadeOut = menuFrame:CreateAnimationGroup()
 menuFrame.fadeOut.alpha = menuFrame.fadeOut:CreateAnimation("alpha")
-menuFrame.fadeOut.alpha:SetFromAlpha(1)
-menuFrame.fadeOut.alpha:SetToAlpha(0)
+F.AlphaSetFromTo(menuFrame.fadeOut.alpha, 1, 0)
 menuFrame.fadeOut.alpha:SetDuration(0.5)
 menuFrame.fadeOut.alpha:SetSmoothing("OUT")
 menuFrame.fadeOut:SetScript("OnPlay", function()
@@ -240,7 +252,7 @@ menuFrame.fadeOut:SetScript("OnFinished", function()
     fadingOut = false
     fadedIn = false
     fadedOut = true
-    menuFrame:SetAlpha(0)
+    menuFrame:Hide()
 
     if hoverFrame:IsMouseOver() then
         menuFrame.fadeIn:Play()
@@ -262,6 +274,7 @@ hoverFrame:SetScript("OnLeave", function()
 end)
 
 local function UpdateHoverFrame()
+    if not Cell.vars.currentLayoutTable then return end
     local anchor = Cell.vars.currentLayoutTable["main"]["anchor"]
     local top, bottom, left, right
 
@@ -352,7 +365,11 @@ end
 
 raid:HookScript("OnEnter", function()
     CellTooltip:SetOwner(raid, "ANCHOR_NONE")
-    CellTooltip:SetPoint(tooltipPoint, raid, tooltipRelativePoint, tooltipX, tooltipY)
+    if tooltipPoint then
+        CellTooltip:SetPoint(tooltipPoint, raid, tooltipRelativePoint, tooltipX, tooltipY)
+    else
+        CellTooltip:SetPoint("TOPLEFT", raid, "BOTTOMLEFT", 0, -3)
+    end
     UpdateRaidSetupTooltip()
 end)
 
@@ -399,6 +416,7 @@ Cell.RegisterCallback("GroupTypeChanged", "MainFrame_GroupTypeChanged", MainFram
 -- load & update
 -------------------------------------------------
 local function UpdatePosition()
+    if not Cell.vars.currentLayoutTable then return end
     local anchor = Cell.vars.currentLayoutTable["main"]["anchor"]
 
     cellMainFrame:ClearAllPoints()
@@ -526,13 +544,14 @@ local function MainFrame_UpdateLayout(layout, which)
         return
     else
         anchorFrame:Show()
-        menuFrame:Show()
+        if not fadedOut or not CellDB["general"]["fadeOut"] then
+            menuFrame:Show()
+        end
         hoverFrame:Show()
     end
 
     if not init then
-        --! NOTE: a reload during pet battle prevents HEADER from CREATING CHILDs (unit buttons), this hide delay is a MUST
-        RegisterStateDriver(cellMainFrame, "visibility", "[petbattle] hide; show")
+        RegisterStateDriver(cellMainFrame, "visibility", "show")
         init = true
     end
 
@@ -551,7 +570,7 @@ local function MainFrame_UpdateLayout(layout, which)
         if not P.LoadPosition(anchorFrame, layout["main"]["position"]) then
             P.ClearPoints(anchorFrame)
             -- no position, use default
-            PixelUtil.SetPoint(anchorFrame, "TOPLEFT", CellParent, "CENTER", 1, -1)
+            F.PixelUtil.SetPoint(anchorFrame, "TOPLEFT", CellParent, "CENTER", 1, -1)
         end
     end
 end

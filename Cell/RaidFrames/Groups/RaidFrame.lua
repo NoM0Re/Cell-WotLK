@@ -8,7 +8,7 @@ local raidFrame = CreateFrame("Frame", "CellRaidFrame", Cell.frames.mainFrame, "
 Cell.frames.raidFrame = raidFrame
 raidFrame:SetAllPoints(Cell.frames.mainFrame)
 
-local npcFrameAnchor = CreateFrame("Frame", "CellNPCFrameAnchor", raidFrame, "SecureFrameTemplate,BackDropTemplate")
+local npcFrameAnchor = CreateFrame("Frame", "CellNPCFrameAnchor", raidFrame, "SecureFrameTemplate")
 raidFrame:SetFrameRef("npcAnchor", npcFrameAnchor)
 -- npcFrameAnchor:Hide()
 -- Cell.StylizeFrame(npcFrameAnchor)
@@ -26,7 +26,8 @@ raidFrame:SetAttribute("_onattributechanged", [[
     else
         local maxGroup
         for i = 1, 8 do
-            if self:GetFrameRef("visibilityHelper"..i):IsVisible() then
+            local helper = self:GetFrameRef("visibilityHelper"..i)
+            if helper and helper:IsVisible() then
                 maxGroup = i
             end
         end
@@ -90,7 +91,7 @@ sortMethod = ["INDEX", "NAME", "NAMELIST"] -- defines how the group is sorted (D
 sortDir = ["ASC", "DESC"] -- defines the sort order (Default: "ASC")
 template = [STRING] -- the XML template to use for the unit buttons
 templateType = [STRING] - specifies the frame type of the managed subframes (Default: "Button")
-groupBy = [nil, "GROUP", "CLASS", "ROLE", "ASSIGNEDROLE"] - specifies a "grouping" type to apply before regular sorting (Default: nil)
+groupBy = [nil, "GROUP", "CLASS", "ROLE"] - specifies a "grouping" type to apply before regular sorting (Default: nil)
 groupingOrder = [STRING] - specifies the order of the groupings (ie. "1,2,3,4,5,6,7,8")
 maxColumns = [NUMBER] - maximum number of columns the header will create (Default: 1)
 unitsPerColumn = [NUMBER or nil] - maximum units that will be displayed in a singe column, nil is infinite (Default: nil)
@@ -179,25 +180,46 @@ local function CreateGroupHeader(group)
 
     -- for npcFrame's point
     raidFrame:SetFrameRef("subgroup"..group, header)
-
-    local helper = CreateFrame("Frame", nil, header[1], "SecureHandlerShowHideTemplate")
-    helper:SetFrameRef("raidframe", raidFrame)
-    raidFrame:SetFrameRef("visibilityHelper"..group, helper)
-    helper:SetAttribute("_onshow", [[ self:GetFrameRef("raidframe"):SetAttribute("visibility", 1) ]])
-    helper:SetAttribute("_onhide", [[ self:GetFrameRef("raidframe"):SetAttribute("visibility", 0) ]])
 end
 
 for i = 1, 8 do
     CreateGroupHeader(i)
 end
 
--- arena pet
-local arenaPetButtons = {}
-for i = 1, (Cell.isRetail and 3 or 5) do
-    arenaPetButtons[i] = CreateFrame("Button", "CellArenaPet"..i, raidFrame, "CellUnitButtonTemplate")
-    arenaPetButtons[i]:SetAttribute("unit", "raidpet"..i)
+local function SyncRaidHeaderChildren(header)
+    local children = {header:GetChildren()}
+    table.sort(children, function(a, b)
+        return (a:GetName() or "") < (b:GetName() or "")
+    end)
 
-    Cell.unitButtons.arena["raidpet"..i] = arenaPetButtons[i]
+    for i, child in ipairs(children) do
+        header[i] = child
+    end
+    return #children
+end
+
+local function InitRaidHeaders()
+    for group = 1, 8 do
+        local header = separatedHeaders[group]
+        SyncRaidHeaderChildren(header)
+        if header[1] and not header._visibilityHelperCreated then
+            header._visibilityHelperCreated = true
+            local helper = CreateFrame("Frame", nil, header[1], "SecureHandlerShowHideTemplate")
+            helper:SetFrameRef("raidframe", raidFrame)
+            raidFrame:SetFrameRef("visibilityHelper"..group, helper)
+            helper:SetAttribute("_onshow", [[ self:GetFrameRef("raidframe"):SetAttribute("visibility", 1) ]])
+            helper:SetAttribute("_onhide", [[ self:GetFrameRef("raidframe"):SetAttribute("visibility", 0) ]])
+        end
+    end
+    SyncRaidHeaderChildren(combinedHeader)
+end
+
+InitRaidHeaders()
+
+local raidButtonsForceInitScheduled
+local function RefreshLateRaidButtons()
+    Cell.Fire("UpdateAppearance")
+    B.ForceInitButtons()
 end
 
 -------------------------------------------------
@@ -323,9 +345,6 @@ local function UpdateHeader(header, layout, which)
         for j, b in ipairs(header) do
             b.widgets.healthBar:GetScript("OnSizeChanged")(b.widgets.healthBar)
         end
-        for k, arenaPet in ipairs(arenaPetButtons) do
-            arenaPet.widgets.healthBar:GetScript("OnSizeChanged")(arenaPet.widgets.healthBar)
-        end
     end
 end
 
@@ -339,51 +358,93 @@ end
 --     ]])
 -- end
 
+local function SetHeaderAttribute(header, name, value)
+    if header:GetAttribute(name) ~= value then
+        header:SetAttribute(name, value)
+    end
+end
+
+local function GetRoleSortedNameList(layout, group)
+    local rolePriority = {}
+    for i, role in ipairs(layout["main"]["roleOrder"]) do
+        rolePriority[role] = i
+    end
+
+    local members = {}
+    for i = 1, GetNumRaidMembers() do
+        local name, _, subgroup = GetRaidRosterInfo(i)
+        if name and (group and subgroup == group or not group and layout["groupFilter"][subgroup]) then
+            tinsert(members, {
+                name = name,
+                priority = rolePriority[F.UnitGroupRolesAssigned("raid"..i)] or 4,
+            })
+        end
+    end
+
+    table.sort(members, function(a, b)
+        if a.priority ~= b.priority then
+            return a.priority < b.priority
+        end
+        return a.name < b.name
+    end)
+
+    local names = {}
+    for _, member in ipairs(members) do
+        tinsert(names, member.name)
+    end
+    return table.concat(names, ",")
+end
+
+local function UpdateCombinedRoleSort(layout, shownGroups)
+    SetHeaderAttribute(combinedHeader, "groupBy", nil)
+    SetHeaderAttribute(combinedHeader, "groupingOrder", "")
+    SetHeaderAttribute(combinedHeader, "sortMethod", "INDEX")
+
+    if layout["main"]["sortByRole"] then
+        SetHeaderAttribute(combinedHeader, "groupFilter", nil)
+        SetHeaderAttribute(combinedHeader, "nameList", GetRoleSortedNameList(layout))
+    else
+        SetHeaderAttribute(combinedHeader, "nameList", nil)
+        SetHeaderAttribute(combinedHeader, "groupFilter", F.TableToString(shownGroups, ","))
+    end
+end
+
+local function UpdateSeparatedRoleSort(layout)
+    for i = 1, 8 do
+        local header = separatedHeaders[i]
+        SetHeaderAttribute(header, "groupBy", nil)
+        SetHeaderAttribute(header, "groupingOrder", "")
+        SetHeaderAttribute(header, "sortMethod", "INDEX")
+
+        if layout["main"]["sortByRole"] then
+            SetHeaderAttribute(header, "groupFilter", nil)
+            SetHeaderAttribute(header, "nameList", GetRoleSortedNameList(layout, i))
+        else
+            SetHeaderAttribute(header, "nameList", nil)
+            SetHeaderAttribute(header, "groupFilter", tostring(i))
+        end
+    end
+end
+
 local function RaidFrame_UpdateLayout(layout, which)
     -- visibility
     if Cell.vars.groupType ~= "raid" or Cell.vars.isHidden then
-        UnregisterAttributeDriver(raidFrame, "state-visibility")
+        UnregisterStateDriver(raidFrame, "visibility")
         raidFrame:Hide()
         return
     else
-        RegisterAttributeDriver(raidFrame, "state-visibility", "show")
+        RegisterStateDriver(raidFrame, "visibility", "show")
+        InitRaidHeaders()
+        if not raidButtonsForceInitScheduled then
+            raidButtonsForceInitScheduled = true
+            F.C_Timer.After(0.5, RefreshLateRaidButtons)
+        end
     end
 
     -- update
     layout = CellDB["layouts"][layout]
 
-    -- arena pets
-    if Cell.vars.inBattleground == 5 and layout["pet"]["partyEnabled"] and not layout["pet"]["partyDetached"] then
-        for i, arenaPet in ipairs(arenaPetButtons) do
-            RegisterAttributeDriver(arenaPet, "state-visibility", "[@raidpet"..i..", exists] show;hide")
-        end
-    else
-        for i, arenaPet in ipairs(arenaPetButtons) do
-            UnregisterAttributeDriver(arenaPet, "state-visibility")
-            arenaPet:Hide()
-        end
-    end
-
-    local point, anchorPoint, groupAnchorPoint, unitSpacing, groupSpacing, unitSpacingX, unitSpacingY, verticalSpacing, horizontalSpacing, headerPoint, headerColumnAnchorPoint = F.GetRaidFramePoints(layout["main"])
-
-    if not which or which == "main-arrangement" or which == "pet-arrangement" or which == "rows_columns" or which == "groupSpacing" or which == "groupFilter" then
-        local petSpacingX = layout["pet"]["sameArrangementAsMain"] and unitSpacingX or P.Scale(layout["pet"]["spacingX"])
-        local petSpacingY = layout["pet"]["sameArrangementAsMain"] and unitSpacingY or P.Scale(layout["pet"]["spacingY"])
-
-        -- arena pets
-        for k in ipairs(arenaPetButtons) do
-            arenaPetButtons[k]:ClearAllPoints()
-            if k == 1 then
-                arenaPetButtons[k]:SetPoint(point, npcFrameAnchor)
-            else
-                if layout["main"]["orientation"] == "vertical" then
-                    arenaPetButtons[k]:SetPoint(point, arenaPetButtons[k-1], anchorPoint, 0, petSpacingY)
-                else
-                    arenaPetButtons[k]:SetPoint(point, arenaPetButtons[k-1], anchorPoint, petSpacingX, 0)
-                end
-            end
-        end
-    end
+    local point, _, groupAnchorPoint, unitSpacing, groupSpacing, unitSpacingX, unitSpacingY, verticalSpacing, horizontalSpacing, headerPoint, headerColumnAnchorPoint = F.GetRaidFramePoints(layout["main"])
 
     local shownGroups = {}
     for i, isShown in ipairs(layout["groupFilter"]) do
@@ -433,21 +494,8 @@ local function RaidFrame_UpdateLayout(layout, which)
             raidFrame:SetAttribute("combineGroups", true) -- NOTE: trigger _onattributechanged to set npcFrameAnchor point!
         end
 
-        if not which or which == "header" or which == "sort" then
-            if layout["main"]["sortByRole"] then
-                combinedHeader:SetAttribute("sortMethod", "NAME")
-                local order = table.concat(layout["main"]["roleOrder"], ",")..",NONE"
-                combinedHeader:SetAttribute("groupingOrder", order)
-                combinedHeader:SetAttribute("groupBy", "ASSIGNEDROLE")
-            else
-                combinedHeader:SetAttribute("sortMethod", "INDEX")
-                combinedHeader:SetAttribute("groupingOrder", "")
-                combinedHeader:SetAttribute("groupBy", nil)
-            end
-        end
-
-        if not which or which == "header" or which == "groupFilter" then
-            combinedHeader:SetAttribute("groupFilter", F.TableToString(shownGroups, ","))
+        if not which or which == "header" or which == "sort" or which == "groupFilter" then
+            UpdateCombinedRoleSort(layout, shownGroups)
         end
 
     else
@@ -464,6 +512,7 @@ local function RaidFrame_UpdateLayout(layout, which)
 
                     --! force update unitbutton's point
                     for j = 1, 5 do
+                        if not header[j] then break end
                         header[j]:ClearAllPoints()
                     end
                     header:SetAttribute("unitsPerColumn", 5)
@@ -489,6 +538,7 @@ local function RaidFrame_UpdateLayout(layout, which)
 
                     --! force update unitbutton's point
                     for j = 1, 5 do
+                        if not header[j] then break end
                         header[j]:ClearAllPoints()
                     end
                     header:SetAttribute("unitsPerColumn", 5)
@@ -515,21 +565,8 @@ local function RaidFrame_UpdateLayout(layout, which)
             raidFrame:SetAttribute("combineGroups", false) -- NOTE: trigger _onattributechanged to set npcFrameAnchor point!
         end
 
-        if not which or which == "header" or which == "sort" then
-            if layout["main"]["sortByRole"] then
-                for i = 1, 8 do
-                    separatedHeaders[i]:SetAttribute("sortMethod", "NAME")
-                    local order = table.concat(layout["main"]["roleOrder"], ",")..",NONE"
-                    separatedHeaders[i]:SetAttribute("groupingOrder", order)
-                    separatedHeaders[i]:SetAttribute("groupBy", "ASSIGNEDROLE")
-                end
-            else
-                for i = 1, 8 do
-                    separatedHeaders[i]:SetAttribute("sortMethod", "INDEX")
-                    separatedHeaders[i]:SetAttribute("groupingOrder", "")
-                    separatedHeaders[i]:SetAttribute("groupBy", nil)
-                end
-            end
+        if not which or which == "header" or which == "sort" or which == "groupFilter" then
+            UpdateSeparatedRoleSort(layout)
         end
 
         -- show/hide groups
@@ -544,25 +581,49 @@ local function RaidFrame_UpdateLayout(layout, which)
         end
     end
 
-    -- raid pets
-    if not which or strfind(which, "size$") or strfind(which, "power$") or which == "barOrientation" or which == "powerFilter" then
-        local width, height = unpack(layout["main"]["size"])
-
-        for i, arenaPet in ipairs(arenaPetButtons) do
-            -- NOTE: SetOrientation BEFORE SetPowerSize
-            B.SetOrientation(arenaPet, layout["barOrientation"][1], layout["barOrientation"][2])
-
-            if layout["pet"]["sameSizeAsMain"] then
-                P.Size(arenaPet, width, height)
-                B.SetPowerSize(arenaPet, layout["main"]["powerSize"])
-            else
-                P.Size(arenaPet, layout["pet"]["size"][1], layout["pet"]["size"][2])
-                B.SetPowerSize(arenaPet, layout["pet"]["powerSize"])
-            end
-        end
-    end
 end
 Cell.RegisterCallback("UpdateLayout", "RaidFrame_UpdateLayout", RaidFrame_UpdateLayout)
+
+local roleSortUpdatePending
+local roleSortFrame = CreateFrame("Frame")
+roleSortFrame:RegisterEvent("RAID_ROSTER_UPDATE")
+
+local function RefreshRoleSort()
+    local layout = Cell.vars.currentLayoutTable
+    if Cell.vars.groupType ~= "raid" or Cell.vars.isHidden
+    or not layout or not layout["main"]["sortByRole"]
+    then
+        return
+    end
+
+    if InCombatLockdown() then
+        roleSortFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
+        return
+    end
+
+    if roleSortUpdatePending then return end
+
+    roleSortUpdatePending = true
+    F.C_Timer.After(0, function()
+        roleSortUpdatePending = nil
+        local currentLayout = Cell.vars.currentLayoutTable
+        if InCombatLockdown() then
+            roleSortFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
+        elseif Cell.vars.groupType == "raid" and not Cell.vars.isHidden
+        and currentLayout and currentLayout["main"]["sortByRole"]
+        then
+            RaidFrame_UpdateLayout(Cell.vars.currentLayout, "sort")
+        end
+    end)
+end
+
+roleSortFrame:SetScript("OnEvent", function(self, event)
+    if event == "PLAYER_REGEN_ENABLED" then
+        self:UnregisterEvent("PLAYER_REGEN_ENABLED")
+    end
+    RefreshRoleSort()
+end)
+Cell.RegisterCallback("GroupRoleChanged", "RaidFrame_GroupRoleChanged", RefreshRoleSort)
 
 -- local function RaidFrame_UpdateVisibility(which)
 --     if not which or which == "raid" then

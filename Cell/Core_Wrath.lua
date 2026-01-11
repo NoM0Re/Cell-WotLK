@@ -1,4 +1,4 @@
----@class Cell
+---@type Cell
 local Cell = select(2, ...)
 _G.Cell = Cell
 
@@ -17,12 +17,13 @@ Cell.defaults = {}
 Cell.frames = {}
 Cell.vars = {}
 Cell.snippetVars = {}
-Cell.funcs = {}
+Cell.funcs = Cell.funcs or {}
 Cell.iFuncs = {}
 Cell.bFuncs = {}
 Cell.uFuncs = {}
 Cell.animations = {}
 
+---@class CellFuncs
 local F = Cell.funcs
 local I = Cell.iFuncs
 local P = Cell.pixelPerfectFuncs
@@ -36,14 +37,18 @@ Cell.MIN_INDICATORS_VERSION = 246
 Cell.MIN_DEBUFFS_VERSION = 246
 
 --@debug@
-local debugMode = true
+local debugMode = false
 --@end-debug@
 function F.Debug(arg, ...)
     if debugMode then
         if type(arg) == "string" or type(arg) == "number" then
             print(arg, ...)
         elseif type(arg) == "table" then
-            DevTools_Dump(arg)
+            if DevTools_Dump then
+                DevTools_Dump(arg)
+            else
+                print(arg)
+            end
         elseif type(arg) == "function" then
             arg(...)
         elseif arg == nil then
@@ -106,25 +111,21 @@ function F.UpdateLayout(layoutGroupType)
 end
 
 local bgMaxPlayers = {
-    [2197] = 40, -- 科尔拉克的复仇
+    [402] = 40, -- Alterac Valley
+    [541] = 40, -- Isle of Conquest
 }
 
 -- layout auto switch
 local instanceType
 local function PreUpdateLayout()
     if instanceType == "pvp" then
-        local name, _, _, _, _, _, _, id = GetInstanceInfo()
-        if bgMaxPlayers[id] then
-            if bgMaxPlayers[id] <= 15 then
-                Cell.vars.inBattleground = 15
-                F.UpdateLayout("battleground15", true)
-            else
-                Cell.vars.inBattleground = 40
-                F.UpdateLayout("battleground40", true)
-            end
-        else
-            Cell.vars.inBattleground = 15
+        SetMapToCurrentZone()
+        local maxPlayers = bgMaxPlayers[GetCurrentMapAreaID()] or 15
+        Cell.vars.inBattleground = maxPlayers
+        if maxPlayers <= 15 then
             F.UpdateLayout("battleground15", true)
+        else
+            F.UpdateLayout("battleground40", true)
         end
     elseif instanceType == "arena" then
         Cell.vars.inBattleground = 5 -- treat as bg 5
@@ -156,16 +157,12 @@ eventFrame:RegisterEvent("ADDON_LOADED")
 eventFrame:RegisterEvent("PLAYER_LOGIN")
 
 function eventFrame:VARIABLES_LOADED()
-    SetCVar("predictedHealth", 1)
+    --[[SetCVar("predictedHealth", 1) -- use lib predicted health]]
 end
 
-local IsInRaid = IsInRaid
-local IsInGroup = IsInGroup
-local GetNumGroupMembers = GetNumGroupMembers
 local GetRaidRosterInfo = GetRaidRosterInfo
 local UnitGUID = UnitGUID
--- local IsInBattleGround = C_PvP.IsBattleground -- NOTE: can't get valid value immediately after PLAYER_ENTERING_WORLD
-local GetAddOnMetadata = C_AddOns and C_AddOns.GetAddOnMetadata or GetAddOnMetadata
+local GetAddOnMetadata = GetAddOnMetadata
 
 -- local cellLoaded, omnicdLoaded
 function eventFrame:ADDON_LOADED(arg1)
@@ -191,6 +188,14 @@ function eventFrame:ADDON_LOADED(arg1)
         if type(CellDB["snippets"]) ~= "table" then CellDB["snippets"] = {} end
         if not CellDB["snippets"][0] then CellDB["snippets"][0] = F.GetDefaultSnippet() end
 
+        if type(CellDB["minimap"]) ~= "table" then
+            CellDB["minimap"] = {
+                ["hide"] = false,
+            }
+        elseif CellDB["minimap"]["hide"] == nil then
+            CellDB["minimap"]["hide"] = false
+        end
+
         -- general --------------------------------------------------------------------------------
         if type(CellDB["general"]) ~= "table" then
             CellDB["general"] = {
@@ -198,8 +203,8 @@ function eventFrame:ADDON_LOADED(arg1)
                 ["hideTooltipsInCombat"] = true,
                 ["tooltipsPosition"] = {"BOTTOMLEFT", "Default", "TOPLEFT", 0, 15},
                 ["hideBlizzardParty"] = true,
-                ["hideBlizzardRaid"] = true,
-                ["hideBlizzardRaidManager"] = true,
+                ["hideBlizzardRaid"] = false,
+                ["hideBlizzardRaidManager"] = false,
                 ["locked"] = false,
                 ["fadeOut"] = false,
                 ["menuPosition"] = "top_bottom",
@@ -351,7 +356,7 @@ function eventFrame:ADDON_LOADED(arg1)
         end
 
         -- click-casting --------------------------------------------------------------------------
-        Cell.vars.playerClass, Cell.vars.playerClassID = UnitClassBase("player")
+        Cell.vars.playerClass, Cell.vars.playerClassID = F.UnitClassBase("player")
 
         if type(CellCharacterDB["clickCastings"]) ~= "table" then
             CellCharacterDB["clickCastings"] = {
@@ -467,7 +472,7 @@ function eventFrame:ADDON_LOADED(arg1)
         Cell.versionNum = tonumber(string.match(Cell.version, "%d+"))
         if not CellDB["revise"] then CellDB["firstRun"] = true end
         F.Revise()
-        F.CheckWhatsNew()
+        -- F.CheckWhatsNew()
         F.RunSnippets()
 
         -- validation -----------------------------------------------------------------------------
@@ -520,49 +525,46 @@ Cell.vars.raidSetup = {
     ["DAMAGER"]={["ALL"]=0},
 }
 
-function eventFrame:GROUP_ROSTER_UPDATE()
-    if IsInRaid() then
+local function RebuildRaidSetup()
+    for _, t in pairs(Cell.vars.raidSetup) do
+        for class in pairs(t) do
+            if class == "ALL" then
+                t["ALL"] = 0
+            else
+                t[class] = nil
+            end
+        end
+    end
+
+    for i = 1, F.GetNumGroupMembers() do
+        local _, _, _, _, _, class = GetRaidRosterInfo(i)
+        local role = F.UnitGroupRolesAssigned("raid"..i)
+        if not role or role == "NONE" then role = "DAMAGER" end
+
+        Cell.vars.raidSetup[role]["ALL"] = Cell.vars.raidSetup[role]["ALL"] + 1
+        if class then
+            Cell.vars.raidSetup[role][class] = (Cell.vars.raidSetup[role][class] or 0) + 1
+        end
+    end
+
+    F.UpdateRaidSetup()
+end
+
+function eventFrame:RAID_ROSTER_UPDATE()
+    if F.IsInRaid() then
         if Cell.vars.groupType ~= "raid" then
             Cell.vars.groupType = "raid"
             F.Debug("|cffffbb77GroupTypeChanged:|r raid")
             Cell.Fire("GroupTypeChanged", "raid")
         end
 
-        -- reset raid setup
-        for _, t in pairs(Cell.vars.raidSetup) do
-            for class in pairs(t) do
-                if class == "ALL" then
-                    t["ALL"] = 0
-                else
-                    t[class] = nil
-                end
-            end
-        end
-
-        -- update guid & raid setup
-        for i = 1, GetNumGroupMembers() do
-            -- update raid setup
-            local _, _, _, _, _, class, _, _, _, _, _, role = GetRaidRosterInfo(i)
-            if not role or role == "NONE" then role = "DAMAGER" end
-            -- update ALL
-            Cell.vars.raidSetup[role]["ALL"] = Cell.vars.raidSetup[role]["ALL"] + 1
-            -- update for each class
-            if class then
-                if not Cell.vars.raidSetup[role][class] then
-                    Cell.vars.raidSetup[role][class] = 1
-                else
-                    Cell.vars.raidSetup[role][class] = Cell.vars.raidSetup[role][class] + 1
-                end
-            end
-        end
+        RebuildRaidSetup()
 
         -- update Cell.unitButtons.raid.units
-        for i = GetNumGroupMembers()+1, 40 do
+        for i = F.GetNumGroupMembers()+1, 40 do
             Cell.unitButtons.raid.units["raid"..i] = nil
             _G["CellRaidFrameMember"..i] = nil
         end
-        F.UpdateRaidSetup()
-
         -- update Cell.unitButtons.party.units
         Cell.unitButtons.party.units["player"] = nil
         Cell.unitButtons.party.units["pet"] = nil
@@ -571,7 +573,7 @@ function eventFrame:GROUP_ROSTER_UPDATE()
             Cell.unitButtons.party.units["partypet"..i] = nil
         end
 
-    elseif IsInGroup() then
+    elseif F.IsInGroup() then
         if Cell.vars.groupType ~= "party" then
             Cell.vars.groupType = "party"
             F.Debug("|cffffbb77GroupTypeChanged:|r party")
@@ -585,7 +587,7 @@ function eventFrame:GROUP_ROSTER_UPDATE()
         end
 
         -- update Cell.unitButtons.party.units
-        for i = GetNumGroupMembers(), 4 do
+        for i = F.GetNumGroupMembers(), 4 do
             Cell.unitButtons.party.units["party"..i] = nil
             Cell.unitButtons.party.units["partypet"..i] = nil
         end
@@ -619,6 +621,21 @@ function eventFrame:GROUP_ROSTER_UPDATE()
         F.Debug("|cffbb00bbPermissionChanged")
     end
 end
+eventFrame.PARTY_MEMBERS_CHANGED = eventFrame.RAID_ROSTER_UPDATE
+eventFrame.PARTY_LEADER_CHANGED = eventFrame.RAID_ROSTER_UPDATE
+
+local raidSetupUpdatePending
+Cell.RegisterCallback("GroupRoleChanged", "Core_GroupRoleChanged", function()
+    if not F.IsInRaid() or raidSetupUpdatePending then return end
+
+    raidSetupUpdatePending = true
+    F.C_Timer.After(0, function()
+        raidSetupUpdatePending = nil
+        if F.IsInRaid() then
+            RebuildRaidSetup()
+        end
+    end)
+end)
 
 local inInstance
 function eventFrame:PLAYER_ENTERING_WORLD()
@@ -630,14 +647,15 @@ function eventFrame:PLAYER_ENTERING_WORLD()
 
     if isIn then
         F.Debug("|cffff1111*** Entered Instance:|r", iType)
+        Cell.Fire("EnterInstance", iType)
         PreUpdateLayout()
         inInstance = true
 
         -- NOTE: delayed raid difficulty check
         if iType == "raid" then
-            C_Timer.After(0.5, function()
+            F.C_Timer.After(0.5, function()
                 --! can't get difficultyID, difficultyName immediately after entering an instance
-                local _, _, difficultyID, difficultyName, maxPlayers = GetInstanceInfo()
+                local _, _, _, _, maxPlayers = GetInstanceInfo()
                 -- if difficultyID == 3 or difficultyID == 5 or difficultyID == 175 or difficultyID == 193 then
                 --     Cell.vars.raidType = "raid10"
                 -- elseif difficultyID == 4 or difficultyID == 6 or difficultyID == 176 or difficultyID == 194 then
@@ -654,8 +672,9 @@ function eventFrame:PLAYER_ENTERING_WORLD()
             end)
         end
 
-    elseif inInstance then -- left insntance
+    elseif inInstance then -- left instance
         F.Debug("|cffff1111*** Left Instance|r")
+        Cell.Fire("LeaveInstance")
         PreUpdateLayout()
         inInstance = false
 
@@ -670,46 +689,24 @@ function eventFrame:PLAYER_ENTERING_WORLD()
     end
 end
 
-local function CheckDivineAegis()
-    if Cell.vars.playerClass == "PRIEST" then
-        local rank = select(5, GetTalentInfo(1, 22))
-        if rank == 1 then
-            Cell.vars.divineAegisMultiplier = 0.1
-        elseif rank == 2 then
-            Cell.vars.divineAegisMultiplier = 0.2
-        elseif rank == 3 then
-            Cell.vars.divineAegisMultiplier = 0.3
-        end
-    end
-end
-
-local function UpdateSpecVars(skipTalentUpdate)
-    -- if not skipTalentUpdate then
-        Cell.vars.activeTalentGroup = GetActiveTalentGroup()
-        Cell.vars.playerSpecID = Cell.vars.activeTalentGroup
-    -- end
+local function UpdateSpecVars()
+    Cell.vars.activeTalentGroup = GetActiveTalentGroup()
+    Cell.vars.playerSpecID = Cell.vars.activeTalentGroup
 end
 
 function eventFrame:PLAYER_LOGIN()
     F.Debug("|cffbbbbbb=== PLAYER_LOGIN ===")
     eventFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
-    eventFrame:RegisterEvent("GROUP_ROSTER_UPDATE")
+    eventFrame:RegisterEvent("RAID_ROSTER_UPDATE")
+    eventFrame:RegisterEvent("PARTY_MEMBERS_CHANGED")
+    eventFrame:RegisterEvent("PARTY_LEADER_CHANGED")
     eventFrame:RegisterEvent("ACTIVE_TALENT_GROUP_CHANGED")
     eventFrame:RegisterEvent("PLAYER_TALENT_UPDATE")
-    eventFrame:RegisterEvent("UI_SCALE_CHANGED")
+    eventFrame:RegisterEvent("DISPLAY_SIZE_CHANGED")
 
     Cell.vars.playerNameShort = GetUnitName("player")
     Cell.vars.playerNameFull = F.UnitFullName("player")
 
-    CheckDivineAegis()
-
-    --! init bgMaxPlayers
-    for i = 1, GetNumBattlegroundTypes() do
-        local bgName, _, _, _, _, _, bgId, maxPlayers = GetBattlegroundInfo(i)
-        if bgId then
-            bgMaxPlayers[bgId] = maxPlayers
-        end
-    end
 
     Cell.vars.playerGUID = UnitGUID("player")
 
@@ -717,11 +714,11 @@ function eventFrame:PLAYER_LOGIN()
     UpdateSpecVars()
 
     --! init Cell.vars.currentLayout and Cell.vars.currentLayoutTable
-    eventFrame:GROUP_ROSTER_UPDATE()
+    eventFrame:RAID_ROSTER_UPDATE()
     -- update click-castings
     Cell.Fire("UpdateClickCastings")
     -- update indicators
-    -- Cell.Fire("UpdateIndicators") -- NOTE: already update in GROUP_ROSTER_UPDATE -> GroupTypeChanged -> F.UpdateLayout
+    -- Cell.Fire("UpdateIndicators") -- NOTE: already update in roster update -> GroupTypeChanged -> F.UpdateLayout
     -- update texture and font
     Cell.Fire("UpdateAppearance")
     Cell.UpdateOptionsFont(CellDB["appearance"]["optionsFontSizeOffset"], CellDB["appearance"]["useGameFont"])
@@ -747,14 +744,14 @@ function eventFrame:PLAYER_LOGIN()
     -- update pixel perfect
     Cell.Fire("UpdatePixelPerfect")
     -- LibHealComm
-    -- F.EnableLibHealComm(CellDB["appearance"]["useLibHealComm"])
+    if F.EnableLibHealComm then F.EnableLibHealComm() end
     -- update LGF
     F.UpdateFramePriority()
 end
 
 local function UpdatePixels()
     if not InCombatLockdown() then
-        F.Debug("UI_SCALE_CHANGED: ", UIParent:GetScale(), CellParent:GetEffectiveScale())
+        F.Debug("DISPLAY_SIZE_CHANGED: ", UIParent:GetScale(), CellParent:GetEffectiveScale())
         Cell.Fire("UpdatePixelPerfect")
         Cell.Fire("UpdateAppearance", "scale")
     end
@@ -765,14 +762,24 @@ local function DelayedUpdatePixels()
     if updatePixelsTimer then
         updatePixelsTimer:Cancel()
     end
-    updatePixelsTimer = C_Timer.NewTimer(1, UpdatePixels)
+    updatePixelsTimer = F.C_Timer.NewTimer(1, UpdatePixels)
 end
 
-function eventFrame:UI_SCALE_CHANGED()
+function eventFrame:DISPLAY_SIZE_CHANGED()
     DelayedUpdatePixels()
 end
 
+local pixelScaleCVars = {
+    uiscale = true,
+    useuiscale = true,
+}
+
 hooksecurefunc(UIParent, "SetScale", DelayedUpdatePixels)
+hooksecurefunc("SetCVar", function(cvar)
+    if type(cvar) == "string" and pixelScaleCVars[strlower(cvar)] then
+        DelayedUpdatePixels()
+    end
+end)
 
 function eventFrame:ACTIVE_TALENT_GROUP_CHANGED()
     F.Debug("|cffbbbbbb=== ACTIVE_TALENT_GROUP_CHANGED ===")
@@ -784,13 +791,10 @@ function eventFrame:ACTIVE_TALENT_GROUP_CHANGED()
         F.Debug("|cffffbb77ActiveTalentGroupChanged:|r", Cell.vars.activeTalentGroup)
         Cell.Fire("ActiveTalentGroupChanged", Cell.vars.activeTalentGroup)
 
-        CheckDivineAegis()
     end
 end
 
--- check Divine Aegis
 function eventFrame:PLAYER_TALENT_UPDATE()
-    CheckDivineAegis()
     -- UpdateSpecVars(true)
     F.UpdateClickCastingProfileLabel()
 end

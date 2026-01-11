@@ -37,11 +37,11 @@ local function CreateRTPane()
     -- battle res
     resCB = Cell.CreateCheckButton(rtPane, L["Battle Res Timer"], function(checked, self)
         CellDB["tools"]["battleResTimer"][1] = checked
-        resDetachCB:SetEnabled(checked)
+        F.SetEnabled(resDetachCB, checked)
         Cell.Fire("UpdateTools", "battleResTimer")
     end, L["Battle Res Timer"], L["Only show during encounter or in mythic+"])
     resCB:SetPoint("TOPLEFT", rtPane, "TOPLEFT", 5, -27)
-    resCB:SetEnabled(Cell.isRetail)
+    F.SetEnabled(resCB, false)
 
     resDetachCB = Cell.CreateCheckButton(rtPane, L["Detached"], function(checked, self)
         CellDB["tools"]["battleResTimer"][2] = checked
@@ -71,16 +71,16 @@ local function CreateRTPane()
     -- buff tracker
     buffCB = Cell.CreateCheckButton(rtPane, L["Buff Tracker"], function(checked, self)
         CellDB["tools"]["buffTracker"][1] = checked
-        buffDropdown:SetEnabled(checked)
-        sizeEditBox:SetEnabled(checked)
+        F.SetEnabled(buffDropdown, checked)
+        F.SetEnabled(sizeEditBox, checked)
         if buffButtons then
             for buff, b in pairs(buffButtons) do
-                b:SetEnabled(checked)
+                F.SetEnabled(b, checked)
             end
         end
         Cell.Fire("UpdateTools", "buffTracker")
     end, L["Buff Tracker"].." |cffff7727"..L["MODERATE CPU USAGE"], L["Check if your group members need some raid buffs"],
-    Cell.isRetail and L["|cffffb5c5Left-Click:|r cast the spell"] or "|cffffb5c5(Shift)|r "..L["|cffffb5c5Left-Click:|r cast the spell"],
+    "|cffffb5c5(Shift)|r "..L["|cffffb5c5Left-Click:|r cast the spell"],
     L["|cffffb5c5Right-Click:|r report unaffected"])
     -- L["Use |cFFFFB5C5/cell buff X|r to set icon size"],
     -- "|cffffffff" .. L["Current"]..": |cFFFFB5C5"..CellDB["tools"]["buffTracker"][3])
@@ -151,55 +151,54 @@ local function CreateRTPane()
         end
     end)
 
-    if Cell.isVanilla or Cell.isTBC or Cell.isWrath or Cell.isCata then
-        buffButtons = {}
+    buffButtons = {}
 
-        local buffOrder, buffs = U.GetBuffTrackerInfo()
+    local buffOrder, buffs = U.GetBuffTrackerInfo()
 
-        local last
-        for i, buff in ipairs(buffOrder) do
-            local b = Cell.CreateButton(rtPane, "", "accent-hover", {20, 20})
-            buffButtons[buff] = b
+    local last
+    for i, buff in ipairs(buffOrder) do
+        local b = Cell.CreateButton(rtPane, "", "accent-hover", {20, 20})
+        buffButtons[buff] = b
 
-            local tex = b:CreateTexture(nil, "ARTWORK")
-            P.Point(tex, "TOPLEFT", b, "TOPLEFT", 1, -1)
-            P.Point(tex, "BOTTOMRIGHT", b, "BOTTOMRIGHT", -1, 1)
-            tex:SetTexture(buffs[buff]["buff1"]["icon"])
-            tex:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+        local tex = b:CreateTexture(nil, "ARTWORK")
+        F.FixTextureDesaturation(tex)
+        P.Point(tex, "TOPLEFT", b, "TOPLEFT", 1, -1)
+        P.Point(tex, "BOTTOMRIGHT", b, "BOTTOMRIGHT", -1, 1)
+        tex:SetTexture(buffs[buff]["buff1"]["icon"])
+        tex:SetTexCoord(0.08, 0.92, 0.08, 0.92)
 
-            b:SetScript("OnEnable", function()
-                tex:SetDesaturated(false)
-            end)
-            b:SetScript("OnDisable", function()
-                tex:SetDesaturated(true)
-            end)
+        b:SetScript("OnEnable", function()
+            tex:SetDesaturated(false)
+        end)
+        b:SetScript("OnDisable", function()
+            tex:SetDesaturated(true)
+        end)
 
-            b:SetScript("OnClick", function()
-                CellDB["tools"]["buffTracker"][5][buff] = not CellDB["tools"]["buffTracker"][5][buff]
-                Cell.Fire("UpdateTools", "buffTracker")
-                if CellDB["tools"]["buffTracker"][5][buff] then
-                    b:SetAlpha(1)
-                else
-                    b:SetAlpha(0.25)
-                end
-            end)
-
-            if last then
-                b:SetPoint("TOPLEFT", last, "TOPRIGHT", 2, 0)
+        b:SetScript("OnClick", function()
+            CellDB["tools"]["buffTracker"][5][buff] = not CellDB["tools"]["buffTracker"][5][buff]
+            Cell.Fire("UpdateTools", "buffTracker")
+            if CellDB["tools"]["buffTracker"][5][buff] then
+                b:SetAlpha(1)
             else
-                b:SetPoint("TOPLEFT", sizeEditBox, "TOPRIGHT", 5, 0)
+                b:SetAlpha(0.25)
             end
+        end)
 
-            last = b
+        if last then
+            b:SetPoint("TOPLEFT", last, "TOPRIGHT", 2, 0)
+        else
+            b:SetPoint("TOPLEFT", sizeEditBox, "TOPRIGHT", 5, 0)
         end
+
+        last = b
     end
 
     -- ready & pull
     readyPullCB = Cell.CreateCheckButton(rtPane, L["ReadyCheck and PullTimer buttons"], function(checked, self)
         CellDB["tools"]["readyAndPull"][1] = checked
-        styleDropdown:SetEnabled(checked)
-        pullDropdown:SetEnabled(checked)
-        secEditBox:SetEnabled(checked)
+        F.SetEnabled(styleDropdown, checked)
+        F.SetEnabled(pullDropdown, checked)
+        F.SetEnabled(secEditBox, checked)
         Cell.Fire("UpdateTools", "buttons")
     end, L["ReadyCheck and PullTimer buttons"], L["Only show when you have permission to do this"], L["readyCheckTips"], L["pullTimerTips"])
     readyPullCB:SetPoint("TOPLEFT", buffCB, "BOTTOMLEFT", 0, -43)
@@ -301,8 +300,8 @@ local function CreateRTPane()
     -- marks bar
     marksBarCB = Cell.CreateCheckButton(rtPane, L["Marks Bar"], function(checked, self)
         CellDB["tools"]["marks"][1] = checked
-        marksDropdown:SetEnabled(checked)
-        marksShowSoloCB:SetEnabled(checked)
+        F.SetEnabled(marksDropdown, checked)
+        F.SetEnabled(marksShowSoloCB, checked)
         Cell.Fire("UpdateTools", "marks")
     end, L["Marks Bar"], L["Only show when you have permission to do this"], L["marksTips"])
     marksBarCB:SetPoint("TOPLEFT", readyPullCB, "BOTTOMLEFT", 0, -43)
@@ -324,42 +323,6 @@ local function CreateRTPane()
             ["value"] = "target_v",
             ["onClick"] = function()
                 CellDB["tools"]["marks"][3] = "target_v"
-                Cell.Fire("UpdateTools", "marks")
-            end,
-        },
-        {
-            ["text"] = L["World Marks"].." ("..L["Horizontal"]..")",
-            ["value"] = "world_h",
-            ["disabled"] = Cell.isVanilla or Cell.isTBC or Cell.isWrath,
-            ["onClick"] = function()
-                CellDB["tools"]["marks"][3] = "world_h"
-                Cell.Fire("UpdateTools", "marks")
-            end,
-        },
-        {
-            ["text"] = L["World Marks"].." ("..L["Vertical"]..")",
-            ["value"] = "world_v",
-            ["disabled"] = Cell.isVanilla or Cell.isTBC or Cell.isWrath,
-            ["onClick"] = function()
-                CellDB["tools"]["marks"][3] = "world_v"
-                Cell.Fire("UpdateTools", "marks")
-            end,
-        },
-        {
-            ["text"] = L["Both"].." ("..L["Horizontal"]..")",
-            ["value"] = "both_h",
-            ["disabled"] = Cell.isVanilla or Cell.isTBC or Cell.isWrath,
-            ["onClick"] = function()
-                CellDB["tools"]["marks"][3] = "both_h"
-                Cell.Fire("UpdateTools", "marks")
-            end,
-        },
-        {
-            ["text"] = L["Both"].." ("..L["Vertical"]..")",
-            ["value"] = "both_v",
-            ["disabled"] = Cell.isVanilla or Cell.isTBC or Cell.isWrath,
-            ["onClick"] = function()
-                CellDB["tools"]["marks"][3] = "both_v"
                 Cell.Fire("UpdateTools", "marks")
             end,
         }
@@ -410,7 +373,7 @@ local function ShowUtilitySettings(which)
         -- raid tools
         resCB:SetChecked(CellDB["tools"]["battleResTimer"][1])
         resDetachCB:SetChecked(CellDB["tools"]["battleResTimer"][2])
-        resDetachCB:SetEnabled(Cell.isRetail and CellDB["tools"]["battleResTimer"][1])
+        F.SetEnabled(resDetachCB, false)
         reportCB:SetChecked(CellDB["tools"]["deathReport"][1])
 
         buffCB:SetChecked(CellDB["tools"]["buffTracker"][1])
@@ -419,7 +382,7 @@ local function ShowUtilitySettings(which)
         Cell.SetEnabled(CellDB["tools"]["buffTracker"][1], buffDropdown, sizeEditBox)
         if buffButtons then
             for buff, b in pairs(buffButtons) do
-                b:SetEnabled(CellDB["tools"]["buffTracker"][1])
+                F.SetEnabled(b, CellDB["tools"]["buffTracker"][1])
                 b:SetAlpha(CellDB["tools"]["buffTracker"][5][buff] and 1 or 0.25)
             end
         end
@@ -430,9 +393,9 @@ local function ShowUtilitySettings(which)
         secEditBox:SetText(CellDB["tools"]["readyAndPull"][3][2])
         Cell.SetEnabled(CellDB["tools"]["readyAndPull"][1], styleDropdown, pullDropdown, secEditBox)
 
-        marksDropdown:SetEnabled(CellDB["tools"]["marks"][1])
+        F.SetEnabled(marksDropdown, CellDB["tools"]["marks"][1])
         marksBarCB:SetChecked(CellDB["tools"]["marks"][1])
-        marksDropdown:SetSelectedValue(CellDB["tools"]["marks"][3])
+        marksDropdown:SetSelectedValue(strfind(CellDB["tools"]["marks"][3], "_v$") and "target_v" or "target_h")
         marksShowSoloCB:SetChecked(CellDB["tools"]["marks"][2])
 
         fadeOutToolsCB:SetChecked(CellDB["tools"]["fadeOut"])

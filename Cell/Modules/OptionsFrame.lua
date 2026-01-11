@@ -7,12 +7,33 @@ local lastShownTab
 
 local optionsFrame = Cell.CreateFrame("CellOptionsFrame", Cell.frames.mainFrame, 432, 401)
 Cell.frames.optionsFrame = optionsFrame
-PixelUtil.SetPoint(optionsFrame, "CENTER", CellParent, "CENTER", 1, -1)
+F.PixelUtil.SetPoint(optionsFrame, "CENTER", CellParent, "CENTER", 1, -1)
 optionsFrame:SetFrameStrata("DIALOG")
-optionsFrame:SetFrameLevel(520)
+optionsFrame:SetFrameLevel(10)
 optionsFrame:SetClampedToScreen(true)
 optionsFrame:SetClampRectInsets(0, 0, 40, 0)
 optionsFrame:SetMovable(true)
+
+local function HideOptionMasks()
+    local tabKeys = {
+        "generalTab",
+        "appearanceTab",
+        "layoutsTab",
+        "clickCastingsTab",
+        "indicatorsTab",
+        "raidDebuffsTab",
+        "utilitiesTab",
+        "aboutTab",
+        "quickAssistTab",
+    }
+
+    for _, key in ipairs(tabKeys) do
+        local tab = Cell.frames[key]
+        if tab and tab.mask then
+            tab.mask:Hide()
+        end
+    end
+end
 
 local function RegisterDragForOptionsFrame(frame)
     frame:RegisterForDrag("LeftButton")
@@ -90,11 +111,15 @@ local function CreateTabButtons()
     }
 
     local function ShowTab(tab)
+        HideOptionMasks()
+
         if lastShownTab ~= tab then
             P.Height(optionsFrame, tabHeight[tab])
             Cell.Fire("ShowOptionsTab", tab)
             lastShownTab = tab
         end
+
+        HideOptionMasks()
     end
 
     local function OnEnter(b)
@@ -111,7 +136,7 @@ local function CreateTabButtons()
 
     local function OnLeave(b)
         if b.id == utilitiesBtn.id then
-            utilitiesBtn.timer = C_Timer.NewTicker(0.5, function()
+            utilitiesBtn.timer = F.C_Timer.NewTicker(0.5, function()
                 if not F.IsUtilityListMouseover() then
                     F.HideUtilityList()
                     utilitiesBtn.timer:Cancel()
@@ -157,6 +182,8 @@ optionsFrame:SetScript("OnShow", function()
     if not P.LoadPosition(optionsFrame, CellDB["optionsFramePosition"]) then
         P.PixelPerfectPoint(optionsFrame)
     end
+    HideOptionMasks()
+    F.C_Timer.After(0, HideOptionMasks)
 end)
 
 optionsFrame:SetScript("OnHide", function()
@@ -216,7 +243,7 @@ function F.ApplyCombatProtectionToWidget(widget)
     tinsert(protectedWidgets, widget)
 
     if InCombatLockdown() then
-        widget:SetEnabled(false)
+        F.SetEnabled(widget, false)
     end
 end
 
@@ -228,14 +255,14 @@ optionsFrame:SetScript("OnEvent", function(self, event)
             f.combatMask:Show()
         end
         for _, w in pairs(protectedWidgets) do
-            w:SetEnabled(false)
+            F.SetEnabled(w, false)
         end
     elseif event == "PLAYER_REGEN_ENABLED" then
         for _, f in pairs(protectedFrames) do
             f.combatMask:Hide()
         end
         for _, w in pairs(protectedWidgets) do
-            w:SetEnabled(true)
+            F.SetEnabled(w, true)
         end
     end
 end)

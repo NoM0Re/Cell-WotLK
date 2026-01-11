@@ -8,7 +8,7 @@ local A = Cell.animations
 -----------------------------------------
 -- forked from ElvUI
 -----------------------------------------
-local FADEFRAMES, FADEMANAGER = {}, CreateFrame('FRAME')
+local FADEFRAMES, FADEMANAGER = {}, CreateFrame('Frame')
 FADEMANAGER.interval = 0.025
 
 -----------------------------------------
@@ -120,6 +120,8 @@ function A.ApplyFadeInOutToParent(parent, condition, ...)
                 A.FrameFadeOut(parent, 0.25, parent:GetAlpha(), 0)
             end
         end)
+
+        f:EnableMouse(true)
     end
 end
 
@@ -130,8 +132,7 @@ function A.CreateFadeIn(frame, fromAlpha, toAlpha, duration, delay, onFinished)
     local fadeIn = frame:CreateAnimationGroup()
     frame.fadeIn = fadeIn
     fadeIn.alpha = fadeIn:CreateAnimation("Alpha")
-    fadeIn.alpha:SetFromAlpha(fromAlpha)
-    fadeIn.alpha:SetToAlpha(toAlpha)
+    F.AlphaSetFromTo(fadeIn.alpha, fromAlpha, toAlpha)
     fadeIn.alpha:SetDuration(duration)
     if delay then fadeIn.alpha:SetStartDelay(delay) end
 
@@ -155,8 +156,7 @@ function A.CreateFadeOut(frame, fromAlpha, toAlpha, duration, delay, onFinished)
     local fadeOut = frame:CreateAnimationGroup()
     frame.fadeOut = fadeOut
     fadeOut.alpha = fadeOut:CreateAnimation("Alpha")
-    fadeOut.alpha:SetFromAlpha(fromAlpha)
-    fadeOut.alpha:SetToAlpha(toAlpha)
+    F.AlphaSetFromTo(fadeOut.alpha, fromAlpha, toAlpha)
     fadeOut.alpha:SetDuration(duration)
     if delay then fadeOut.alpha:SetStartDelay(delay) end
 
@@ -185,13 +185,13 @@ end
 function A.ApplyFadeInOutToMenu(anchorFrame, hoverFrame)
     local fadingIn, fadedIn, fadingOut, fadedOut
     anchorFrame.fadeIn = anchorFrame:CreateAnimationGroup()
-    anchorFrame.fadeIn.alpha = anchorFrame.fadeIn:CreateAnimation("alpha")
-    anchorFrame.fadeIn.alpha:SetFromAlpha(0)
-    anchorFrame.fadeIn.alpha:SetToAlpha(1)
+    anchorFrame.fadeIn.alpha = anchorFrame.fadeIn:CreateAnimation("Alpha")
+    F.AlphaSetFromTo(anchorFrame.fadeIn.alpha, 0, 1)
     anchorFrame.fadeIn.alpha:SetDuration(0.5)
     anchorFrame.fadeIn.alpha:SetSmoothing("OUT")
     anchorFrame.fadeIn:SetScript("OnPlay", function()
         anchorFrame.fadeOut:Finish()
+        anchorFrame:Show()
         fadingIn = true
     end)
     anchorFrame.fadeIn:SetScript("OnFinished", function()
@@ -199,7 +199,6 @@ function A.ApplyFadeInOutToMenu(anchorFrame, hoverFrame)
         fadingOut = false
         fadedIn = true
         fadedOut = false
-        anchorFrame:SetAlpha(1)
 
         if CellDB["general"]["fadeOut"] and not hoverFrame:IsMouseOver() then
             anchorFrame.fadeOut:Play()
@@ -207,9 +206,8 @@ function A.ApplyFadeInOutToMenu(anchorFrame, hoverFrame)
     end)
 
     anchorFrame.fadeOut = anchorFrame:CreateAnimationGroup()
-    anchorFrame.fadeOut.alpha = anchorFrame.fadeOut:CreateAnimation("alpha")
-    anchorFrame.fadeOut.alpha:SetFromAlpha(1)
-    anchorFrame.fadeOut.alpha:SetToAlpha(0)
+    anchorFrame.fadeOut.alpha = anchorFrame.fadeOut:CreateAnimation("Alpha")
+    F.AlphaSetFromTo(anchorFrame.fadeOut.alpha, 1, 0)
     anchorFrame.fadeOut.alpha:SetDuration(0.5)
     anchorFrame.fadeOut.alpha:SetSmoothing("OUT")
     anchorFrame.fadeOut:SetScript("OnPlay", function()
@@ -221,7 +219,7 @@ function A.ApplyFadeInOutToMenu(anchorFrame, hoverFrame)
         fadingOut = false
         fadedIn = false
         fadedOut = true
-        anchorFrame:SetAlpha(0)
+        anchorFrame:Hide()
 
         if hoverFrame:IsMouseOver() then
             anchorFrame.fadeIn:Play()
@@ -241,6 +239,7 @@ function A.ApplyFadeInOutToMenu(anchorFrame, hoverFrame)
             anchorFrame.fadeOut:Play()
         end
     end)
+    hoverFrame:EnableMouse(true)
 end
 
 -----------------------------------------
@@ -252,17 +251,27 @@ function A.CreateBlinkAnimation(region, duration, enableShowHideHook)
 
     local alpha = blink:CreateAnimation("Alpha")
     blink.alpha = alpha
-    alpha:SetFromAlpha(0.25)
-    alpha:SetToAlpha(1)
+    F.AlphaSetFromTo(alpha, 0.25, 1)
     alpha:SetDuration(duration or 0.5)
 
     blink:SetLooping("BOUNCE")
 
-    if enableShowHideHook then
+    if enableShowHideHook and region.HookScript then
         region:HookScript("OnShow", function()
             blink:Play()
         end)
         region:HookScript("OnHide", function()
+            blink:Stop()
+        end)
+    elseif enableShowHideHook and region.SetScript then
+        local onShow = region.GetScript and region:GetScript("OnShow")
+        local onHide = region.GetScript and region:GetScript("OnHide")
+        region:SetScript("OnShow", function(self, ...)
+            if onShow then onShow(self, ...) end
+            blink:Play()
+        end)
+        region:SetScript("OnHide", function(self, ...)
+            if onHide then onHide(self, ...) end
             blink:Stop()
         end)
     else

@@ -5,6 +5,7 @@
 -- key - A key in the table (cannot be nil) (value)
 -- value - New value to set for the key (value)
 select(2, ...).L = setmetatable({
+    ["|cffeda55fLeft-Click|r to toggle showing the options window."] = "|cffeda55fLeft-Click|r to toggle showing the options window.",
     ["target"] = "Target",
     ["focus"] = "Focus",
     ["assist"] = "Assist",
@@ -87,6 +88,26 @@ select(2, ...).L = setmetatable({
 
     ["CHANGELOGS"] = [[
         <h2>If there are any issues after an update, check through all code snippets first.</h2>
+        <br/>
+
+        <h1>Hello to all Cell users, and thank you for your continued support!</h1>
+        <p>Although it's already far too late to say this, I still want to offer my apologies. I wasn't able to deliver the new version of Cell for the retail servers as promised last month.</p>
+        <p>Since the end of February, work has kept me completely occupied, leaving me with no time or energy to continue the project's refactor.</p>
+        <p>Fortunately, our amazing contributors stepped in and fixed Cell, giving the project a bit more life. I'm truly grateful for their help.</p>
+        <p>I hope to return as soon as possible and bring you even better work.</p>
+        <p>Thank you all for your support and encouragement.</p>
+        <p>For Azeroth!</p>
+        <p>— enderneko</p>
+        <br/>
+
+        <p><a href="older">Click to view older changelogs</a></p>
+        <br/>
+    ]],
+
+    ["OLDER_CHANGELOGS"] = [[
+        <h1>r274-release (2026-01-22 19:07 GMT+8)</h1>
+        <p>* Update Molten Core debuffs (thanks Rurutia).</p>
+        <p>* Fixed an issue with getting hostile boss frames via LibGetFrame.</p>
         <br/>
 
         <h1>r273-release (2025-12-29 17:40 GMT+8)</h1>
@@ -362,11 +383,6 @@ select(2, ...).L = setmetatable({
         <p>+ Updated locales: deDE, frFR, ptBR, ruRU, zhTW.</p>
         <br/>
 
-        <p><a href="older">Click to view older changelogs</a></p>
-        <br/>
-    ]],
-
-    ["OLDER_CHANGELOGS"] = [[
         <h1>r238-release (Aug 7, 2024, 15:25 GMT+8)</h1>
         <p>* Fixed missing indicators.</p>
         <p>* Updated deDE and zhTW.</p>

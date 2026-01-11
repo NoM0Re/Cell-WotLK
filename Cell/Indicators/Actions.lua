@@ -6,6 +6,8 @@ local F = Cell.funcs
 local I = Cell.iFuncs
 
 local orientation, speed
+local band, bor = bit.band, bit.bor
+local UnitGUID = UnitGUID
 
 -------------------------------------------------
 -- events
@@ -16,34 +18,49 @@ local orientation, speed
 -- [15:13] SPELL_HEAL 秋静葉 秋静葉 307192 灵魂治疗药水
 -- [15:13] SPELL_CAST_SUCCESS 秋静葉 nil 307192 灵魂治疗药水
 
--- UNIT_SPELLCAST_SUCCEEDED
--- unit, castGUID, spellID
+-- COMBAT_LOG_EVENT_UNFILTERED
+-- 3.3.5a: timestamp, subevent, sourceGUID, sourceName, sourceFlags, destGUID, destName, destFlags, spellID, spellName
 
 local function Display(b, ...)
     b.indicators.actions:Display(...)
 end
 
+local GROUP_SOURCE_FLAGS = bor(COMBATLOG_OBJECT_AFFILIATION_MINE, COMBATLOG_OBJECT_AFFILIATION_PARTY, COMBATLOG_OBJECT_AFFILIATION_RAID)
+local petGUID
+
+local function UpdatePetGUID()
+    petGUID = UnitGUID("pet")
+end
+
+local function IsGroupSource(sourceGUID, sourceFlags)
+    if sourceGUID == Cell.vars.playerGUID or sourceGUID == petGUID then
+        return true
+    end
+    return sourceFlags and band(sourceFlags, GROUP_SOURCE_FLAGS) ~= 0
+end
+
 local eventFrame = CreateFrame("Frame")
-eventFrame:SetScript("OnEvent", function(self, event, unit, castGUID, spellID)
-    -- filter out players not in your group
-    if not (UnitInRaid(unit) or UnitInParty(unit) or unit == "player" or unit == "pet") then return end
+eventFrame:SetScript("OnEvent", function(self, event, ...)
+    if event == "UNIT_PET" then
+        local unit = ...
+        if unit == "player" then
+            UpdatePetGUID()
+        end
+        return
+    end
+
+    local timestamp, subevent, sourceGUID, sourceName, sourceFlags, destGUID, destName, destFlags, spellID, spellName = ...
+    if subevent ~= "SPELL_CAST_SUCCESS" or not IsGroupSource(sourceGUID, sourceFlags) then return end
 
     if Cell.vars.actionsDebugModeEnabled then
         local name = F.GetSpellInfo(spellID)
-        print("|cFFFF3030[Cell]|r |cFFB2B2B2" .. event .. ":|r", unit, "|cFF00FF00" .. (spellID or "nil") .. "|r", name)
+        print("|cFFFF3030[Cell]|r |cFFB2B2B2" .. subevent .. ":|r", sourceName, "|cFF00FF00" .. (spellID or "nil") .. "|r", name)
     end
 
     if Cell.vars.actions[spellID] then
-        F.HandleUnitButton("unit", unit, Display, unpack(Cell.vars.actions[spellID]))
+        F.HandleUnitButton("guid", sourceGUID, Display, unpack(Cell.vars.actions[spellID]))
     end
 end)
-
--- local CombatLogGetCurrentEventInfo = CombatLogGetCurrentEventInfo
--- eventFrame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
--- eventFrame:SetScript("OnEvent", function()
---     local timestamp, subevent, _, sourceGUID, sourceName, sourceFlags, sourceRaidFlags, destGUID, destName, destFlags, destRaidFlags, spellId, spellName = CombatLogGetCurrentEventInfo()
---     print(subevent, sourceName, destName, spellId, spellName)
--- end)
 
 -------------------------------------------------
 -- pool
@@ -55,176 +72,100 @@ local function ResetterFunc(_, canvas)
 end
 
 -------------------------------------------------
--- animation: A
+-- stop-motion animations
 -------------------------------------------------
-local function CreateAnimationGroup_TypeA()
+local ActionFrameCount = 64
+local ActionAtlasColumns = 8
+local ActionAtlasTileWidth = 128
+local ActionAtlasTileHeight = 64
+local ActionAtlasWidth = 1024
+local ActionAtlasHeight = 512
+local ActionMediaPath = "Interface\\AddOns\\Cell\\Media\\Actions\\"
+local ActionDurations = {
+    A = 1.1,
+    B = 0.7,
+    D = 1,
+    E = 0.8,
+    F = 1,
+    G = 1,
+}
+local ActionAtlases = {
+    A = ActionMediaPath .. "Action_A_horizontal.tga",
+    AVertical = ActionMediaPath .. "Action_A_vertical.tga",
+    B = ActionMediaPath .. "Action_B.tga",
+    D = ActionMediaPath .. "Action_D.tga",
+    E = ActionMediaPath .. "Action_E.tga",
+    F = ActionMediaPath .. "Action_F.tga",
+    G = ActionMediaPath .. "Action_G.tga",
+}
+
+local function SetActionAtlasFrame(texture, frameIndex)
+    local column = frameIndex % ActionAtlasColumns
+    local row = floor(frameIndex / ActionAtlasColumns)
+    local left = (column * ActionAtlasTileWidth + 1.5) / ActionAtlasWidth
+    local right = ((column + 1) * ActionAtlasTileWidth - 1.5) / ActionAtlasWidth
+    local top = (row * ActionAtlasTileHeight + 1.5) / ActionAtlasHeight
+    local bottom = ((row + 1) * ActionAtlasTileHeight - 1.5) / ActionAtlasHeight
+    texture:SetTexCoord(left, right, top, bottom)
+end
+
+local function StopMotionOnUpdate(canvas, elapsed)
+    canvas.elapsed = canvas.elapsed + elapsed
+    local progress = min(1, canvas.elapsed / canvas.duration)
+    local frameIndex = floor(progress * (ActionFrameCount - 1) + 0.5)
+
+    if frameIndex ~= canvas.frameIndex then
+        canvas.frameIndex = frameIndex
+        SetActionAtlasFrame(canvas.texture, frameIndex)
+    end
+
+    if progress == 1 then
+        animationPool[canvas.animationType]:Release(canvas)
+    end
+end
+
+local function CreateStopMotionAnimation(animationType)
     local canvas = CreateFrame("Frame")
+    canvas:Hide()
+    canvas.animationType = animationType
 
-    -- frame
-    local f = CreateFrame("Frame", nil, canvas)
+    local texture = canvas:CreateTexture(nil, "ARTWORK")
+    texture:SetAllPoints(canvas)
+    canvas.texture = texture
+    canvas.ag = canvas
+    canvas:SetScript("OnUpdate", StopMotionOnUpdate)
 
-    -- texture
-    local tex = f:CreateTexture(nil, "ARTWORK")
-    tex:SetAllPoints(f)
-    tex:SetTexture(Cell.vars.whiteTexture)
-
-    -- mask
-    local mask = canvas:CreateMaskTexture()
-    mask:SetTexture(Cell.vars.whiteTexture, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
-    mask:SetAllPoints(canvas)
-    -- mask:SetSnapToPixelGrid(true)
-    tex:AddMaskTexture(mask)
-
-    -- animation
-    local ag = f:CreateAnimationGroup()
-    canvas.ag = ag
-
-    local a1 = ag:CreateAnimation("Alpha")
-    a1.duration = 0.6
-    a1:SetFromAlpha(0)
-    a1:SetToAlpha(1)
-    a1:SetOrder(1)
-    a1:SetDuration(a1.duration)
-    a1:SetSmoothing("OUT")
-
-    local t1 = ag:CreateAnimation("Translation")
-    t1.duration = 0.6
-    t1:SetOrder(1)
-    t1:SetSmoothing("OUT")
-    t1:SetDuration(t1.duration)
-
-    local a2 = ag:CreateAnimation("Alpha")
-    a2.duration = 0.5
-    a2:SetFromAlpha(1)
-    a2:SetToAlpha(0)
-    a2:SetDuration(a2.duration)
-    a2:SetOrder(2)
-    -- a2:SetSmoothing("IN")
-
-    ag:SetScript("OnPlay", function()
-        canvas:Show()
-    end)
-
-    ag:SetScript("OnFinished", function()
-        animationPool.A:Release(canvas)
-    end)
-
-    function ag:Display(parent, r, g, b)
+    function canvas:Display(parent, r, g, b)
         canvas:SetParent(parent)
         canvas:SetAllPoints(parent)
+        canvas:SetFrameLevel(parent:GetFrameLevel() + 1)
+        canvas.elapsed = 0
+        canvas.duration = ActionDurations[animationType] / parent.speed
+        canvas.frameIndex = nil
 
-        if parent.orientation == "horizontal" then
-            f:SetPoint("TOPRIGHT", canvas, "TOPLEFT")
-            f:SetPoint("BOTTOMRIGHT", canvas, "BOTTOMLEFT")
-            f:SetWidth(15)
-
-            t1:SetOffset(canvas:GetWidth(), 0)
-            tex:SetGradient("HORIZONTAL", CreateColor(r, g, b, 0), CreateColor(r, g, b, 1))
+        if animationType == "A" and parent.orientation ~= "horizontal" then
+            texture:SetTexture(ActionAtlases.AVertical)
         else
-            f:SetPoint("TOPLEFT", canvas, "BOTTOMLEFT")
-            f:SetPoint("TOPRIGHT", canvas, "BOTTOMRIGHT")
-            f:SetHeight(15)
-
-            t1:SetOffset(0, canvas:GetHeight())
-            tex:SetGradient("VERTICAL", CreateColor(r, g, b, 0), CreateColor(r, g, b, 1))
+            texture:SetTexture(ActionAtlases[animationType])
         end
-
-        a1:SetDuration(a1.duration / parent.speed)
-        t1:SetDuration(t1.duration / parent.speed)
-        a2:SetDuration(a2.duration / parent.speed)
-
-        if ag:IsPlaying() then
-            ag:Restart()
-        else
-            ag:Play()
-        end
+        texture:SetVertexColor(r, g, b, 1)
+        SetActionAtlasFrame(texture, 0)
+        canvas:Show()
     end
 
     return canvas
 end
 
-animationPool.A = CreateObjectPool(CreateAnimationGroup_TypeA, ResetterFunc)
+animationPool.A = CreateObjectPool(function() return CreateStopMotionAnimation("A") end, ResetterFunc)
+animationPool.B = CreateObjectPool(function() return CreateStopMotionAnimation("B") end, ResetterFunc)
 
--------------------------------------------------
--- animation: B
--------------------------------------------------
-local function CreateAnimationGroup_TypeB()
-    local WIDTH = 20
-
-    local canvas = CreateFrame("Frame")
-
-    -- frame
-    local f = CreateFrame("Frame", nil, canvas)
-    f:SetPoint("TOPRIGHT", canvas, "TOPLEFT")
-    f:SetPoint("BOTTOMRIGHT", canvas, "BOTTOMLEFT")
-    f:SetWidth(WIDTH)
-
-    -- texture
-    local tex = f:CreateTexture(nil, "ARTWORK")
-    tex:SetPoint("BOTTOMRIGHT")
-    tex:SetWidth(WIDTH)
-    tex:SetRotation(45 * math.pi / 180, CreateVector2D(1, 0))
-
-    -- mask
-    local mask = canvas:CreateMaskTexture()
-    mask:SetTexture(Cell.vars.whiteTexture, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
-    mask:SetAllPoints(canvas)
-    -- mask:SetSnapToPixelGrid(true)
-    tex:AddMaskTexture(mask)
-
-    -- animation
-    local ag = f:CreateAnimationGroup()
-    canvas.ag = ag
-
-    local a1 = ag:CreateAnimation("Alpha")
-    a1.duration = 0.35
-    a1:SetFromAlpha(0)
-    a1:SetToAlpha(0.7)
-    a1:SetDuration(a1.duration)
-    -- a1:SetSmoothing("IN")
-
-    local t1 = ag:CreateAnimation("Translation")
-    t1.duration = 0.7
-    t1:SetSmoothing("IN_OUT")
-    t1:SetDuration(t1.duration)
-
-    -- local a2 = ag:CreateAnimation("Alpha")
-    -- a2.duration = 0.3
-    -- a2:SetFromAlpha(0.7)
-    -- a2:SetToAlpha(0)
-    -- a2:SetDuration(a2.duration)
-    -- a2:SetStartDelay(t1.duration - a2.duration)
-
-    ag:SetScript("OnPlay", function()
-        canvas:Show()
-    end)
-
-    ag:SetScript("OnFinished", function()
-        animationPool.B:Release(canvas)
-    end)
-
-    function ag:Display(parent, r, g, b)
-        canvas:SetParent(parent)
-        canvas:SetAllPoints(parent)
-
-        a1:SetDuration(a1.duration / parent.speed)
-        t1:SetDuration(t1.duration / parent.speed)
-
-        t1:SetOffset(canvas:GetWidth() + math.tan(math.pi / 4) * canvas:GetHeight() + WIDTH / math.cos(math.pi / 4), 0)
-        tex:SetHeight(canvas:GetHeight() / math.sin(math.pi / 4) + WIDTH)
-        tex:SetColorTexture(r, g, b)
-
-        if ag:IsPlaying() then
-            ag:Restart()
-        else
-            ag:Play()
-        end
+local function PlayNativeAnimation(animationGroup, frame)
+    if animationGroup:IsPlaying() then
+        animationGroup:Stop()
     end
-
-    return canvas
+    frame:SetAlpha(0)
+    animationGroup:Play()
 end
-
-animationPool.B = CreateObjectPool(CreateAnimationGroup_TypeB, ResetterFunc)
 
 -------------------------------------------------
 -- animation: C
@@ -246,12 +187,10 @@ local function CreateAnimationGroup_TypeC()
 
     local a1 = ag:CreateAnimation("Alpha")
     a1.duration = 0.5
-    a1:SetFromAlpha(0)
-    a1:SetToAlpha(1)
+    F.AlphaSetFromTo(a1, 0, 0.6)
     a1:SetOrder(1)
     a1:SetDuration(a1.duration)
     a1:SetSmoothing("OUT")
-
     local t1 = ag:CreateAnimation("Translation")
     t1.duration = 0.5
     t1:SetOrder(1)
@@ -260,8 +199,7 @@ local function CreateAnimationGroup_TypeC()
 
     local a2 = ag:CreateAnimation("Alpha")
     a2.duration = 0.5
-    a2:SetFromAlpha(1)
-    a2:SetToAlpha(0)
+    F.AlphaSetFromTo(a2, 0.6, 0)
     a2:SetDuration(a2.duration)
     a2:SetOrder(2)
     a2:SetSmoothing("IN")
@@ -277,6 +215,8 @@ local function CreateAnimationGroup_TypeC()
     function ag:Display(parent, subType, r, g, b)
         canvas:SetParent(parent)
         canvas:SetAllPoints(parent)
+        canvas:SetFrameLevel(parent:GetFrameLevel() + 1)
+        f:SetFrameLevel(canvas:GetFrameLevel())
 
         f:ClearAllPoints()
         if subType == "1" then
@@ -295,14 +235,9 @@ local function CreateAnimationGroup_TypeC()
         a2:SetDuration(a2.duration / parent.speed)
 
         f:SetWidth(canvas:GetHeight() / 2)
-        t1:SetOffset(0, canvas:GetHeight() / 2)
-        tex:SetGradient("VERTICAL", CreateColor(r, g, b, 0), CreateColor(r, g, b, 1))
-
-        if ag:IsPlaying() then
-            ag:Restart()
-        else
-            ag:Play()
-        end
+        t1:SetOffset(0, canvas:GetHeight() / 2 * canvas:GetEffectiveScale())
+        tex:SetGradientAlpha("VERTICAL", r, g, b, 0, r, g, b, 1)
+        PlayNativeAnimation(ag, f)
     end
 
     return canvas
@@ -313,317 +248,22 @@ animationPool.C = CreateObjectPool(CreateAnimationGroup_TypeC, ResetterFunc)
 -------------------------------------------------
 -- animation: D
 -------------------------------------------------
-local function CreateAnimationGroup_TypeD()
-    local canvas = CreateFrame("Frame")
-
-    -- frame
-    local f = CreateFrame("Frame", nil, canvas)
-    f:SetAllPoints(canvas)
-
-    -- texture
-    local tex = f:CreateTexture(nil, "ARTWORK")
-    tex:SetPoint("CENTER")
-
-    -- mask1
-    local mask1 = f:CreateMaskTexture()
-    mask1:SetAllPoints(tex)
-    mask1:SetTexture("Interface/AddOns/Cell/Media/Shapes/circle_filled_256", "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
-    tex:AddMaskTexture(mask1)
-
-    -- mask2
-    local mask2 = canvas:CreateMaskTexture()
-    mask2:SetTexture(Cell.vars.whiteTexture, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
-    mask2:SetAllPoints(canvas)
-    tex:AddMaskTexture(mask2)
-
-    -- animation
-    local ag = f:CreateAnimationGroup()
-    canvas.ag = ag
-
-    local a1 = ag:CreateAnimation("Alpha")
-    a1.duration = 0.3
-    a1:SetFromAlpha(0)
-    a1:SetToAlpha(1)
-    a1:SetOrder(1)
-    a1:SetDuration(a1.duration)
-    a1:SetSmoothing("OUT")
-
-    local s1 = ag:CreateAnimation("Scale")
-    s1.duration = 0.5
-    s1:SetScaleFrom(0, 0)
-    s1:SetScaleTo(1, 1)
-    s1:SetOrder(1)
-    s1:SetDuration(s1.duration)
-
-    local a2 = ag:CreateAnimation("Alpha")
-    a2.duration = 0.5
-    a2:SetFromAlpha(1)
-    a2:SetToAlpha(0)
-    a2:SetDuration(a2.duration)
-    a2:SetOrder(2)
-    a2:SetSmoothing("IN")
-
-    ag:SetScript("OnPlay", function()
-        canvas:Show()
-    end)
-
-    ag:SetScript("OnFinished", function()
-        animationPool.D:Release(canvas)
-    end)
-
-    function ag:Display(parent, r, g, b)
-        canvas:SetParent(parent)
-        canvas:SetAllPoints(parent)
-
-        a1:SetDuration(a1.duration / parent.speed)
-        s1:SetDuration(s1.duration / parent.speed)
-        a2:SetDuration(a2.duration / parent.speed)
-
-        local l = math.sqrt((parent:GetParent():GetHeight() / 2) ^ 2 + (parent:GetParent():GetWidth() / 2) ^ 2) * 2
-        tex:SetSize(l, l)
-        tex:SetColorTexture(r, g, b, 0.6)
-
-        if ag:IsPlaying() then
-            ag:Restart()
-        else
-            ag:Play()
-        end
-    end
-
-    return canvas
-end
-
-animationPool.D = CreateObjectPool(CreateAnimationGroup_TypeD, ResetterFunc)
+animationPool.D = CreateObjectPool(function() return CreateStopMotionAnimation("D") end, ResetterFunc)
 
 -------------------------------------------------
 -- animation: E
 -------------------------------------------------
-local function CreateAnimationGroup_TypeE()
-    local canvas = CreateFrame("Frame")
-
-    -- frame
-    local f = CreateFrame("Frame", nil, canvas)
-    f:SetPoint("TOPRIGHT", canvas, "TOPLEFT")
-    f:SetPoint("BOTTOMRIGHT", canvas, "BOTTOMLEFT")
-
-    -- texture
-    local tex = f:CreateTexture(nil, "ARTWORK")
-    tex:SetAllPoints(f)
-    tex:SetTexture("Interface/AddOns/Cell/Media/Icons/arrow.tga")
-
-    -- mask
-    local mask = canvas:CreateMaskTexture()
-    mask:SetTexture(Cell.vars.whiteTexture, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
-    mask:SetAllPoints(canvas)
-    -- frame:SetSnapToPixelGrid(false)
-    -- frame:SetTexelSnappingBias(0)
-    tex:AddMaskTexture(mask)
-
-    -- animation
-    local ag = f:CreateAnimationGroup()
-    canvas.ag = ag
-
-    -- local a1 = ag:CreateAnimation("Alpha")
-    -- a1:SetFromAlpha(0)
-    -- a1:SetToAlpha(0.7)
-    -- a1:SetDuration(0.3)
-    -- a1:SetSmoothing("OUT")
-
-    local t1 = ag:CreateAnimation("Translation")
-    t1.duration = 0.8
-    t1:SetSmoothing("IN_OUT")
-    t1:SetDuration(t1.duration)
-
-    -- local a2 = ag:CreateAnimation("Alpha")
-    -- a2:SetFromAlpha(0.7)
-    -- a2:SetToAlpha(0)
-    -- a2:SetDuration(0.3)
-    -- a2:SetStartDelay(0.5)
-    -- a2:SetSmoothing("IN")
-
-    ag:SetScript("OnPlay", function()
-        canvas:Show()
-    end)
-
-    ag:SetScript("OnFinished", function()
-        animationPool.E:Release(canvas)
-    end)
-
-    function ag:Display(parent, r, g, b)
-        canvas:SetParent(parent)
-        canvas:SetAllPoints(parent)
-
-        t1:SetDuration(t1.duration / parent.speed)
-
-        local l = canvas:GetHeight() * 2
-        f:SetWidth(l)
-        t1:SetOffset(l + canvas:GetWidth(), 0)
-
-        tex:SetVertexColor(r, g, b, 0.6)
-
-        if ag:IsPlaying() then
-            ag:Restart()
-        else
-            ag:Play()
-        end
-    end
-
-    return canvas
-end
-
-animationPool.E = CreateObjectPool(CreateAnimationGroup_TypeE, ResetterFunc)
+animationPool.E = CreateObjectPool(function() return CreateStopMotionAnimation("E") end, ResetterFunc)
 
 -------------------------------------------------
 -- animation: F
 -------------------------------------------------
-local function CreateAnimationGroup_TypeF()
-    local canvas = CreateFrame("Frame")
-
-    -- frame
-    local f = CreateFrame("Frame", nil, canvas)
-    f:SetAllPoints(canvas)
-
-    -- texture
-    local tex = f:CreateTexture(nil, "ARTWORK")
-    tex:SetPoint("CENTER")
-
-    -- mask1
-    local mask1 = f:CreateMaskTexture()
-    mask1:SetAllPoints(tex)
-    mask1:SetTexture("Interface/AddOns/Cell/Media/Shapes/heart_filled_256", "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
-    tex:AddMaskTexture(mask1)
-
-    -- mask2
-    local mask2 = canvas:CreateMaskTexture()
-    mask2:SetTexture(Cell.vars.whiteTexture, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
-    mask2:SetAllPoints(canvas)
-    tex:AddMaskTexture(mask2)
-
-    -- animation
-    local ag = f:CreateAnimationGroup()
-    canvas.ag = ag
-
-    local a1 = ag:CreateAnimation("Alpha")
-    a1.duration = 0.3
-    a1:SetFromAlpha(0)
-    a1:SetToAlpha(1)
-    a1:SetOrder(1)
-    a1:SetDuration(a1.duration)
-    a1:SetSmoothing("OUT")
-
-    local s1 = ag:CreateAnimation("Scale")
-    s1.duration = 0.5
-    s1:SetScaleFrom(0, 0)
-    s1:SetScaleTo(1, 1)
-    s1:SetOrder(1)
-    s1:SetDuration(s1.duration)
-
-    local a2 = ag:CreateAnimation("Alpha")
-    a2.duration = 0.5
-    a2:SetFromAlpha(1)
-    a2:SetToAlpha(0)
-    a2:SetDuration(a2.duration)
-    a2:SetOrder(2)
-    a2:SetSmoothing("IN")
-
-    ag:SetScript("OnPlay", function()
-        canvas:Show()
-    end)
-
-    ag:SetScript("OnFinished", function()
-        animationPool.F:Release(canvas)
-    end)
-
-    function ag:Display(parent, r, g, b)
-        canvas:SetParent(parent)
-        canvas:SetAllPoints(parent)
-
-        a1:SetDuration(a1.duration / parent.speed)
-        s1:SetDuration(s1.duration / parent.speed)
-        a2:SetDuration(a2.duration / parent.speed)
-
-        local l = max(parent:GetParent():GetWidth(), parent:GetParent():GetHeight()) * 2
-        tex:SetSize(l, l)
-        tex:SetColorTexture(r, g, b, 0.6)
-
-        if ag:IsPlaying() then
-            ag:Restart()
-        else
-            ag:Play()
-        end
-    end
-
-    return canvas
-end
-
-animationPool.F = CreateObjectPool(CreateAnimationGroup_TypeF, ResetterFunc)
+animationPool.F = CreateObjectPool(function() return CreateStopMotionAnimation("F") end, ResetterFunc)
 
 -------------------------------------------------
 -- animation: G
 -------------------------------------------------
-local function CreateAnimationGroup_TypeG()
-    local canvas = CreateFrame("Frame")
-
-    -- frame
-    local f = CreateFrame("Frame", nil, canvas)
-    f:SetPoint("TOPLEFT", canvas)
-    f:SetPoint("TOPRIGHT", canvas)
-
-    -- texture
-    local tex = f:CreateTexture(nil, "ARTWORK")
-    tex:SetAllPoints(f)
-    tex:SetTexture(Cell.vars.whiteTexture)
-
-    -- animation
-    local ag = f:CreateAnimationGroup()
-    canvas.ag = ag
-
-    local a1 = ag:CreateAnimation("Alpha")
-    a1.duration = 0.5
-    a1:SetFromAlpha(0)
-    a1:SetToAlpha(1)
-    a1:SetOrder(1)
-    a1:SetDuration(a1.duration)
-    a1:SetSmoothing("OUT")
-
-    local a2 = ag:CreateAnimation("Alpha")
-    a2.duration = 0.5
-    a2:SetFromAlpha(1)
-    a2:SetToAlpha(0)
-    a2:SetDuration(a2.duration)
-    a2:SetOrder(2)
-    a2:SetSmoothing("IN")
-
-    ag:SetScript("OnPlay", function()
-        canvas:Show()
-    end)
-
-    ag:SetScript("OnFinished", function()
-        animationPool.G:Release(canvas)
-    end)
-
-    function ag:Display(parent, r, g, b)
-        canvas:SetParent(parent)
-        canvas:SetAllPoints(parent)
-
-        f:SetHeight(canvas:GetHeight() / 2)
-
-        tex:SetGradient("VERTICAL", CreateColor(r, g, b, 0), CreateColor(r, g, b, 1))
-
-        a1:SetDuration(a1.duration / parent.speed)
-        a2:SetDuration(a2.duration / parent.speed)
-
-        if ag:IsPlaying() then
-            ag:Restart()
-        else
-            ag:Play()
-        end
-    end
-
-    return canvas
-end
-
-animationPool.G = CreateObjectPool(CreateAnimationGroup_TypeG, ResetterFunc)
+animationPool.G = CreateObjectPool(function() return CreateStopMotionAnimation("G") end, ResetterFunc)
 
 -------------------------------------------------
 -- indicator
@@ -679,8 +319,11 @@ end
 
 function I.EnableActions(enabled)
     if enabled then
-        eventFrame:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
+        UpdatePetGUID()
+        eventFrame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
+        eventFrame:RegisterEvent("UNIT_PET")
     else
-        eventFrame:UnregisterEvent("UNIT_SPELLCAST_SUCCEEDED")
+        eventFrame:UnregisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
+        eventFrame:UnregisterEvent("UNIT_PET")
     end
 end
