@@ -138,6 +138,8 @@ local function SetVerticalCooldownValue(cooldown, value)
     cooldown.progress = cooldown.duration and cooldown.duration > 0 and 1 - value / cooldown.duration or 0
     if cooldown.icon then
         F.SetVerticalTextureFill(cooldown.icon, cooldown.iconParent, cooldown.progress, true, cooldown.iconTexCoord, cooldown.iconHeight)
+    elseif cooldown.fill then
+        F.SetVerticalTextureFill(cooldown.fill, cooldown, cooldown.progress, true)
     end
 end
 
@@ -257,14 +259,20 @@ local function CreateVerticalCooldownWithoutIcon(frame)
     cooldown:SetStatusBarTexture(Cell.vars.whiteTexture)
 
     local texture = cooldown:GetStatusBarTexture()
-    texture:SetVertexColor(0, 0, 0, 0.8)
+    texture:SetAlpha(0)
 
-    local spark = cooldown:CreateTexture(nil, "BORDER")
+    local fill = cooldown:CreateTexture(nil, "ARTWORK")
+    cooldown.fill = fill
+    fill:SetTexture(Cell.vars.whiteTexture)
+    fill:SetVertexColor(0, 0, 0, 0.8)
+    F.SetVerticalTextureFill(fill, cooldown, 0, true)
+
+    local spark = cooldown:CreateTexture(nil, "OVERLAY")
     cooldown.spark = spark
     P.Height(spark, 1)
     spark:SetBlendMode("ADD")
-    spark:SetPoint("BOTTOMLEFT", texture, "TOPLEFT")
-    spark:SetPoint("BOTTOMRIGHT", texture, "TOPRIGHT")
+    spark:SetPoint("TOPLEFT", fill, "BOTTOMLEFT")
+    spark:SetPoint("TOPRIGHT", fill, "BOTTOMRIGHT")
 end
 
 -------------------------------------------------
