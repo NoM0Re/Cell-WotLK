@@ -1966,9 +1966,13 @@ local function UnitButton_UpdateHealth(self, diff, skipStateUpdates)
         UnitButton_UpdateHealthStates(self, diff)
     end
     local healthPercent = self.states.healthPercent
+    local statusBarValue = self.states.health
+    if barAnimationType ~= "Smooth" and statusBarValue == 0 then
+        statusBarValue = 0.0001 -- 3.3.5 does not update the fill texture geometry at exactly zero.
+    end
 
     if barAnimationType == "Flash" then
-        self.widgets.healthBar:SetValue(self.states.health)
+        self.widgets.healthBar:SetValue(statusBarValue)
         local diff = healthPercent - (self.states.healthPercentOld or healthPercent)
         if diff >= 0 or self.states.healthMax == 0 then
             B.HideFlash(self)
@@ -1976,7 +1980,7 @@ local function UnitButton_UpdateHealth(self, diff, skipStateUpdates)
             B.ShowFlash(self, abs(diff))
         end
     else
-        self.widgets.healthBar:SetBarValue(self.states.health)
+        self.widgets.healthBar:SetBarValue(statusBarValue)
     end
 
     if Cell.vars.useThresholdColor or Cell.vars.useFullColor then
@@ -3584,6 +3588,10 @@ function B.UpdateAnimation(button)
         button.widgets.healthBar.SetBarValue = button.widgets.healthBar.SetValue
         button.widgets.powerBar:ResetSmoothedValue()
         button.widgets.powerBar.SetBarValue = button.widgets.powerBar.SetValue
+
+        if button.states.health == 0 then
+            button.widgets.healthBar:SetValue(0.0001)
+        end
     end
 
     if barAnimationType ~= "Flash" then
