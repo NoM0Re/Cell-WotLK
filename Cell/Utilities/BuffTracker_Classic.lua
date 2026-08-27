@@ -703,6 +703,7 @@ end
 -- end
 
 function buffTrackerFrame:UNIT_AURA(unit)
+    if not unit then return end
     if F.IsInRaid() then
         if unit:find("^raid%d+$") then
             CheckUnit(unit, true)
