@@ -198,34 +198,25 @@ end
 -- supporters
 -------------------------------------------------
 local function GetSupporters(t)
-    local str = ""
+    local lines = {}
     local n = #t
     for i = 1, n do
-        local total = #t[i]
-        for j, name in ipairs(t[i]) do
+        for _, name in ipairs(t[i]) do
             name = name:gsub("%(.+%)", function(s)
                 return "|cff777777"..s.."|r"
             end)
-            str = str .. name
-            if j ~= total or i ~= n then
-                str = str .. "\n"
-            end
+            lines[#lines+1] = name
         end
     end
-    return str
+    return table.concat(lines, "\n")
 end
 
 local function Getsupporters2(t)
-    local str = ""
-    local n = #t
-    for i = 1, n do
-        local name = t[i][1] .. " |cff777777("..t[i][2]..")|r"
-        str = str .. name
-        if i ~= n then
-            str = str .. "\n"
-        end
+    local lines = {}
+    for i = 1, #t do
+        lines[i] = t[i][1] .. " |cff777777("..t[i][2]..")|r"
     end
-    return str
+    return table.concat(lines, "\n")
 end
 
 local function CreateAnimation(frame)
@@ -319,7 +310,6 @@ local function CreateSupportersPane()
     supportersText1:SetPoint("TOPLEFT")
     supportersText1:SetSpacing(5)
     supportersText1:SetJustifyH("LEFT")
-    supportersText1:SetText(GetSupporters(Cell.supporters1))
 
     local supportersFrame2 = CreateFrame("Frame", nil, supportersPane)
     RaiseAboveParent(supportersFrame2, supportersPane)
@@ -336,7 +326,14 @@ local function CreateSupportersPane()
     supportersText2:SetPoint("TOPLEFT")
     supportersText2:SetSpacing(5)
     supportersText2:SetJustifyH("LEFT")
-    supportersText2:SetText(Getsupporters2(Cell.supporters2))
+
+    local supportersLoaded
+    local function LoadSupporters()
+        if supportersLoaded then return end
+        supportersLoaded = true
+        supportersText1:SetText(GetSupporters(Cell.supporters1))
+        supportersText2:SetText(Getsupporters2(Cell.supporters2))
+    end
 
     -- update width
     local elapsedTime = 0
@@ -379,6 +376,7 @@ local function CreateSupportersPane()
 
     supportersBtn1:SetScript("OnClick", function()
         if supportersBtn1.fadeOut:IsPlaying() or supportersBtn1.fadeIn:IsPlaying() then return end
+        LoadSupporters()
         supportersBtn1.fadeOut:Play()
         supportersBtn2.fadeIn:Play()
         supportersPane.fadeIn:Play()
