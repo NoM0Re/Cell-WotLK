@@ -1622,7 +1622,6 @@ local powerEvents = {
     "UNIT_ENERGY",
     "UNIT_RAGE",
     "UNIT_FOCUS",
-    "UNIT_HAPPINESS",
     "UNIT_RUNIC_POWER",
 }
 
@@ -1631,57 +1630,65 @@ local maxPowerEvents = {
     "UNIT_MAXENERGY",
     "UNIT_MAXRAGE",
     "UNIT_MAXFOCUS",
-    "UNIT_MAXHAPPINESS",
     "UNIT_MAXRUNIC_POWER",
 }
 
 local powerEventMap, maxPowerEventMap = {}, {}
+local allPowerEventMap = {
+    ["UNIT_DISPLAYPOWER"] = true,
+}
 for _, event in ipairs(powerEvents) do
     powerEventMap[event] = true
+    allPowerEventMap[event] = true
 end
 for _, event in ipairs(maxPowerEvents) do
     maxPowerEventMap[event] = true
+    allPowerEventMap[event] = true
 end
 
-local function RegisterPowerEvents(frame)
-    for _, event in ipairs(powerEvents) do
-        frame:RegisterEvent(event)
+local unitEventFrame = CreateFrame("Frame")
+local powerEventButtons = {}
+local powerEventsRegistered = false
+
+local function SetEventsRegistered(events, enabled)
+    for _, event in ipairs(events) do
+        if enabled then
+            unitEventFrame:RegisterEvent(event)
+        else
+            unitEventFrame:UnregisterEvent(event)
+        end
     end
 end
 
-local function UnregisterPowerEvents(frame)
-    for _, event in ipairs(powerEvents) do
-        frame:UnregisterEvent(event)
-    end
-end
+local function SetPowerEventsRegistered(enabled)
+    if powerEventsRegistered == enabled then return end
+    powerEventsRegistered = enabled
 
-local function RegisterMaxPowerEvents(frame)
-    for _, event in ipairs(maxPowerEvents) do
-        frame:RegisterEvent(event)
-    end
-end
-
-local function UnregisterMaxPowerEvents(frame)
-    for _, event in ipairs(maxPowerEvents) do
-        frame:UnregisterEvent(event)
-    end
-end
-
-CheckPowerEventRegistration = function(b)
-    if b:IsVisible() and not b.isPreview and (b._shouldShowPowerText or b._shouldShowPowerBar) then
-        RegisterPowerEvents(b)
-        RegisterMaxPowerEvents(b)
-        b:RegisterEvent("UNIT_DISPLAYPOWER")
-        return true
+    if enabled then
+        unitEventFrame:RegisterEvent("UNIT_DISPLAYPOWER")
     else
-        UnregisterPowerEvents(b)
-        UnregisterMaxPowerEvents(b)
-        b:UnregisterEvent("UNIT_DISPLAYPOWER")
-        return false
+        unitEventFrame:UnregisterEvent("UNIT_DISPLAYPOWER")
     end
+    SetEventsRegistered(powerEvents, enabled)
+    SetEventsRegistered(maxPowerEvents, enabled)
 end
 
-local function ShowPowerBar(b)
+CheckPowerEventRegistration = function(button)
+    local enabled = not button.isPreview
+        and button:IsVisible()
+        and (not Cell.loaded or button._shouldShowPowerText or button._shouldShowPowerBar)
+
+    if enabled then
+        powerEventButtons[button] = true
+    else
+        powerEventButtons[button] = nil
+    end
+
+    SetPowerEventsRegistered(next(powerEventButtons) ~= nil)
+    return enabled
+end
+
+local function ShowPowerBar(b, powerStatesUpdated)
     b.widgets.powerBar:Show()
     b.widgets.powerBarLoss:Show()
     F.SetShown(b.widgets.gapTexture, CELL_BORDER_SIZE ~= 0)
@@ -1703,7 +1710,9 @@ local function ShowPowerBar(b)
     if b:IsVisible() then
         -- update now
         CheckPowerEventRegistration(b)
-        UnitButton_UpdatePowerStates(b)
+        if not powerStatesUpdated then
+            UnitButton_UpdatePowerStates(b)
+        end
         UnitButton_UpdatePowerType(b)
         UnitButton_UpdatePowerMax(b)
         UnitButton_UpdatePower(b)
@@ -1943,11 +1952,13 @@ local function UnitButton_UpdateHealthMax(self)
     end
 end
 
-local function UnitButton_UpdateHealth(self, diff)
+local function UnitButton_UpdateHealth(self, diff, skipStateUpdates)
     local unit = self.states.displayedUnit
     if not unit then return end
 
-    UnitButton_UpdateHealthStates(self, diff)
+    if not skipStateUpdates then
+        UnitButton_UpdateHealthStates(self, diff)
+    end
     local healthPercent = self.states.healthPercent
 
     if barAnimationType == "Flash" then
@@ -1983,7 +1994,7 @@ local function UnitButton_UpdateHealth(self, diff)
     end
 end
 
-local function UnitButton_UpdateHealPrediction(self)
+local function UnitButton_UpdateHealPrediction(self, skipStateUpdates, incomingHealUpdated)
     if not predictionEnabled then
         self.widgets.incomingHeal:Hide()
         return
@@ -1992,25 +2003,33 @@ local function UnitButton_UpdateHealPrediction(self)
     local unit = self.states.displayedUnit
     if not unit then return end
 
-    local value = 0
+    -- HealComm callbacks refresh this value; health events only reposition the overlay.
+    if not incomingHealUpdated or self.states.incomingHeal == nil then
+        local value = 0
 
-    --! NOTE: use LibHealComm
-    if self.__displayedGuid then
-        local modifier = HealComm:GetHealModifier(self.__displayedGuid) or 1
-        local casted = HealComm:GetHealAmount(self.__displayedGuid, HealComm.CASTED_HEALS) or 0
-        -- local hot = select(3, HealComm:GetNextHealAmount(self.__displayedGuid, HealComm.HOT_HEALS)) or 0
-        -- NOTE: hots within 3 seconds
-        local hotType = HealComm.OVERTIME_AND_BOMB_HEALS or bit.bor(HealComm.HOT_HEALS or 0x04, HealComm.BOMB_HEALS or 0x10)
-        local hot = HealComm:GetHealAmount(self.__displayedGuid, hotType, GetTime()+3) or 0
-        value = (casted + hot) * modifier
+        --! NOTE: use LibHealComm
+        if self.__displayedGuid then
+            local modifier = HealComm:GetHealModifier(self.__displayedGuid) or 1
+            local casted = HealComm:GetHealAmount(self.__displayedGuid, HealComm.CASTED_HEALS) or 0
+            -- local hot = select(3, HealComm:GetNextHealAmount(self.__displayedGuid, HealComm.HOT_HEALS)) or 0
+            -- NOTE: hots within 3 seconds
+            local hotType = HealComm.OVERTIME_AND_BOMB_HEALS or bit.bor(HealComm.HOT_HEALS or 0x04, HealComm.BOMB_HEALS or 0x10)
+            local hot = HealComm:GetHealAmount(self.__displayedGuid, hotType, GetTime()+3) or 0
+            value = (casted + hot) * modifier
+        end
+
+        self.states.incomingHeal = value
     end
 
+    local value = self.states.incomingHeal
     if value == 0 then
         self.widgets.incomingHeal:Hide()
         return
     end
 
-    UnitButton_UpdateHealthStates(self)
+    if not skipStateUpdates then
+        UnitButton_UpdateHealthStates(self)
+    end
 
     self.widgets.incomingHeal:SetValue(value / self.states.healthMax, self.states.healthPercent)
 end
@@ -2106,41 +2125,73 @@ local function UnitButton_UpdateInRange(self)
     end
 end
 
-local healthEventButtons = {}
-local healthEventUnits = {}
+-- 3.3.5a has no RegisterUnitEvent, so one frame filters unit events for all buttons.
+local unitEventButtons = {}
+local unitEventsRegistered = false
+local unitEvents = {
+    "UNIT_HEALTH",
+    "UNIT_MAXHEALTH",
+    "UNIT_AURA",
+    "UNIT_ENTERED_VEHICLE",
+    "UNIT_EXITING_VEHICLE",
+    "UNIT_FLAGS",
+    "UNIT_FACTION",
+    "PLAYER_FLAGS_CHANGED",
+    "UNIT_NAME_UPDATE",
+    "UNIT_PORTRAIT_UPDATE",
+}
 
-local function UnregisterHealthEventButton(button)
-    local units = healthEventUnits[button]
-    if not units then return end
-
-    for unit in pairs(units) do
-        local buttons = healthEventButtons[unit]
-        buttons[button] = nil
-        if not next(buttons) then
-            healthEventButtons[unit] = nil
-        end
-    end
-
-    healthEventUnits[button] = nil
+local function SetUnitEventsRegistered(enabled)
+    if unitEventsRegistered == enabled then return end
+    unitEventsRegistered = enabled
+    SetEventsRegistered(unitEvents, enabled)
 end
 
-local function RegisterHealthEventButton(button)
-    UnregisterHealthEventButton(button)
-    if not button:IsShown() then return end
+local function RemoveUnitEventButton(unit, button)
+    local buttons = unit and unitEventButtons[unit]
+    if not buttons then return end
 
-    local units = {}
-    healthEventUnits[button] = units
+    buttons[button] = nil
+    if not next(buttons) then
+        unitEventButtons[unit] = nil
+    end
+end
 
-    local function RegisterUnit(unit)
-        if not unit or units[unit] then return end
+local function AddUnitEventButton(unit, button)
+    if not unit then return end
 
-        units[unit] = true
-        healthEventButtons[unit] = healthEventButtons[unit] or {}
-        healthEventButtons[unit][button] = true
+    unitEventButtons[unit] = unitEventButtons[unit] or {}
+    unitEventButtons[unit][button] = true
+end
+
+local function UnregisterUnitEventButton(button)
+    RemoveUnitEventButton(button.__unitEventUnit, button)
+    if button.__unitEventDisplayedUnit ~= button.__unitEventUnit then
+        RemoveUnitEventButton(button.__unitEventDisplayedUnit, button)
     end
 
-    RegisterUnit(button.states.unit)
-    RegisterUnit(button.states.displayedUnit)
+    button.__unitEventUnit = nil
+    button.__unitEventDisplayedUnit = nil
+    SetUnitEventsRegistered(next(unitEventButtons) ~= nil)
+end
+
+local function RegisterUnitEventButton(button)
+    if button.__unitEventUnit == button.states.unit
+    and button.__unitEventDisplayedUnit == button.states.displayedUnit
+    then
+        return
+    end
+
+    UnregisterUnitEventButton(button)
+    if button.isPreview or not button:IsVisible() then return end
+
+    AddUnitEventButton(button.states.unit, button)
+    if button.states.displayedUnit ~= button.states.unit then
+        AddUnitEventButton(button.states.displayedUnit, button)
+    end
+    button.__unitEventUnit = button.states.unit
+    button.__unitEventDisplayedUnit = button.states.displayedUnit
+    SetUnitEventsRegistered(next(unitEventButtons) ~= nil)
 end
 
 local function UnitButton_UpdateVehicleStatus(self)
@@ -2163,7 +2214,7 @@ local function UnitButton_UpdateVehicleStatus(self)
         self.indicators.nameText.vehicle:SetText("")
     end
 
-    RegisterHealthEventButton(self)
+    RegisterUnitEventButton(self)
 end
 
 UnitButton_UpdateStatusText = function(self)
@@ -2333,11 +2384,13 @@ end
 -------------------------------------------------
 -- shields
 -------------------------------------------------
-UnitButton_UpdateShieldAbsorbs = function(self)
+UnitButton_UpdateShieldAbsorbs = function(self, skipStateUpdates)
     local unit = self.states.displayedUnit
     if not unit then return end
 
-    UnitButton_UpdateHealthStates(self)
+    if not skipStateUpdates then
+        UnitButton_UpdateHealthStates(self)
+    end
 
     if self.states.totalAbsorbs > 0 then
         local shieldPercent = self.states.totalAbsorbs / self.states.healthMax
@@ -2542,6 +2595,30 @@ end)
 -------------------------------------------------
 -- update all
 -------------------------------------------------
+local function UnitButton_UpdatePowerLayout(self, powerStatesUpdated)
+    self._powerUpdateRequired = nil
+    self._shouldShowPowerText = ShouldShowPowerText(self)
+    self._shouldShowPowerBar = ShouldShowPowerBar(self)
+
+    if not powerStatesUpdated then
+        UnitButton_UpdatePowerStates(self)
+    end
+
+    if self._shouldShowPowerText then
+        UnitButton_UpdatePowerTextColor(self)
+        UnitButton_UpdatePowerText(self)
+    else
+        self.indicators.powerText:Hide()
+    end
+
+    if self._shouldShowPowerBar then
+        ShowPowerBar(self, true)
+    else
+        HidePowerBar(self)
+    end
+
+end
+
 UnitButton_UpdateAll = function(self)
     if not self:IsVisible() then return end
 
@@ -2550,14 +2627,14 @@ UnitButton_UpdateAll = function(self)
     UnitButton_UpdateNameTextColor(self)
     UnitButton_UpdateHealthTextColor(self)
     UnitButton_UpdateHealthMax(self)
-    UnitButton_UpdateHealth(self)
-    UnitButton_UpdateHealPrediction(self)
+    UnitButton_UpdateHealth(self, nil, true)
+    UnitButton_UpdateHealPrediction(self, true)
     UnitButton_UpdateStatusText(self)
     UnitButton_UpdateHealthColor(self)
     UnitButton_UpdateTarget(self)
     UnitButton_UpdatePlayerRaidIcon(self)
     UnitButton_UpdateTargetRaidIcon(self)
-    UnitButton_UpdateShieldAbsorbs(self)
+    UnitButton_UpdateShieldAbsorbs(self, true)
     UnitButton_UpdateInRange(self)
     UnitButton_UpdateRole(self)
     UnitButton_UpdateLeader(self)
@@ -2567,40 +2644,29 @@ UnitButton_UpdateAll = function(self)
     I.UpdateStatusIcon_Resurrection(self)
 
     UnitButton_UpdatePowerStates(self)
-    if Cell.loaded then
-        if self._powerUpdateRequired then
-            self._powerUpdateRequired = nil
-
-            self._shouldShowPowerText = ShouldShowPowerText(self)
-            self._shouldShowPowerBar = ShouldShowPowerBar(self)
-            CheckPowerEventRegistration(self)
-
-            if self._shouldShowPowerText then
-                UnitButton_UpdatePowerTextColor(self)
-                UnitButton_UpdatePowerText(self)
-            else
-                self.indicators.powerText:Hide()
-            end
-
-            if self._shouldShowPowerBar then
-                ShowPowerBar(self)
-            else
-                HidePowerBar(self)
-            end
-
-        end
+    if Cell.loaded and self._powerUpdateRequired then
+        UnitButton_UpdatePowerLayout(self, true)
     end
 
     UnitButton_UpdateAuras(self)
 end
 
+local function UnitButton_UpdateGroupRole(button)
+    UnitButton_UpdateRole(button)
+    button._powerUpdateRequired = 1
+    if Cell.loaded then
+        UnitButton_UpdatePowerLayout(button)
+    end
+end
+
 Cell.RegisterCallback("GroupRoleChanged", "UnitButton_GroupRoleChanged", function(unit, guid)
+    if unit and F.HandleUnitButton("unit", unit, UnitButton_UpdateGroupRole) then return end
+    if guid and F.HandleUnitButton("guid", guid, UnitButton_UpdateGroupRole) then return end
+    if not guid then return end
+
     F.IterateAllUnitButtons(function(b)
-        if (guid and b.states.guid == guid)
-        or (unit and (b.states.unit == unit or b.states.displayedUnit == unit))
-        then
-            b._powerUpdateRequired = 1
-            UnitButton_UpdateAll(b)
+        if b.states.guid == guid then
+            UnitButton_UpdateGroupRole(b)
         end
     end, true)
 end)
@@ -2609,36 +2675,17 @@ end)
 -- unit button events
 -------------------------------------------------
 local function UnitButton_RegisterEvents(self)
-    -- self:RegisterEvent("PLAYER_ENTERING_WORLD")
     self:RegisterEvent("RAID_ROSTER_UPDATE")
     self:RegisterEvent("PARTY_MEMBERS_CHANGED")
     self:RegisterEvent("PARTY_LEADER_CHANGED")
-
-    RegisterPowerEvents(self)
-    RegisterMaxPowerEvents(self)
-    self:RegisterEvent("UNIT_DISPLAYPOWER")
-
-    self:RegisterEvent("UNIT_AURA")
-
-    self:RegisterEvent("UNIT_THREAT_SITUATION_UPDATE")
-    self:RegisterEvent("UNIT_THREAT_LIST_UPDATE")
-    self:RegisterEvent("UNIT_ENTERED_VEHICLE")
-    self:RegisterEvent("UNIT_EXITING_VEHICLE")
-
-    self:RegisterEvent("UNIT_FLAGS") -- afk
-    self:RegisterEvent("UNIT_FACTION") -- mind control
-
-    self:RegisterEvent("PARTY_MEMBER_ENABLE") -- online
-    self:RegisterEvent("PARTY_MEMBER_DISABLE") -- offline
-    self:RegisterEvent("PLAYER_FLAGS_CHANGED") -- afk
-    self:RegisterEvent("UNIT_NAME_UPDATE") -- unknown target
-    self:RegisterEvent("ZONE_CHANGED_NEW_AREA") --? update status text
-
-    -- self:RegisterEvent("PLAYER_ROLES_ASSIGNED") -- roster update
+    self:RegisterEvent("PARTY_MEMBER_ENABLE")
+    self:RegisterEvent("PARTY_MEMBER_DISABLE")
+    self:RegisterEvent("ZONE_CHANGED_NEW_AREA")
     self:RegisterEvent("PLAYER_REGEN_ENABLED")
     self:RegisterEvent("PLAYER_REGEN_DISABLED")
-
     self:RegisterEvent("PLAYER_TARGET_CHANGED")
+    self:RegisterEvent("UNIT_THREAT_LIST_UPDATE")
+    self:RegisterEvent("UNIT_THREAT_SITUATION_UPDATE")
 
     if Cell.loaded then
         if enabledIndicators["playerRaidIcon"] then
@@ -2660,21 +2707,11 @@ local function UnitButton_RegisterEvents(self)
         self:RegisterEvent("READY_CHECK_CONFIRM")
     end
 
-    -- self:RegisterEvent("UNIT_PHASE") -- warmode, traditional sources of phasing such as progress through quest chains
-    -- self:RegisterEvent("PARTY_MEMBER_DISABLE")
-    -- self:RegisterEvent("PARTY_MEMBER_ENABLE")
-    -- self:RegisterEvent("INCOMING_RESURRECT_CHANGED")
-
-    -- self:RegisterEvent("VOICE_CHAT_CHANNEL_ACTIVATED")
-    -- self:RegisterEvent("VOICE_CHAT_CHANNEL_DEACTIVATED")
-
-    -- self:RegisterEvent("UNIT_PET")
-    self:RegisterEvent("UNIT_PORTRAIT_UPDATE") -- pet summoned far away
-
     local success, result = pcall(UnitButton_UpdateAll, self)
     if not success then
         F.Debug("UnitButton_UpdateAll |cffff0000FAILED:|r", self:GetName(), result)
     end
+    CheckPowerEventRegistration(self)
 end
 
 local function UnitButton_UnregisterEvents(self)
@@ -2683,7 +2720,15 @@ end
 
 local function UnitButton_OnEvent(self, event, unit)
     -- print(event, self:GetName(), unit, self.states.displayedUnit, self.states.unit)
-    if event == "PARTY_MEMBER_DISABLE" or event == "PARTY_MEMBER_ENABLE" then
+    if event == "UNIT_THREAT_SITUATION_UPDATE" then
+        if not unit or self.states.displayedUnit == unit or self.states.unit == unit then
+            UnitButton_UpdateThreat(self)
+        end
+        return
+    elseif event == "UNIT_THREAT_LIST_UPDATE" then
+        UnitButton_UpdateThreatBar(self)
+        return
+    elseif event == "PARTY_MEMBER_DISABLE" or event == "PARTY_MEMBER_ENABLE" then
         local displayedUnit = self.states.displayedUnit
         local assignedUnit = self.states.unit
         if (displayedUnit and strfind(displayedUnit, "^party")) or (assignedUnit and strfind(assignedUnit, "^party")) then
@@ -2708,14 +2753,14 @@ local function UnitButton_OnEvent(self, event, unit)
 
         elseif event == "UNIT_MAXHEALTH" then
             UnitButton_UpdateHealthMax(self)
-            UnitButton_UpdateHealth(self)
-            UnitButton_UpdateHealPrediction(self)
-            UnitButton_UpdateShieldAbsorbs(self)
+            UnitButton_UpdateHealth(self, nil, true)
+            UnitButton_UpdateHealPrediction(self, true, true)
+            UnitButton_UpdateShieldAbsorbs(self, true)
 
         elseif event == "UNIT_HEALTH" then
             UnitButton_UpdateHealth(self)
-            UnitButton_UpdateHealPrediction(self)
-            UnitButton_UpdateShieldAbsorbs(self)
+            UnitButton_UpdateHealPrediction(self, true, true)
+            UnitButton_UpdateShieldAbsorbs(self, true)
             -- UnitButton_UpdateStatusText(self)
 
         elseif maxPowerEventMap[event] then
@@ -2750,9 +2795,6 @@ local function UnitButton_OnEvent(self, event, unit)
             UnitButton_UpdateNameTextColor(self)
             UnitButton_UpdateHealthColor(self)
 
-        elseif event == "UNIT_THREAT_SITUATION_UPDATE" then
-            UnitButton_UpdateThreat(self)
-
         elseif event == "READY_CHECK_CONFIRM" then
             UnitButton_UpdateReadyCheck(self)
 
@@ -2775,9 +2817,6 @@ local function UnitButton_OnEvent(self, event, unit)
             UnitButton_UpdateTarget(self)
             UnitButton_UpdateThreatBar(self)
 
-        elseif event == "UNIT_THREAT_LIST_UPDATE" then
-            UnitButton_UpdateThreatBar(self)
-
         elseif event == "RAID_TARGET_UPDATE" then
             UnitButton_UpdatePlayerRaidIcon(self)
             UnitButton_UpdateTargetRaidIcon(self)
@@ -2797,39 +2836,18 @@ local function UnitButton_OnEvent(self, event, unit)
     end
 end
 
-local pendingHealthEvents = {}
-local processingHealthEvents = {}
-local healthEventFrame = CreateFrame("Frame")
-healthEventFrame:Hide()
-healthEventFrame:RegisterEvent("UNIT_HEALTH")
-healthEventFrame:RegisterEvent("UNIT_MAXHEALTH")
-healthEventFrame:SetScript("OnEvent", function(self, event, unit)
-    if unit then
-        if event == "UNIT_MAXHEALTH" or not pendingHealthEvents[unit] then
-            pendingHealthEvents[unit] = event
-        end
-        self:Show()
-    end
-end)
-healthEventFrame:SetScript("OnUpdate", function(self)
-    self:Hide()
+do
+    unitEventFrame:SetScript("OnEvent", function(_, event, unit)
+        local buttons = unit and unitEventButtons[unit]
+        if not buttons then return end
 
-    local events = pendingHealthEvents
-    pendingHealthEvents = processingHealthEvents
-    processingHealthEvents = events
-    wipe(pendingHealthEvents)
-
-    for unit, event in pairs(events) do
-        local buttons = healthEventButtons[unit]
-        if buttons then
-            for button in pairs(buttons) do
+        for button in pairs(buttons) do
+            if not allPowerEventMap[event] or not Cell.loaded or button._shouldShowPowerText or button._shouldShowPowerBar then
                 UnitButton_OnEvent(button, event, unit)
             end
         end
-    end
-
-    wipe(events)
-end)
+    end)
+end
 
 local timer
 local function EnterLeaveInstance()
@@ -2879,7 +2897,7 @@ local function UnitButton_OnAttributeChanged(self, name, value)
             end
         end
 
-        RegisterHealthEventButton(self)
+        RegisterUnitEventButton(self)
     end
 end
 
@@ -2893,7 +2911,7 @@ local function UnitButton_OnShow(self)
     self._updateRequired = nil -- prevent UnitButton_UpdateAll twice. when convert party <-> raid, GROUP_ROSTER_UPDATE fired.
     self._powerUpdateRequired = 1
     UnitButton_RegisterEvents(self)
-    RegisterHealthEventButton(self)
+    RegisterUnitEventButton(self)
 
     --[[
     if self.states.unit then
@@ -2917,8 +2935,9 @@ local function UnitButton_OnShow(self)
 end
 
 local function UnitButton_OnHide(self)
-    UnregisterHealthEventButton(self)
+    UnregisterUnitEventButton(self)
     UnitButton_UnregisterEvents(self)
+    CheckPowerEventRegistration(self)
 
     ResetAuraTables(self)
 
@@ -3042,8 +3061,8 @@ function B.SetPowerSize(button, size)
     button.powerSize = size
 
     if size == 0 then
-        HidePowerBar(button)
         button._shouldShowPowerBar = false
+        HidePowerBar(button)
     else
         button._shouldShowPowerBar = ShouldShowPowerBar(button)
         if button._shouldShowPowerBar then
@@ -3052,7 +3071,6 @@ function B.SetPowerSize(button, size)
             HidePowerBar(button)
         end
     end
-    CheckPowerEventRegistration(button)
 end
 
 function B.UpdateShields(button)
