@@ -3953,7 +3953,6 @@ local function CreateSetting_Glow(parent)
         function widget:SetDBValue(t, hideNone)
             widget.useSmallerSize = not hideNone -- TODO: may require addtional arg
             widget.glowType.items[1].disabled = hideNone
-            widget.glowType.items[5].disabled = true
 
             -- {"Pixel", {0.95,0.95,0.32,1}, 9, 0.25, 8, 2},
             widget.glow = t
