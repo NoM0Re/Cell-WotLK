@@ -241,21 +241,24 @@ function PixelUtil.GetNearestPixelSizeForRegion(region, uiUnitSize, minPixels)
     return PixelUtil.GetNearestPixelSize(uiUnitSize, region:GetEffectiveScale(), minPixels)
 end
 
-function PixelUtil.SetPoint(frame, point, relativeTo, relativePoint, x, y)
-    frame:SetPoint(point, relativeTo, relativePoint, PixelUtil.GetNearestPixelSizeForRegion(frame, x or 0), PixelUtil.GetNearestPixelSizeForRegion(frame, y or 0))
+function PixelUtil.SetPoint(region, point, relativeTo, relativePoint, x, y, minXPixels, minYPixels)
+    region:SetPoint(point, relativeTo, relativePoint,
+        PixelUtil.GetNearestPixelSizeForRegion(region, x or 0, minXPixels),
+        PixelUtil.GetNearestPixelSizeForRegion(region, y or 0, minYPixels)
+    )
 end
 
-function PixelUtil.SetWidth(frame, width)
-    frame:SetWidth(PixelUtil.GetNearestPixelSizeForRegion(frame, width))
+function PixelUtil.SetWidth(region, width, minPixels)
+    region:SetWidth(PixelUtil.GetNearestPixelSizeForRegion(region, width, minPixels))
 end
 
-function PixelUtil.SetHeight(frame, height)
-    frame:SetHeight(PixelUtil.GetNearestPixelSizeForRegion(frame, height))
+function PixelUtil.SetHeight(region, height, minPixels)
+    region:SetHeight(PixelUtil.GetNearestPixelSizeForRegion(region, height, minPixels))
 end
 
-function PixelUtil.SetSize(frame, width, height)
-    PixelUtil.SetWidth(frame, width)
-    PixelUtil.SetHeight(frame, height)
+function PixelUtil.SetSize(region, width, height, minWidthPixels, minHeightPixels)
+    PixelUtil.SetWidth(region, width, minWidthPixels)
+    PixelUtil.SetHeight(region, height, minHeightPixels)
 end
 
 ---@return nil

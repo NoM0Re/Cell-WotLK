@@ -39,7 +39,8 @@ local P = addon.pixelPerfectFuncs
 local PixelUtil = addon.funcs.PixelUtil
 
 function P.GetResolution()
-    return string.match(({GetScreenResolutions()})[GetCurrentResolution()], "(%d+)x(%d+)")
+    local resolution = ({GetScreenResolutions()})[GetCurrentResolution()] or ""
+    return string.match(resolution, "(%d+).-(%d+)")
 end
 
 -- The UI P.Scale goes from 1 to 0.64.
@@ -159,8 +160,10 @@ end
 --     end
 -- end
 
+local GetNearestPixelSize = PixelUtil.GetNearestPixelSize
+
 function P.Scale(desiredPixels)
-    return PixelUtil.GetNearestPixelSize(desiredPixels, CellParent:GetEffectiveScale())
+    return GetNearestPixelSize(desiredPixels, CellParent:GetEffectiveScale())
 end
 
 function P.Size(frame, width, height)

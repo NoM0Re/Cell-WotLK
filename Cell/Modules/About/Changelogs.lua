@@ -18,61 +18,109 @@ local function CreateChangelogsFrame()
     Cell.CreateScrollFrame(changelogsFrame)
     changelogsFrame.scrollFrame:SetScrollStep(37)
 
-    local content = CreateFrame("SimpleHTML", "CellChangelogsContent", changelogsFrame.scrollFrame.content)
-    content:SetSpacing("h1", 9)
-    content:SetSpacing("h2", 7)
-    content:SetSpacing("p", 5)
-    content:SetFontObject("h1", "CELL_FONT_CLASS_TITLE")
-    content:SetFontObject("h2", "CELL_FONT_CLASS")
-    if LOCALE_zhCN then
-        content:SetFontObject("p", "CELL_FONT_WIDGET")
-    else
-        content:SetFontObject("p", "CELL_FONT_CHINESE")
-    end
-    content:SetPoint("TOP", 0, -10)
-    content:SetWidth(changelogsFrame:GetWidth() - 30)
-    content:SetHeight(1)
-    content:SetHyperlinkFormat("|H%s|h|cFFFFD100%s|r|h")
+    local contents = {}
+    local SetChangelogText, recentChangelogs
 
-    local measureFonts = {
-        h1 = changelogsFrame:CreateFontString(nil, "ARTWORK", "CELL_FONT_CLASS_TITLE"),
-        h2 = changelogsFrame:CreateFontString(nil, "ARTWORK", "CELL_FONT_CLASS"),
-        p = changelogsFrame:CreateFontString(nil, "ARTWORK", LOCALE_zhCN and "CELL_FONT_WIDGET" or "CELL_FONT_CHINESE"),
-    }
-    local spacings = {h1 = 9, h2 = 7, p = 5}
-    for tag, fontString in pairs(measureFonts) do
-        fontString:SetWidth(content:GetWidth())
-        fontString:SetSpacing(spacings[tag])
-        fontString:SetAlpha(0)
-    end
-
-    local function GetTextHeight(fontString, text)
-        text = string.gsub(text, "<[^>]+>", "")
-        text = string.gsub(text, "&amp;", "&")
-        text = string.gsub(text, "&lt;", "<")
-        text = string.gsub(text, "&gt;", ">")
-        fontString:SetText(text)
-        return fontString:GetStringHeight()
-    end
-
-    local function GetChangelogHeight(text)
-        local height = 0
-        for tag, fontString in pairs(measureFonts) do
-            for block in string.gmatch(text, "<"..tag..">(.-)</"..tag..">") do
-                height = height + GetTextHeight(fontString, block) + spacings[tag]
+    local function CreateContent(name)
+        local content = CreateFrame("SimpleHTML", name, changelogsFrame.scrollFrame.content)
+        content:SetSpacing("h1", 8)
+        content:SetSpacing("h2", 6)
+        content:SetSpacing("h3", 4)
+        content:SetSpacing("p", 4)
+        content:SetFontObject("h1", "CELL_FONT_CLASS_TITLE")
+        content:SetFontObject("h2", "CELL_FONT_CLASS")
+        local bodyFont
+        if LOCALE_zhCN then
+            bodyFont = "CELL_FONT_WIDGET"
+        else
+            bodyFont = "CELL_FONT_CHINESE"
+        end
+        content:SetFontObject("h3", bodyFont)
+        content:SetFontObject("p", bodyFont)
+        content:SetTextColor("h3", 1, 1, 1, 0)
+        content:SetWidth(changelogsFrame:GetWidth() - 30)
+        content:SetHeight(1)
+        content:SetHyperlinkFormat("|H%s|h|cFFFFD100%s|r|h")
+        content:SetScript("OnHyperlinkClick", function(self, linkData, link, button)
+            if linkData == "older" then
+                SetChangelogText(L["OLDER_CHANGELOGS"], 15, true)
+            elseif linkData == "recent" then
+                SetChangelogText(recentChangelogs, 30, true)
             end
+        end)
+        contents[#contents + 1] = content
+        return content
+    end
+
+    recentChangelogs = L["CHANGELOGS"]
+    CreateContent("CellChangelogsContent")
+
+    local function GetRenderedHeight(content)
+        local point, relativeTo, relativePoint, x, y = content:GetPoint()
+        content:ClearAllPoints()
+        content:SetHeight(1)
+        content:SetPoint("TOPLEFT", UIParent)
+        local height = select(4, content:GetBoundsRect())
+        content:ClearAllPoints()
+        content:SetPoint(point, relativeTo, relativePoint, x, y)
+        return height
+    end
+
+    local function GetChangelogChunks(text)
+        local chunks = {}
+        local chunk = ""
+
+        for line in (text.."\n"):gmatch("(.-)\n") do
+            if #chunk >= 20000 and line:find("^%s*<h1>") then
+                chunks[#chunks + 1] = chunk
+                chunk = ""
+            end
+            chunk = chunk .. line .. "\n"
         end
 
-        local _, breaks = string.gsub(text, "<br%s*/>", "")
-        measureFonts.p:SetText(" ")
-        return math.ceil(height + breaks * (measureFonts.p:GetStringHeight() + spacings.p))
+        chunks[#chunks + 1] = chunk
+        return chunks
     end
 
-    local function UpdateContentHeight(text, padding, resetScroll)
+    local updateId = 0
+    SetChangelogText = function(text, padding, resetScroll)
+        changelogsFrame.scrollFrame.content:SetAlpha(0)
+        -- Wrath renders <br/> too tall; one transparent line matches modern spacing.
+        text = string.gsub(text, "<br%s*/>", "<h3>.</h3>")
+
+        local chunks = GetChangelogChunks(text)
+        updateId = updateId + 1
+        local currentUpdateId = updateId
+
+        for i, chunk in ipairs(chunks) do
+            local content = contents[i] or CreateContent()
+            content:ClearAllPoints()
+            if i == 1 then
+                content:SetPoint("TOP", 0, -10)
+            else
+                content:SetPoint("TOP", contents[i - 1], "BOTTOM")
+            end
+            content:SetHeight(1)
+            content:SetText("<html><body>" .. chunk .. "</body></html>")
+            content:Show()
+        end
+
+        for i = #chunks + 1, #contents do
+            contents[i]:Hide()
+        end
+
         F.C_Timer.After(0, function()
-            local height = GetChangelogHeight(text)
-            content:SetHeight(height)
-            changelogsFrame.scrollFrame:SetContentHeight(height + padding)
+            if currentUpdateId ~= updateId then return end
+
+            local totalHeight = 0
+            for i = 1, #chunks do
+                local height = GetRenderedHeight(contents[i])
+                contents[i]:SetHeight(height)
+                totalHeight = totalHeight + height
+            end
+
+            changelogsFrame.scrollFrame:SetContentHeight(totalHeight + padding)
+            changelogsFrame.scrollFrame.content:SetAlpha(1)
             if resetScroll then
                 changelogsFrame.scrollFrame:ResetScroll()
             end
@@ -80,26 +128,10 @@ local function CreateChangelogsFrame()
     end
 
     changelogsFrame:SetScript("OnShow", function()
-        local text = L["CHANGELOGS"]
-        content:SetText("<html><body>" .. text .. "</body></html>")
-        UpdateContentHeight(text, 100)
+        SetChangelogText(recentChangelogs, 100)
         F.C_Timer.After(0, function()
             P.PixelPerfectPoint(changelogsFrame)
         end)
-    end)
-
-    content:SetScript("OnHyperlinkClick", function(self, linkData, link, button)
-        local text
-        if linkData == "older" then
-            text = L["OLDER_CHANGELOGS"]
-        elseif linkData == "recent" then
-            text = L["CHANGELOGS"]
-        end
-
-        if text then
-            content:SetText("<html><body>" .. text .. "</body></html>")
-            UpdateContentHeight(text, 30, true)
-        end
     end)
 end
 
