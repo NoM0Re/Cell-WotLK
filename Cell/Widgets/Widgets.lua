@@ -622,11 +622,7 @@ function Cell.CreateButton(parent, text, buttonColor, size, noBorder, noBackgrou
         b:SetPushedTextOffset(0, 0)
     else
         if not noBackground then
-            local bgf = CreateFrame("Frame", nil, b)
-            bgf:SetFrameLevel(b:GetFrameLevel()-1)
-            bgf:SetAllPoints(b)
-            local bg = bgf:CreateTexture()
-            bg:SetDrawLayer("BACKGROUND")
+            local bg = b:CreateTexture(nil, "BACKGROUND")
             b.bg = bg
             bg:SetAllPoints(b)
             bg:SetTexture(0.115, 0.115, 0.115, 1)
