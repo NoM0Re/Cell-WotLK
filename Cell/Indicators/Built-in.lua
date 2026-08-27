@@ -1740,7 +1740,7 @@ local function RoleIcon_SetRole(self, role)
             self.tex:SetTexture(ICON_PATH .. "MattUI_ROLES")
             self.tex:SetTexCoord(GetTexCoordsForRoleSmall(role))
         elseif self.texture == "custom" then
-            self.tex:SetTexture(self[role])
+            F.SetTexture(self.tex, self[role])
         end
         self:Show()
     elseif role == "VEHICLE-ROOT" then

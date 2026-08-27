@@ -1752,7 +1752,22 @@ local wowAtlasTextures = {
     ["alliance_icon_and_flag-dynamicIcon"] = {"Interface\\AddOns\\Cell\\Media\\Icons\\WorldStateUITextures.BLP", 0.00195312, 0.0644531, 0.777344, 0.902344},
 }
 
+local elvUIVersion = GetAddOnMetadata("ElvUI", "version")
+local elvUIMajorVersion = tonumber(string.match(elvUIVersion or "", "%d+")) or 0
+local legacyElvUIRoleTextures
+if elvUIMajorVersion > 0 and elvUIMajorVersion < 7 then
+    legacyElvUIRoleTextures = {
+        ["Interface\\AddOns\\ElvUI\\Core\\Media\\Textures\\Tank.tga"] = "Interface\\AddOns\\ElvUI\\Media\\Textures\\Tank.tga",
+        ["Interface\\AddOns\\ElvUI\\Core\\Media\\Textures\\Healer.tga"] = "Interface\\AddOns\\ElvUI\\Media\\Textures\\Healer.tga",
+        ["Interface\\AddOns\\ElvUI\\Core\\Media\\Textures\\DPS.tga"] = "Interface\\AddOns\\ElvUI\\Media\\Textures\\DPS.tga",
+    }
+end
+
 function F.GetTextureInfo(texture)
+    if legacyElvUIRoleTextures then
+        texture = legacyElvUIRoleTextures[texture] or texture
+    end
+
     local info = wowAtlasTextures[texture]
     if info then
         return unpack(info)
