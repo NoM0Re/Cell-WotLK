@@ -626,6 +626,24 @@ function Cell.CreateButton(parent, text, buttonColor, size, noBorder, noBackgrou
             b.bg = bg
             bg:SetAllPoints(b)
             bg:SetTexture(0.115, 0.115, 0.115, 1)
+
+            local bgColor = b:CreateTexture(nil, "BORDER")
+            b.bgColor = bgColor
+            if noBorder then
+                bgColor:SetAllPoints(b)
+            else
+                local n = P.Scale(1)
+                bgColor:SetPoint("TOPLEFT", n, -n)
+                bgColor:SetPoint("BOTTOMRIGHT", -n, n)
+            end
+            bgColor:SetTexture(Cell.vars.whiteTexture)
+
+            local SetBackdropColor = b.SetBackdropColor
+            function b:SetBackdropColor(r, g, blue, a)
+                a = a or 1
+                SetBackdropColor(self, r, g, blue, a)
+                bgColor:SetVertexColor(r, g, blue, a)
+            end
         end
 
         b:SetBackdropBorderColor(0, 0, 0, 1)
@@ -706,6 +724,11 @@ function Cell.CreateButton(parent, text, buttonColor, size, noBorder, noBackgrou
             -- update backdrop
             local n = P.Scale(1)
             b:SetBackdrop({bgFile = Cell.vars.whiteTexture, edgeFile = Cell.vars.whiteTexture, edgeSize = n, insets = {left=n, right=n, top=n, bottom=n}})
+            if b.bgColor then
+                b.bgColor:ClearAllPoints()
+                b.bgColor:SetPoint("TOPLEFT", n, -n)
+                b.bgColor:SetPoint("BOTTOMRIGHT", -n, n)
+            end
             -- restore colors
             b:SetBackdropColor(unpack(currentBackdropColor))
             b:SetBackdropBorderColor(unpack(currentBackdropBorderColor))
