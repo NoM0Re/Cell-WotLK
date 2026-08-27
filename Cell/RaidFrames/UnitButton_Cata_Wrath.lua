@@ -1477,6 +1477,10 @@ local function UnitButton_UpdateHealthStates(self, diff)
 
     local health = UnitHealth(unit) + (diff or 0)
     local healthMax = UnitHealthMax(unit)
+    if health == 1 and healthMax == 1 and UnitIsPlayer(unit) and not UnitIsConnected(unit) then
+        -- 3.3.5 returns 1/1 for players who are already offline at login.
+        health, healthMax = 0, 0
+    end
     health = min(health, healthMax) --! diff
 
     self.states.health = health
@@ -1941,10 +1945,12 @@ local function UnitButton_UpdateHealthMax(self)
 
     UnitButton_UpdateHealthStates(self)
 
+    local statusBarMax = self.states.healthMax == 0 and 1 or self.states.healthMax
+
     if barAnimationType == "Smooth" then
-        self.widgets.healthBar:SetMinMaxSmoothedValue(0, self.states.healthMax)
+        self.widgets.healthBar:SetMinMaxSmoothedValue(0, statusBarMax)
     else
-        self.widgets.healthBar:SetMinMaxValues(0, self.states.healthMax)
+        self.widgets.healthBar:SetMinMaxValues(0, statusBarMax)
     end
 
     if Cell.vars.useThresholdColor or Cell.vars.useFullColor then
