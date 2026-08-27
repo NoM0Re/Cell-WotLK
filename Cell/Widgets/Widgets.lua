@@ -591,8 +591,13 @@ function Cell.CreateButton(parent, text, buttonColor, size, noBorder, noBackgrou
     if s then
         s:SetWordWrap(false)
         -- s:SetWidth(size[1])
-        s:SetPoint("LEFT")
-        s:SetPoint("RIGHT")
+        if text == "×" then
+            s:ClearAllPoints()
+            s:SetPoint("CENTER", b, "CENTER", P.Scale(-1), P.Scale(1))
+        else
+            s:SetPoint("LEFT")
+            s:SetPoint("RIGHT")
+        end
 
         function b:SetTextColor(...)
             s:SetTextColor(...)
