@@ -6,7 +6,7 @@ https://www.wowace.com/projects/libbuttonglow-1-0
 -- luacheck: globals CreateFromMixins ObjectPoolMixin CreateTexturePool CreateFramePool
 
 local MAJOR_VERSION = "LibCustomGlow-1.0"
-local MINOR_VERSION = 21
+local MINOR_VERSION = 22
 if not LibStub then error(MAJOR_VERSION .. " requires LibStub.") end
 local lib, oldversion = LibStub:NewLibrary(MAJOR_VERSION, MINOR_VERSION)
 if not lib then return end
@@ -278,6 +278,8 @@ end
 
 local function acUpdate(self, elapsed)
   local texIndex, info = 0, self.info
+  if not info.space then return end
+
   for k = 1, 4 do
     self.timer[k] = self.timer[k] + elapsed / (info.period * k)
     if self.timer[k] > 1 or self.timer[k] < -1 then
