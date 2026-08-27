@@ -226,25 +226,29 @@ function Cell.StartRainbowText(fs, reverse)
 
     local pos = 0
     local step = 360 / (#fs.text-1)
-    local col
+    local col = CreateColor(1, 1, 1)
     local str
+    local elapsedTime = 0
 
     fs.updater:SetScript("OnUpdate", function(self, elapsed)
-
-        local hue = pos
-        -- NOTE: lua 正则匹配中文，不知道会不会有问题
-        str = fs.text:gsub("[%z\1-\127\194-\244][\128-\191]*", function(char)
-            colorSelect:SetColorHSV(hue,1,1)
-            col = F.CreateColor(colorSelect:GetColorRGB())
-            hue = (hue+step) > 360 and (hue+step)-360 or hue+step
-            return col:WrapTextInColorCode(char)
-        end)
-
         if reverse then
             pos = (pos+1) > 360 and 0 or pos + 1
         else
             pos = (pos-1) < 0 and 360 or pos - 1
         end
+
+        elapsedTime = elapsedTime + elapsed
+        if elapsedTime < 1 / 30 then return end
+        elapsedTime = 0
+
+        local hue = pos
+        -- NOTE: lua 正则匹配中文，不知道会不会有问题
+        str = fs.text:gsub("[%z\1-\127\194-\244][\128-\191]*", function(char)
+            colorSelect:SetColorHSV(hue,1,1)
+            col:SetRGB(colorSelect:GetColorRGB())
+            hue = (hue+step) > 360 and (hue+step)-360 or hue+step
+            return col:WrapTextInColorCode(char)
+        end)
 
         fs:SetText(str)
     end)
