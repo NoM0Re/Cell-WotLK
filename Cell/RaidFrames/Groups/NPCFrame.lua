@@ -84,6 +84,8 @@ function npcFrame:UpdateSeparateAnchor()
             else
                 separateAnchor.fadeOut:GetScript("OnFinished")(separateAnchor.fadeOut)
             end
+        else
+            separateAnchor:Show()
         end
     else
         dumb:Hide()

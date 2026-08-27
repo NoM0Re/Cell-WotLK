@@ -183,7 +183,9 @@ end
 -- apply fade in/out to menu
 -----------------------------------------
 function A.ApplyFadeInOutToMenu(anchorFrame, hoverFrame)
-    local fadingIn, fadedIn, fadingOut, fadedOut
+    local fadingIn, fadedIn, fadingOut
+    local fadedOut = true
+    anchorFrame:Hide()
     anchorFrame.fadeIn = anchorFrame:CreateAnimationGroup()
     anchorFrame.fadeIn.alpha = anchorFrame.fadeIn:CreateAnimation("Alpha")
     F.AlphaSetFromTo(anchorFrame.fadeIn.alpha, 0, 1)

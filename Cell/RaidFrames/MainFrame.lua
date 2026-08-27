@@ -80,6 +80,7 @@ local menuFrame = CreateFrame("Frame", "CellMenuFrame", cellMainFrame)
 Cell.frames.menuFrame = menuFrame
 menuFrame:SetAllPoints(anchorFrame)
 menuFrame:SetFrameLevel(27)
+menuFrame:Hide()
 
 local options = Cell.CreateButton(menuFrame, "", "red", {20, 10}, false, true)
 P.Point(options, "TOPLEFT", menuFrame)
@@ -203,7 +204,8 @@ P.Point(loadingBar, "BOTTOMRIGHT", options, -1, 1)
 -------------------------------------------------
 -- fadeIn & fadeOut
 -------------------------------------------------
-local fadingIn, fadedIn, fadingOut, fadedOut
+local fadingIn, fadedIn, fadingOut
+local fadedOut = true
 menuFrame.fadeIn = menuFrame:CreateAnimationGroup()
 menuFrame.fadeIn.initialAlpha = menuFrame.fadeIn:CreateAnimation("alpha")
 menuFrame.fadeIn.initialAlpha:SetChange(-1)

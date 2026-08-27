@@ -68,6 +68,8 @@ local function UpdateAnchor()
             else
                 anchorFrame.fadeOut:GetScript("OnFinished")(anchorFrame.fadeOut)
             end
+        else
+            anchorFrame:Show()
         end
     else
         dumb:Hide()
