@@ -788,9 +788,7 @@ end)
 local GroupTalentsCallback = {}
 function GroupTalentsCallback:RoleChanged(_, guid, unit, role)
     if unit then
-        F.C_Timer.After(0, function()
-            Cell.Fire("GroupRoleChanged", unit, guid, F.UnitGroupRolesAssigned(unit, role))
-        end)
+        Cell.Fire("GroupRoleChanged", unit, guid, F.UnitGroupRolesAssigned(unit, role))
     end
 end
 
