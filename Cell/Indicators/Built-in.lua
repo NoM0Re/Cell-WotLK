@@ -283,7 +283,7 @@ function I.CreateTankActiveMitigation(parent)
     bar:GetStatusBarTexture():SetAlpha(0)
     bar.reverseFill = true
 
-    local tex = bar:CreateTexture(nil, "BORDER", nil, -1)
+    local tex = bar:CreateTexture(nil, "BORDER")
     bar.tex = tex
     tex:SetTexture(F.GetClassColor(Cell.vars.playerClass))
     tex:SetPoint("TOPLEFT")
@@ -707,32 +707,32 @@ local function Dispels_UpdateHighlight(self, highlightType)
         self.highlight:ClearAllPoints()
         self.highlight:SetAllPoints(self.parent.widgets.healthBar)
         self.highlight:SetTexture(Cell.vars.whiteTexture)
-        self.highlight:SetDrawLayer("ARTWORK", 0)
+        self.highlight:SetDrawLayer("OVERLAY")
     elseif highlightType == "gradient-half" then
         -- self.highlight:SetParent(self.parent.widgets.indicatorFrame)
         self.highlight:ClearAllPoints()
         self.highlight:SetPoint("BOTTOMLEFT", self.parent.widgets.healthBar)
         self.highlight:SetPoint("TOPRIGHT", self.parent.widgets.healthBar, "RIGHT")
         self.highlight:SetTexture(Cell.vars.whiteTexture)
-        self.highlight:SetDrawLayer("ARTWORK", 0)
+        self.highlight:SetDrawLayer("OVERLAY")
     elseif highlightType == "entire" then
         -- self.highlight:SetParent(self.parent.widgets.indicatorFrame)
         self.highlight:ClearAllPoints()
         self.highlight:SetAllPoints(self.parent.widgets.healthBar)
         self.highlight:SetTexture(Cell.vars.whiteTexture)
-        self.highlight:SetDrawLayer("ARTWORK", 0)
+        self.highlight:SetDrawLayer("OVERLAY")
     elseif highlightType == "current" then
         -- self.highlight:SetParent(self.parent.widgets.healthBar)
         self.highlight:ClearAllPoints()
         self.highlight:SetAllPoints(self.parent.widgets.healthBar:GetStatusBarTexture())
         self.highlight:SetTexture(Cell.vars.texture)
-        self.highlight:SetDrawLayer("ARTWORK", -7)
+        self.highlight:SetDrawLayer("BACKGROUND")
     elseif highlightType == "current+" then
         -- self.highlight:SetParent(self.parent.widgets.healthBar)
         self.highlight:ClearAllPoints()
         self.highlight:SetAllPoints(self.parent.widgets.healthBar:GetStatusBarTexture())
         self.highlight:SetTexture(Cell.vars.texture)
-        self.highlight:SetDrawLayer("ARTWORK", -7)
+        self.highlight:SetDrawLayer("BACKGROUND")
         self.highlight:SetBlendMode("ADD")
     end
 end
@@ -750,6 +750,17 @@ function I.CreateDispels(parent)
     dispels.highlight = parent.widgets.midLevelFrame:CreateTexture(parent:GetName().."DispelHighlight")
     dispels.highlight:Hide()
 
+    -- 3.3.5 has only four persistent draw layers, so the fifth overlapping icon needs one lower frame.
+    dispels.lowestIconFrame = CreateFrame("Frame", nil, dispels)
+    dispels.lowestIconFrame:SetAllPoints(dispels)
+    dispels.lowestIconFrame:SetFrameLevel(dispels:GetFrameLevel() - 1)
+
+    dispels._SetFrameLevel = dispels.SetFrameLevel
+    function dispels:SetFrameLevel(level)
+        dispels:_SetFrameLevel(level)
+        dispels.lowestIconFrame:SetFrameLevel(level - 1)
+    end
+
     dispels._SetSize = dispels.SetSize
     dispels.SetSize = Dispels_SetSize
     dispels.UpdateSize = Dispels_UpdateSize
@@ -758,12 +769,13 @@ function I.CreateDispels(parent)
     dispels.SetIconStyle = Dispels_SetIconStyle
     dispels.SetOrientation = Dispels_SetOrientation
 
+    local layers = {"OVERLAY", "ARTWORK", "BORDER", "BACKGROUND"}
     for i = 1, 5 do
-        local icon = dispels:CreateTexture(parent:GetName().."Dispel"..i, "ARTWORK")
+        local iconParent = i == 5 and dispels.lowestIconFrame or dispels
+        local icon = iconParent:CreateTexture(parent:GetName().."Dispel"..i, layers[i] or "ARTWORK")
         tinsert(dispels, icon)
         icon:Hide()
 
-        icon:SetDrawLayer("ARTWORK", 6-i)
         icon.SetDispel = Dispels_SetDispel_Blizzard
     end
 end
@@ -1790,7 +1802,7 @@ end
 -- party assignment icon
 -------------------------------------------------
 function I.CreatePartyAssignmentIcon(parent)
-    local partyAssignmentIcon = parent.widgets.indicatorFrame:CreateTexture(parent:GetName().."PartyAssignmentIcon", "ARTWORK", nil, -7)
+    local partyAssignmentIcon = parent.widgets.indicatorFrame:CreateTexture(parent:GetName().."PartyAssignmentIcon", "BACKGROUND")
     parent.indicators.partyAssignmentIcon = partyAssignmentIcon
     partyAssignmentIcon:Hide()
 
@@ -1816,7 +1828,7 @@ end
 -- leader icon
 -------------------------------------------------
 function I.CreateLeaderIcon(parent)
-    local leaderIcon = parent.widgets.indicatorFrame:CreateTexture(parent:GetName().."LeaderIcon", "ARTWORK", nil, -7)
+    local leaderIcon = parent.widgets.indicatorFrame:CreateTexture(parent:GetName().."LeaderIcon", "BACKGROUND")
     parent.indicators.leaderIcon = leaderIcon
     -- leaderIcon:SetPoint("TOPLEFT", roleIcon, "BOTTOM")
     -- leaderIcon:SetPoint("TOPLEFT", 0, -11)
@@ -2031,7 +2043,7 @@ function I.CreateShieldBar(parent)
     shieldBar:SetBackdrop({edgeFile=Cell.vars.whiteTexture, edgeSize=P.Scale(1)})
     shieldBar:SetBackdropBorderColor(0, 0, 0, 1)
 
-    local tex = shieldBar:CreateTexture(nil, "BORDER", nil, -7)
+    local tex = shieldBar:CreateTexture(nil, "BACKGROUND")
     tex:SetAllPoints()
 
     shieldBar._SetPoint = shieldBar.SetPoint
@@ -2322,12 +2334,12 @@ function I.CreateCombatIcon(parent)
     combatIcon.root = parent
     combatIcon:Hide()
 
-    combatIcon.tex = combatIcon:CreateTexture(nil, "ARTWORK", nil, 0)
+    combatIcon.tex = combatIcon:CreateTexture(nil, "ARTWORK")
     combatIcon.tex:SetAllPoints()
     combatIcon.tex:SetTexture("Interface\\AddOns\\Cell\\Media\\Icons\\combat")
     -- combatIcon.tex:SetAtlas("combat_swords-dynamicIcon")
 
-    combatIcon.flashTex = combatIcon:CreateTexture(nil, "ARTWORK", nil, -5)
+    combatIcon.flashTex = combatIcon:CreateTexture(nil, "BORDER")
     combatIcon.flashTex:SetAllPoints()
     combatIcon.flashTex:SetTexture("Interface\\AddOns\\Cell\\Media\\Icons\\combat_glow")
     -- combatIcon.flashTex:SetAtlas("combat_swords-flash")

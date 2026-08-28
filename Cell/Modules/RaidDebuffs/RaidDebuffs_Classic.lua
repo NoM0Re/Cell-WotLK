@@ -1211,14 +1211,12 @@ local function CreateDetailsFrame()
     -- detailsContentFrame:SetAllPoints(detailsFrame)
 
     -- spell icon
-    local spellIconBG = detailsContentFrame:CreateTexture(nil, "ARTWORK")
+    local spellIconBG = detailsContentFrame:CreateTexture(nil, "BORDER")
     spellIconBG:SetSize(27, 27)
-    spellIconBG:SetDrawLayer("ARTWORK", 6)
     spellIconBG:SetPoint("TOPLEFT", 5, -5)
     spellIconBG:SetTexture(0, 0, 0, 1)
 
     spellIcon = detailsContentFrame:CreateTexture(nil, "ARTWORK")
-    spellIcon:SetDrawLayer("ARTWORK", 7)
     spellIcon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
     spellIcon:SetPoint("TOPLEFT", spellIconBG, 1, -1)
     spellIcon:SetPoint("BOTTOMRIGHT", spellIconBG, -1, 1)

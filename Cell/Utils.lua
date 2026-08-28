@@ -2227,7 +2227,7 @@ local harmSpells = {
     ["PRIEST"] = 585, -- Shadow Word: Pain / Smite
     ["ROGUE"] = 1752, -- Sinister Strike
     ["SHAMAN"] = 403, -- Lightning Bolt
-    ["WARLOCK"] = 234153, -- Drain Life
+    ["WARLOCK"] = 689, -- Drain Life
     ["WARRIOR"] = 355, -- Taunt
 }
 

@@ -215,7 +215,7 @@ local function CreateColorPicker()
         { r=1, g=0, b=0 },    -- back to Red
     }
     for i = 1, 6 do
-        hueSaturation[i] = hueSaturation:CreateTexture(name.."HS_Gradient"..i, "ARTWORK", nil, 0)
+        hueSaturation[i] = hueSaturation:CreateTexture(name.."HS_Gradient"..i, "BACKGROUND")
         hueSaturation[i]:SetTexture(Cell.vars.whiteTexture)
         -- hueSaturation[i]:SetTexture(1, 1, 1, 1)
         -- hueSaturation[i]:SetVertexColor(1, 1, 1, 1)
@@ -234,7 +234,7 @@ local function CreateColorPicker()
     end
 
     -- add saturation
-    local saturation = hueSaturation:CreateTexture(name.."HS_Saturation", "ARTWORK", nil, 1)
+    local saturation = hueSaturation:CreateTexture(name.."HS_Saturation", "ARTWORK")
     saturation:SetBlendMode("BLEND")
     saturation:SetTexture(Cell.vars.whiteTexture)
     saturation:SetGradientAlpha("VERTICAL", 1, 1, 1, 1, 1, 1, 1, 0)

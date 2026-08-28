@@ -112,10 +112,10 @@ local function UpdatePreviewButton()
 
     previewButton.widgets.healthBar:SetStatusBarTexture(Cell.vars.texture)
     F.SetStatusBarRotatesTexture(previewButton.widgets.healthBar, previewButton.widgets.healthBar.rotatesTexture)
-    previewButton.widgets.healthBar:GetStatusBarTexture():SetDrawLayer("ARTWORK", -7) --! VERY IMPORTANT
+    previewButton.widgets.healthBar:GetStatusBarTexture():SetDrawLayer("BORDER") --! VERY IMPORTANT
     previewButton.widgets.powerBar:SetStatusBarTexture(Cell.vars.texture)
     F.SetStatusBarRotatesTexture(previewButton.widgets.powerBar, previewButton.widgets.powerBar.rotatesTexture)
-    previewButton.widgets.powerBar:GetStatusBarTexture():SetDrawLayer("ARTWORK", -7) --! VERY IMPORTANT
+    previewButton.widgets.powerBar:GetStatusBarTexture():SetDrawLayer("BORDER") --! VERY IMPORTANT
 
     -- health color
     local r, g, b, lossR, lossG, lossB = F.GetHealthBarColor(1, false, F.GetClassColor(Cell.vars.playerClass))

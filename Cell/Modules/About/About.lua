@@ -289,7 +289,7 @@ local function CreateSupportersPane()
     heartIcon:SetSize(16, 16)
     heartIcon:SetTexture("Interface\\AddOns\\Cell\\Media\\Icons\\sparkling_heart")
 
-    local bgTex = supportersPane:CreateTexture(nil, "BACKGROUND", nil, 0)
+    local bgTex = supportersPane:CreateTexture(nil, "BACKGROUND")
     bgTex:SetPoint("TOPLEFT", -5, 5)
     bgTex:SetPoint("BOTTOMRIGHT", 5, -5)
     bgTex:SetTexture(0.1, 0.1, 0.1, 1)

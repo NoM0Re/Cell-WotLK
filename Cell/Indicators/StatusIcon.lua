@@ -29,7 +29,26 @@ end
 local rez = {}
 local soulstones = {}
 local SOULSTONE = F.GetSpellInfo(20707)
-local RESURRECTING = F.GetSpellInfo(160029)
+
+local function SetResurrection(guid, button)
+    if not guid then return end
+
+    local start, duration = GetTime(), 60
+    local entry = {start, duration}
+    rez[guid] = entry
+
+    F.C_Timer.After(duration, function()
+        if rez[guid] == entry then
+            rez[guid] = nil
+        end
+    end)
+
+    if button then
+        I.UpdateStatusIcon_Resurrection(button, start, duration)
+    else
+        F.HandleUnitButton("guid", guid, I.UpdateStatusIcon_Resurrection, start, duration)
+    end
+end
 
 local cleuFrame = CreateFrame("Frame")
 cleuFrame:SetScript("OnEvent", function(self, event, ...)
@@ -42,9 +61,6 @@ cleuFrame:SetScript("OnEvent", function(self, event, ...)
             F.C_Timer.After(0.1, function()
                 soulstones[destGUID] = nil
             end)
-        elseif spellName == RESURRECTING then
-            rez[destGUID] = nil
-            F.HandleUnitButton("guid", destGUID, I.UpdateStatusIcon_Resurrection)
         end
     elseif subEvent == "UNIT_DIED" then
         -- print("died", timestamp, destName)
@@ -53,10 +69,7 @@ cleuFrame:SetScript("OnEvent", function(self, event, ...)
         end
         soulstones[destGUID] = nil
     elseif subEvent == "SPELL_RESURRECT" then
-        local start, duration = GetTime(), 60
-        rez[destGUID] = {start, duration}
-
-        F.HandleUnitButton("guid", destGUID, I.UpdateStatusIcon_Resurrection, start, duration)
+        SetResurrection(destGUID)
     end
 end)
 
@@ -67,11 +80,7 @@ local function IncomingResurrectionChanged(name, event, _, _, success)
             I.UpdateStatusIcon(b)
             if event == "ResComm_ResEnd" and success then
                 local guid = b.states.guid or UnitGUID(unit)
-                if guid then
-                    local start, duration = GetTime(), 60
-                    rez[guid] = {start, duration}
-                    I.UpdateStatusIcon_Resurrection(b, start, duration)
-                end
+                SetResurrection(guid, b)
             end
         end
     end)
@@ -183,11 +192,7 @@ function I.UpdateStatusIcon_Resurrection(button, start, duration)
     end
 
     if not start then
-        local dur, expir = select(5, F.FindAuraById(unit, "DEBUFF", 160029)) -- battle res
-        if dur then --! check Resurrecting debuff
-            start = expir - dur
-            duration = dur
-        elseif rez[guid] then --! check saved data (unit button changed)
+        if rez[guid] then --! check saved data (unit button changed)
             start = rez[guid][1]
             duration = rez[guid][2]
         else
@@ -207,7 +212,6 @@ function I.UpdateStatusIcon_Resurrection(button, start, duration)
     -- timer
     if resurrectionIcon.timer then resurrectionIcon.timer:Cancel() end
     resurrectionIcon.timer = F.C_Timer.NewTimer(start + duration - GetTime(), function()
-        rez[guid] = nil
         resurrectionIcon:Hide()
     end)
 end
@@ -238,7 +242,7 @@ function I.UpdateStatusIcon(button)
     --     icon:Show()
     elseif button.states.BGFlag then
         icon:SetVertexColor(1, 1, 1, 1)
-        F.SetTexture(icon, button.states.BGFlag.."_icon_and_flag-dynamicIcon")
+        F.SetTexture(icon, button.states.BGFlag)
         icon:Show()
     else
         icon:Hide()

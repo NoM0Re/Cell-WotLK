@@ -1770,7 +1770,7 @@ function I.CreateAura_Rect(name, parent)
     frame:SetBackdrop({edgeFile = Cell.vars.whiteTexture, edgeSize = P.Scale(CELL_BORDER_SIZE)})
     frame:SetBackdropBorderColor(0, 0, 0, 1)
 
-    local tex = frame:CreateTexture(nil, "BORDER", nil, -7)
+    local tex = frame:CreateTexture(nil, "BACKGROUND")
     frame.tex = tex
     tex:SetAllPoints()
 

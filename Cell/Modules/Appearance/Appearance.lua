@@ -489,11 +489,11 @@ local function UpdatePreviewButton(which)
 
         previewButton2.widgets.healthBar:SetStatusBarTexture(Cell.vars.texture)
         F.SetStatusBarRotatesTexture(previewButton2.widgets.healthBar, previewButton2.widgets.healthBar.rotatesTexture)
-        previewButton2.widgets.healthBar:GetStatusBarTexture():SetDrawLayer("ARTWORK", -7) --! VERY IMPORTANT
+        previewButton2.widgets.healthBar:GetStatusBarTexture():SetDrawLayer("BORDER") --! VERY IMPORTANT
         previewButton2.widgets.healthBarLoss:SetTexture(Cell.vars.texture)
         previewButton2.widgets.powerBar:SetStatusBarTexture(Cell.vars.texture)
         F.SetStatusBarRotatesTexture(previewButton2.widgets.powerBar, previewButton2.widgets.powerBar.rotatesTexture)
-        previewButton2.widgets.powerBar:GetStatusBarTexture():SetDrawLayer("ARTWORK", -7) --! VERY IMPORTANT
+        previewButton2.widgets.powerBar:GetStatusBarTexture():SetDrawLayer("BORDER") --! VERY IMPORTANT
         previewButton2.widgets.powerBarLoss:SetTexture(Cell.vars.texture)
         previewButton2.widgets.incomingHeal:SetTexture(Cell.vars.texture)
         previewButton2.widgets.damageFlashTex:SetTexture(Cell.vars.texture)

@@ -1364,11 +1364,15 @@ local function UnitButton_UpdateBuffs(self)
             I.UpdateCustomIndicators(self, "buff", spellId, name, expirationTime - duration, duration, nil, icon, count, refreshing, source == "player" or source == "pet")
 
             -- check BG flags for statusIcon
-            if spellId == 301091 then
-                self.states.BGFlag = "alliance"
-            end
-            if spellId == 301089 then
-                self.states.BGFlag = "horde"
+            if spellId == 23333 then -- Warsong Flag
+                self.states.BGFlag = "horde_icon_and_flag-dynamicIcon"
+            elseif spellId == 23335 then -- Silverwing Flag
+                self.states.BGFlag = "alliance_icon_and_flag-dynamicIcon"
+            elseif spellId == 34976 then -- Netherstorm Flag
+                local faction = UnitFactionGroup(unit)
+                if faction then
+                    self.states.BGFlag = strlower(faction).."_icon_and_flag-dynamicIcon"
+                end
             end
 
             if enabledIndicators["powerWordShield"] and POWER_WORD_SHIELD[spellId] and (not indicatorBooleans["powerWordShield"] or source == "player") then
@@ -2800,6 +2804,7 @@ local function UnitButton_OnEvent(self, event, unit)
 
         elseif event == "PLAYER_FLAGS_CHANGED" or event == "UNIT_FLAGS" then
             UnitButton_UpdateStatusText(self)
+            I.UpdateStatusIcon_Resurrection(self)
 
         elseif event == "UNIT_FACTION" then -- mind control
             UnitButton_UpdateNameTextColor(self)
@@ -3102,11 +3107,11 @@ end
 function B.SetTexture(button, tex)
     button.widgets.healthBar:SetStatusBarTexture(tex)
     F.SetStatusBarRotatesTexture(button.widgets.healthBar, button.widgets.healthBar.rotatesTexture)
-    button.widgets.healthBar:GetStatusBarTexture():SetDrawLayer("ARTWORK", -7)
+    button.widgets.healthBar:GetStatusBarTexture():SetDrawLayer("BORDER")
     button.widgets.healthBarLoss:SetTexture(tex)
     button.widgets.powerBar:SetStatusBarTexture(tex)
     F.SetStatusBarRotatesTexture(button.widgets.powerBar, button.widgets.powerBar.rotatesTexture)
-    button.widgets.powerBar:GetStatusBarTexture():SetDrawLayer("ARTWORK", -7)
+    button.widgets.powerBar:GetStatusBarTexture():SetDrawLayer("BORDER")
     button.widgets.powerBarLoss:SetTexture(tex)
     button.widgets.incomingHeal:SetTexture(tex)
     button.widgets.damageFlashTex:SetTexture(tex)
@@ -3670,17 +3675,10 @@ B.UpdateName = UnitButton_UpdateName
 local startTimeCache = {}
 
 -- Layers ---------------------------------------
--- OVERLAY
--- ARTWORK
---  -2 overAbsorbGlow
---  -3 absorbsBar
---  -4 overShieldGlow, overShieldGlowR
---  -5 shieldBar, shieldBarR
---	-6 incomingHeal, damageFlashTex
---	-7 healthBar, healthBarLoss
--- BORDER
---  0 gapTexture
--- BACKGROUND
+-- healthBar: BORDER fill, ARTWORK incomingHeal and damageFlashTex
+-- midLevelFrame: BACKGROUND current dispel highlight, BORDER shields,
+--                ARTWORK overshield glows, OVERLAY full dispel highlight
+-- button: BORDER healthBarLoss, powerBarLoss and gapTexture
 -------------------------------------------------
 
 -- NOTE: prevent a nil method error
@@ -3712,11 +3710,11 @@ function CellUnitButton_OnLoad(button)
     button.widgets.healthBar = healthBar
     healthBar.SetBarValue = healthBar.SetValue
     healthBar:SetStatusBarTexture(Cell.vars.texture)
-    healthBar:GetStatusBarTexture():SetDrawLayer("ARTWORK", -7)
+    healthBar:GetStatusBarTexture():SetDrawLayer("BORDER")
     healthBar:SetFrameLevel(button:GetFrameLevel()+1)
 
     -- hp loss
-    local healthBarLoss = button:CreateTexture(name.."HealthBarLoss", "ARTWORK", nil , -7)
+    local healthBarLoss = button:CreateTexture(name.."HealthBarLoss", "BORDER")
     button.widgets.healthBarLoss = healthBarLoss
     -- P.Point(healthBarLoss, "TOPRIGHT", healthBar)
     -- P.Point(healthBarLoss, "BOTTOMLEFT", healthBar:GetStatusBarTexture(), "BOTTOMRIGHT")
@@ -3727,7 +3725,7 @@ function CellUnitButton_OnLoad(button)
     button.widgets.powerBar = powerBar
     powerBar.SetBarValue = powerBar.SetValue
     powerBar:SetStatusBarTexture(Cell.vars.texture)
-    powerBar:GetStatusBarTexture():SetDrawLayer("ARTWORK", -7)
+    powerBar:GetStatusBarTexture():SetDrawLayer("BORDER")
     powerBar:SetFrameLevel(button:GetFrameLevel()+2)
 
     local gapTexture = button:CreateTexture(nil, "BORDER")
@@ -3738,14 +3736,14 @@ function CellUnitButton_OnLoad(button)
     gapTexture:SetTexture(unpack(CELL_BORDER_COLOR))
 
     -- power loss
-    local powerBarLoss = button:CreateTexture(name.."PowerBarLoss", "ARTWORK", nil , -7)
+    local powerBarLoss = button:CreateTexture(name.."PowerBarLoss", "BORDER")
     button.widgets.powerBarLoss = powerBarLoss
     -- P.Point(powerBarLoss, "TOPRIGHT", powerBar)
     -- P.Point(powerBarLoss, "BOTTOMLEFT", powerBar:GetStatusBarTexture(), "BOTTOMRIGHT")
     powerBarLoss:SetTexture(Cell.vars.texture)
 
     -- incoming heal
-    local incomingHeal = healthBar:CreateTexture(name.."IncomingHealBar", "ARTWORK", nil, -6)
+    local incomingHeal = healthBar:CreateTexture(name.."IncomingHealBar", "ARTWORK")
     button.widgets.incomingHeal = incomingHeal
     incomingHeal:SetTexture(Cell.vars.texture)
     incomingHeal:Hide()
@@ -3788,7 +3786,7 @@ function CellUnitButton_OnLoad(button)
     midLevelFrame:SetAllPoints(healthBar)
 
     -- shield bar
-    local shieldBar = midLevelFrame:CreateTexture(name.."ShieldBar", "ARTWORK", nil, -5)
+    local shieldBar = midLevelFrame:CreateTexture(name.."ShieldBar", "BORDER")
     button.widgets.shieldBar = shieldBar
     shieldBar:SetTexture("Interface\\AddOns\\Cell\\Media\\shield.tga", "REPEAT", "REPEAT")
     shieldBar:SetHorizTile(true)
@@ -3798,7 +3796,7 @@ function CellUnitButton_OnLoad(button)
     shieldBar.SetValue = DumbFunc
     shieldBar.healthBar = healthBar
 
-    local shieldBarR = midLevelFrame:CreateTexture(name.."ShieldBarR", "ARTWORK", nil, -5)
+    local shieldBarR = midLevelFrame:CreateTexture(name.."ShieldBarR", "BORDER")
     button.widgets.shieldBarR = shieldBarR
     shieldBarR:SetTexture("Interface\\AddOns\\Cell\\Media\\shield", "REPEAT", "REPEAT")
     shieldBarR:SetHorizTile(true)
@@ -3808,14 +3806,14 @@ function CellUnitButton_OnLoad(button)
     shieldBar.shieldBarR = shieldBarR
 
     -- over-shield glow
-    local overShieldGlow = midLevelFrame:CreateTexture(name.."OverShieldGlow", "ARTWORK", nil, -4)
+    local overShieldGlow = midLevelFrame:CreateTexture(name.."OverShieldGlow", "ARTWORK")
     button.widgets.overShieldGlow = overShieldGlow
     overShieldGlow:SetTexture("Interface\\AddOns\\Cell\\Media\\overshield")
     overShieldGlow:Hide()
     shieldBar.overShieldGlow = overShieldGlow
 
     -- over-shield glow reversed
-    local overShieldGlowR = midLevelFrame:CreateTexture(name.."OverShieldGlowR", "ARTWORK", nil, -4)
+    local overShieldGlowR = midLevelFrame:CreateTexture(name.."OverShieldGlowR", "ARTWORK")
     button.widgets.overShieldGlowR = overShieldGlowR
     overShieldGlowR:SetTexture("Interface\\AddOns\\Cell\\Media\\overshield_reversed")
     -- overShieldGlowR:SetBlendMode("ADD")
@@ -3824,7 +3822,7 @@ function CellUnitButton_OnLoad(button)
 
     -- bar animation
     -- flash
-    local damageFlashTex = healthBar:CreateTexture(name.."DamageFlash", "ARTWORK", nil, -6)
+    local damageFlashTex = healthBar:CreateTexture(name.."DamageFlash", "ARTWORK")
     button.widgets.damageFlashTex = damageFlashTex
     damageFlashTex:SetTexture(Cell.vars.whiteTexture)
     damageFlashTex:SetVertexColor(1, 1, 1, 0.7)

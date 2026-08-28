@@ -378,10 +378,6 @@ function F.Revise()
             end
         end
 
-        if not F.TContains(CellDB["debuffBlacklist"], 160029) then
-            tinsert(CellDB["debuffBlacklist"], 2, 160029)
-        end
-
         -- glow options for raidDebuffs
         for instance, iTable in pairs(CellDB["raidDebuffs"]) do
             for boss, bTable in pairs(iTable) do

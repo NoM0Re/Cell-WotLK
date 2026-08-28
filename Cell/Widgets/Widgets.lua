@@ -1635,7 +1635,7 @@ function Cell.CreateStatusBar(name, parent, width, height, maxValue, smooth, fun
     if not texture then texture = Cell.vars.whiteTexture end
     bar:SetStatusBarTexture(texture)
     bar:SetStatusBarColor(unpack(color))
-    bar:GetStatusBarTexture():SetDrawLayer("BORDER", -1)
+    bar:GetStatusBarTexture():SetDrawLayer("BORDER")
 
     P.Width(bar, width)
     P.Height(bar, height)
