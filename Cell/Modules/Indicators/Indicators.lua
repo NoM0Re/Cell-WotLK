@@ -1842,6 +1842,7 @@ local function ShowIndicatorSettings(id)
             w:SetFunc(function(value)
                 CellDB["targetedSpellsList"] = value
                 Cell.vars.targetedSpellsList = F.ConvertTable(CellDB["targetedSpellsList"])
+                I.UpdateTargetedSpellsList()
             end)
 
         -- targetedSpellsGlow

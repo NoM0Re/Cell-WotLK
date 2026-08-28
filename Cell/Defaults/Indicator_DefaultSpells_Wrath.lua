@@ -83,11 +83,15 @@ function I.UpdateAoEHealings(t)
     wipe(customAoEHealings)
     for _, id in pairs(t["custom"]) do
         customAoEHealings[id] = true
+        local name = F.GetSpellInfo(id)
+        if name then
+            customAoEHealings[name] = true
+        end
     end
 end
 
 function I.IsAoEHealing(name, id)
-    return builtInAoEHealings[name] or builtInAoEHealings[id] or customAoEHealings[id]
+    return builtInAoEHealings[name] or builtInAoEHealings[id] or customAoEHealings[name] or customAoEHealings[id]
 end
 
 local summonDuration = {}

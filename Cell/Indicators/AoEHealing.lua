@@ -42,6 +42,7 @@ end)
 function I.CreateAoEHealing(parent)
     local aoeHealing = CreateFrame("Frame", parent:GetName().."AoEHealing", parent.widgets.indicatorFrame)
     parent.indicators.aoeHealing = aoeHealing
+    aoeHealing:SetFrameLevel(parent.widgets.indicatorFrame:GetFrameLevel()+1)
     aoeHealing:SetPoint("TOPLEFT", parent.widgets.healthBar)
     aoeHealing:SetPoint("TOPRIGHT", parent.widgets.healthBar)
     aoeHealing:Hide()
@@ -50,23 +51,21 @@ function I.CreateAoEHealing(parent)
     aoeHealing.tex:SetAllPoints(aoeHealing)
     aoeHealing.tex:SetTexture(Cell.vars.whiteTexture)
 
-    local ag = aoeHealing:CreateAnimationGroup()
-    local a1 = ag:CreateAnimation("Alpha")
-    F.AlphaSetFromTo(a1, 0, 1)
-    a1:SetDuration(0.5)
-    a1:SetOrder(1)
-    a1:SetSmoothing("OUT")
-    local a2 = ag:CreateAnimation("Alpha")
-    F.AlphaSetFromTo(a2, 1, 0)
-    a2:SetDuration(0.5)
-    a2:SetOrder(2)
-    a2:SetSmoothing("IN")
+    aoeHealing:SetScript("OnUpdate", function(self, elapsed)
+        if not self.elapsed then return end
+        self.elapsed = self.elapsed + elapsed
 
-    ag:SetScript("OnPlay", function()
-        aoeHealing:Show()
-    end)
-    ag:SetScript("OnFinished", function()
-        aoeHealing:Hide()
+        if self.elapsed < 0.5 then
+            local progress = self.elapsed * 2
+            self:SetAlpha(1-(1-progress)^2)
+        elseif self.elapsed < 1 then
+            local progress = (self.elapsed-0.5) * 2
+            self:SetAlpha(1-progress^2)
+        else
+            self.elapsed = nil
+            self:Hide()
+            self:SetAlpha(1)
+        end
     end)
 
     function aoeHealing:SetColor(r, g, b)
@@ -74,11 +73,9 @@ function I.CreateAoEHealing(parent)
     end
 
     function aoeHealing:Display()
-        -- if ag:IsPlaying() then
-        --     ag:Restart()
-        -- else
-            ag:Play()
-        -- end
+        aoeHealing.elapsed = 0
+        aoeHealing:SetAlpha(0)
+        aoeHealing:Show()
     end
 end
 

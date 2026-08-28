@@ -25,6 +25,8 @@ function header:UpdateButtonUnit(bName, unit)
     Cell.unitButtons.party.units[petUnit] = _G[bName].petButton
 end
 
+-- 3.3.5 SecureGroupHeaderTemplate has no _initialAttribute-* child update mechanism.
+-- Synchronize the final unit attributes after the header has applied sorting instead.
 -- header:SetAttribute("initialConfigFunction", [[
 --     RegisterUnitWatch(self)
 
@@ -32,28 +34,6 @@ end
 --     self:SetWidth(header:GetAttribute("buttonWidth") or 66)
 --     self:SetHeight(header:GetAttribute("buttonHeight") or 46)
 -- ]])
-
-header:SetAttribute("_initialAttributeNames", "refreshUnitChange")
-header:SetAttribute("_initialAttribute-refreshUnitChange", [[
-    local unit = self:GetAttribute("unit")
-    local header = self:GetParent()
-    local petButton = self:GetFrameRef("petButton")
-
-    -- print(self:GetName(), unit, petButton)
-
-    if petButton and header:GetAttribute("showPartyPets") and not header:GetAttribute("partyDetached") then
-        local petUnit
-        if unit == "player" then
-            petUnit = "pet"
-        else
-            petUnit = string.gsub(unit, "party", "partypet")
-        end
-        petButton:SetAttribute("unit", petUnit)
-        RegisterUnitWatch(petButton)
-    end
-
-    self:SetAttribute("cellUpdateUnit", unit)
-]])
 
 header:SetAttribute("point", "TOP")
 header:SetAttribute("xOffset", 0)
@@ -81,9 +61,17 @@ local function SyncHeaderChildren()
 end
 
 local function SyncPartyUnits()
+    wipe(Cell.unitButtons.party.units)
     for _, child in ipairs({header:GetChildren()}) do
         local unit = child:GetAttribute("unit")
         if unit then
+            local petUnit = unit == "player" and "pet" or string.gsub(unit, "party", "partypet")
+            if not InCombatLockdown() then
+                child.petButton:SetAttribute("unit", petUnit)
+                if header:GetAttribute("showPartyPets") and not header:GetAttribute("partyDetached") then
+                    RegisterUnitWatch(child.petButton)
+                end
+            end
             header:UpdateButtonUnit(child:GetName(), unit)
         end
     end
@@ -110,12 +98,6 @@ local function InitPetButtons()
 
         playerButton.petButton = petButton
         SecureHandlerSetFrameRef(playerButton, "petButton", petButton)
-        playerButton:HookScript("OnAttributeChanged", function(self, name, value)
-            if name == "cellUpdateUnit" then
-                header:UpdateButtonUnit(self:GetName(), value)
-            end
-        end)
-
         -- for IterateAllUnitButtons
         Cell.unitButtons.party["player"..i] = playerButton
         Cell.unitButtons.party["pet"..i] = petButton
@@ -195,7 +177,6 @@ local function PartyFrame_UpdateLayout(layout, which)
         RegisterStateDriver(partyFrame, "visibility", "[@raid1,exists] hide;[@party1,exists] show;[group:party] show;hide")
         SyncHeaderChildren()
         InitPetButtons()
-        SyncPartyUnits()
     end
 
     -- update
@@ -338,6 +319,8 @@ local function PartyFrame_UpdateLayout(layout, which)
     if not which or which == "hideSelf" then
         header:SetAttribute("showPlayer", not layout["main"]["hideSelf"])
     end
+
+    SyncPartyUnits()
 end
 Cell.RegisterCallback("UpdateLayout", "PartyFrame_UpdateLayout", PartyFrame_UpdateLayout)
 

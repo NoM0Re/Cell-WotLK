@@ -82,27 +82,22 @@ end
 local header = CreateFrame("Frame", "CellPetFrameHeader", petFrame, "SecureGroupPetHeaderTemplate")
 header:SetAllPoints(petFrame)
 
-header:SetAttribute("initialConfigFunction", [[
+header.initialConfigFunction = function(child)
     --! button for pet/vehicle only, toggleForVehicle MUST be false
-    self:SetAttribute("toggleForVehicle", false)
+    child:SetAttribute("toggleForVehicle", false)
 
-    -- RegisterUnitWatch(self)
+    -- RegisterUnitWatch(child)
 
-    -- local header = self:GetParent()
-    -- self:SetWidth(header:GetAttribute("buttonWidth") or 66)
-    -- self:SetHeight(header:GetAttribute("buttonHeight") or 46)
-]])
+    -- local header = child:GetParent()
+    -- child:SetWidth(header:GetAttribute("buttonWidth") or 66)
+    -- child:SetHeight(header:GetAttribute("buttonHeight") or 46)
+end
 
 function header:UpdateButtonUnit(bName, unit)
     if not unit then return end
     Cell.unitButtons.pet.units[unit] = _G[bName]
     _G[bName].isGroupPet = true
 end
-
-header:SetAttribute("_initialAttributeNames", "refreshUnitChange")
-header:SetAttribute("_initialAttribute-refreshUnitChange", [[
-    self:SetAttribute("cellUpdateUnit", self:GetAttribute("unit"))
-]])
 
 header:SetAttribute("template", "CellUnitButtonTemplate")
 header:SetAttribute("point", "TOP")
@@ -117,6 +112,7 @@ header:Show()
 header:SetAttribute("startingIndex", 1)
 
 local function SyncHeaderChildren()
+    wipe(Cell.unitButtons.pet.units)
     local children = {header:GetChildren()}
     table.sort(children, function(a, b)
         return (a:GetName() or "") < (b:GetName() or "")
@@ -127,15 +123,6 @@ local function SyncHeaderChildren()
         Cell.unitButtons.pet[i] = child
         -- child.type = "pet" -- layout setup
 
-        if not child.cellUpdateUnitHooked then
-            child.cellUpdateUnitHooked = true
-            child:HookScript("OnAttributeChanged", function(self, name, value)
-                if name == "cellUpdateUnit" then
-                    header:UpdateButtonUnit(self:GetName(), value)
-                end
-            end)
-        end
-
         local unit = child:GetAttribute("unit")
         if unit then
             header:UpdateButtonUnit(child:GetName(), unit)
@@ -145,6 +132,7 @@ local function SyncHeaderChildren()
 end
 
 SyncHeaderChildren()
+header:HookScript("OnEvent", SyncHeaderChildren)
 
 -- update mover
 if header[1] then

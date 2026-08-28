@@ -282,7 +282,7 @@ local function CreateBuffButton(parent, size, spell1, spell2, icon, index)
     b:SetBackdrop({edgeFile = Cell.vars.whiteTexture, edgeSize = P.Scale(1)})
     b:SetBackdropBorderColor(0, 0, 0, 1)
 
-    b:RegisterForClicks("LeftButtonUp", "RightButtonUp", "LeftButtonDown", "RightButtonDown") -- NOTE: ActionButtonUseKeyDown will affect this
+    b:RegisterForClicks("LeftButtonUp", "RightButtonUp")
     b:SetAttribute("type1", "spell")
     b:SetAttribute("spell", spell1)
     b:SetAttribute("shift-type1", "spell")

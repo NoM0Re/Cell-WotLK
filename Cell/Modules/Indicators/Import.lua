@@ -108,8 +108,10 @@ local function CreateIndicatorsImportFrame()
                 end
             end
 
-            if imported.related["targetedSpellsList"] or imported.related["targetedSpellsGlow"] then
-                I.RefreshTargetedSpells(imported.related["targetedSpellsList"] ~= nil)
+            if imported.related["targetedSpellsList"] then
+                I.UpdateTargetedSpellsList()
+            elseif imported.related["targetedSpellsGlow"] then
+                I.RefreshTargetedSpells()
             end
 
             -- fire events

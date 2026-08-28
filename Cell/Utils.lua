@@ -2022,7 +2022,7 @@ mc:SetScript("OnEvent", function()
         tinsert(macroIndices, i)
     end
     for i = 1, perChar do
-        tinsert(macroIndices, 120 + i)
+        tinsert(macroIndices, 36 + i)
     end
 end)
 
@@ -2263,6 +2263,7 @@ local UnitInSpellRange = function(spellName, unit)
 end
 
 local rc = CreateFrame("Frame")
+rc:RegisterEvent("PLAYER_LOGIN")
 rc:RegisterEvent("SPELLS_CHANGED")
 
 local spell_friend, spell_pet, spell_harm, spell_dead

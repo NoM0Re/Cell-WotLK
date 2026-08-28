@@ -17,8 +17,20 @@ local UnitChannelInfo = UnitChannelInfo
 local casts = {}
 local castsOnUnit, sortedCastsOnUnit = {}, {}
 local recheck = {}
+local targetedSpellIdsByName = {}
 local maxIcons, showAllSpells, isEnabled
 local eventFrame = CreateFrame("Frame")
+
+local function RebuildTargetedSpellIdsByName()
+    wipe(targetedSpellIdsByName)
+
+    for spellId in pairs(Cell.vars.targetedSpellsList) do
+        local name = F.GetSpellInfo(spellId)
+        if name then
+            targetedSpellIdsByName[name] = spellId
+        end
+    end
+end
 
 local function Reset()
     wipe(recheck)
@@ -155,15 +167,18 @@ local function CheckUnitCast(sourceUnit, isRecheck)
         end
     end
 
-    -- name, text, texture, startTimeMS, endTimeMS, isTradeSkill, castID, notInterruptible, spellId
-    local name, _, _, texture, startTimeMS, endTimeMS, _, spellId, notInterruptible = UnitCastingInfo(sourceUnit)
+    -- UnitCastingInfo does not return spellId on Wrath.
+    local name, _, _, texture, startTimeMS, endTimeMS, _, value8, value9, value10 = UnitCastingInfo(sourceUnit)
     if not name then
-        -- name, text, texture, startTimeMS, endTimeMS, isTradeSkill, notInterruptible, spellId
-        name, _, _, texture, startTimeMS, endTimeMS, _, spellId, notInterruptible = UnitChannelInfo(sourceUnit)
+        name, _, _, texture, startTimeMS, endTimeMS, _, value8, value9, value10 = UnitChannelInfo(sourceUnit)
         isChanneling = true
     end
 
-    -- print(sourceUnit, name, spellId)
+    if name then
+        print("Cell targeted spell debug:", isChanneling and "CHANNEL" or "CAST", name, "8:", tostring(value8), "9:", tostring(value9), "10:", tostring(value10))
+    end
+
+    local spellId = targetedSpellIdsByName[name] or (showAllSpells and name)
 
     if spellId and (Cell.vars.targetedSpellsList[spellId] or showAllSpells) then
         if casts[sourceGUID] then
@@ -240,6 +255,11 @@ function I.RefreshTargetedSpells(rescanSources)
     for guid in pairs(affectedTargets) do
         UpdateCastsOnUnit(guid)
     end
+end
+
+function I.UpdateTargetedSpellsList()
+    RebuildTargetedSpellIdsByName()
+    I.RefreshTargetedSpells(true)
 end
 
 -------------------------------------------------
@@ -418,6 +438,7 @@ end
 function I.EnableTargetedSpells(enabled)
     isEnabled = enabled
     if enabled then
+        RebuildTargetedSpellIdsByName()
         F.IterateAllUnitButtons(function(b)
             b.indicators.targetedSpells:Show()
         end, true)
