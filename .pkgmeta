@@ -10,6 +10,7 @@ ignore:
   - .github
   - .agents-cache
   - .discord-release.md
+  - .editorconfig
   - .gitattributes
   - .gitignore
   - .kanban
