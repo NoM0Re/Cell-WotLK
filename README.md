@@ -13,15 +13,15 @@ Hope you enjoy.
 
 ## Features
 
-**Layouts:** auto switch layout by spec/role, supports party, raid, arena, and battleground.<br>
-**Customizable Appearance:** textures, colors and alphas.<br>
-**Built-in Click-Castings:** supports keyboard and multi-button mouse.<br>
-**Indicators:** dozens of built-in indicators and unlimited custom indicators (icon, bar, rect, text, icons).<br>
-**Raid Debuffs:** debuffs priority and glow.<br>
-**Useful Raid Tools:** ready check, countdown, rebuff, death report, marks, battleres.<br>
-**Nice Options UI:** I mean yes it's pretty darn good!<br>
-**Spotlight Frame:** extra 15 unit buttons, can be set to Target, Focus, Unit, Tank, etc.<br>
-**Compatibility:** BigDebuffs, Class Colors, OmniCD and of course, WAs.
+- **Layouts:** auto switch layout by spec/role, supports party, raid, arena, and battleground.
+- **Customizable Appearance:** textures, colors and alphas.
+- **Built-in Click-Castings:** supports keyboard and multi-button mouse.
+- **Indicators:** dozens of built-in indicators and unlimited custom indicators (icon, bar, rect, text, icons).
+- **Raid Debuffs:** debuffs priority and glow.
+- **Useful Raid Tools:** ready check, countdown, rebuff, death report, marks, battleres.
+- **Nice Options UI:** I mean yes it's pretty darn good!
+- **Spotlight Frame:** extra 15 unit buttons, can be set to Target, Focus, Unit, Tank, etc.
+- **Compatibility:** BigDebuffs, Class Colors, OmniCD and of course, WAs.
 
 ## Quick Start
 
@@ -46,9 +46,9 @@ Check https://github.com/NoM0Re/Cell-WotLK/tree/main/Cell/.snippets for more sni
 
 ## Client Extensions
 
-* [Large Address Aware](https://github.com/NoM0Re/WeakAuras-WotLK/wiki/Large-Address-Aware): Enables the WoW client to use up to 4GB of RAM instead of the default 2GB, improving stability and performance on modern systems. This patch is highly recommended for WotLK 3.3.5a users.
-* [Awesome WotLK](https://github.com/NoM0Re/WeakAuras-WotLK/wiki/awesome_wotlk): Adds modern nameplate search functions, unit tracking, and events. Cell uses these functions for improved enemy nameplate discovery when the extension is available.
-* [Deadly Boss Mods](https://github.com/DeadlyBossMods/DBM-WotLK): Supplies encounter callbacks and can handle Cell's pull timer.
+- [Large Address Aware](https://github.com/NoM0Re/WeakAuras-WotLK/wiki/Large-Address-Aware): Enables the WoW client to use up to 4GB of RAM instead of the default 2GB, improving stability and performance on modern systems. This patch is highly recommended for WotLK 3.3.5a users.
+- [Awesome WotLK](https://github.com/NoM0Re/WeakAuras-WotLK/wiki/awesome_wotlk): Adds modern nameplate search functions, unit tracking, and events. Cell uses these functions for improved enemy nameplate discovery when the extension is available.
+- [Deadly Boss Mods](https://github.com/Zidras/DBM-Warmane#how-to-install-for-the-first-time): Adds reliable encounter start, kill, and wipe detection for timely indicator cleanup and encounter-scoped death reports, and can handle Cell's pull timer.
 
 ## Extensions
 
