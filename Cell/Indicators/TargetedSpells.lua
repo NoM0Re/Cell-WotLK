@@ -168,14 +168,10 @@ local function CheckUnitCast(sourceUnit, isRecheck)
     end
 
     -- UnitCastingInfo does not return spellId on Wrath.
-    local name, _, _, texture, startTimeMS, endTimeMS, _, value8, value9, value10 = UnitCastingInfo(sourceUnit)
+    local name, _, _, texture, startTimeMS, endTimeMS = UnitCastingInfo(sourceUnit)
     if not name then
-        name, _, _, texture, startTimeMS, endTimeMS, _, value8, value9, value10 = UnitChannelInfo(sourceUnit)
+        name, _, _, texture, startTimeMS, endTimeMS = UnitChannelInfo(sourceUnit)
         isChanneling = true
-    end
-
-    if name then
-        print("Cell targeted spell debug:", isChanneling and "CHANNEL" or "CAST", name, "8:", tostring(value8), "9:", tostring(value9), "10:", tostring(value10))
     end
 
     local spellId = targetedSpellIdsByName[name] or (showAllSpells and name)
