@@ -76,7 +76,6 @@ local cursorAnchor = CreateFrame("Frame", nil, UIParent)
 cursorAnchor:SetSize(1, 1)
 cursorAnchor:EnableMouse(false)
 cursorAnchor:Hide()
-local tooltipOwner, previousTooltipUpdater
 local function UpdateCursorAnchor(self)
     local scale = UIParent:GetEffectiveScale()
     local x, y = GetCursorPosition()
@@ -93,21 +92,12 @@ local function SetCursorTooltip(anchor, point, relativePoint, x, y)
     cursorAnchor:Show()
 end
 
-local function UpdateCellTooltip()
-    GameTooltip:Show()
-end
-
-local function ClearTooltipUpdater()
-    if tooltipOwner and tooltipOwner.UpdateTooltip == UpdateCellTooltip then
-        tooltipOwner.UpdateTooltip = previousTooltipUpdater
-    end
-    tooltipOwner = nil
-    previousTooltipUpdater = nil
-end
-
 GameTooltip:HookScript("OnHide", function()
-    ClearTooltipUpdater()
     cursorAnchor:Hide()
+end)
+
+GameTooltip:HookScript("OnTooltipSetUnit", function(self)
+    self:Show()
 end)
 
 function F.ShowSpellTooltips(tooltip, spellID)
@@ -143,13 +133,5 @@ function F.ShowTooltips(anchor, tooltipType, unit, aura, filter)
         GameTooltip:SetUnitAura(unit, aura, filter)
     elseif tooltipType == "aura" and unit and aura then
         GameTooltip:SetUnitAura(unit, aura, filter)
-    else
-        return
-    end
-
-    tooltipOwner = GameTooltip:GetOwner()
-    if tooltipOwner then
-        previousTooltipUpdater = tooltipOwner.UpdateTooltip
-        tooltipOwner.UpdateTooltip = UpdateCellTooltip
     end
 end
