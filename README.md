@@ -64,6 +64,10 @@ Check https://github.com/NoM0Re/Cell-WotLK/tree/main/Cell/.snippets for more sni
 - [Addon Spotlight: How to set up Cell + OmniCD for Augmentation Evoker (JFunkGaming)](https://www.youtube.com/watch?v=PMvtgJv-808)
 - [团队框架插件 Cell 配置流程分享 (钛锬)](https://bbs.nga.cn/read.php?tid=32921170)
 
+## Want to help improve Raid Debuffs?
+
+Use [Instance Spell Collector](https://github.com/NoM0Re/Instance-Spell-Collector-WotLK) to collect debuffs. Then create a PR or submit a ticket on GitHub.
+
 ## Examples
 
 For some examples of what WeakAuras can do, take a look at [wago.io](https://wago.io/search/imports/wow/cell/) where tons of people upload their creations utilizing Cell!
