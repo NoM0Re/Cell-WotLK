@@ -11,11 +11,42 @@ if not LibStub then error(MAJOR_VERSION .. " requires LibStub.") end
 local lib, oldversion = LibStub:NewLibrary(MAJOR_VERSION, MINOR_VERSION)
 if not lib then return end
 local Masque = LibStub("Masque", true)
-local AnimateTexCoords = AnimateTexCoords
 
 local pairs, ipairs = pairs, ipairs
-local abs, floor, min = math.abs, math.floor, math.min
+local abs, ceil, floor, min, mod = math.abs, math.ceil, math.floor, math.min, mod
 local tinsert, tremove = table.insert, table.remove
+
+local function AnimateTexCoords(texture, textureWidth, textureHeight, frameWidth, frameHeight, numFrames, elapsed, throttle)
+  if not texture.frame then
+    texture.frame = 1
+    texture.throttle = throttle
+    texture.numColumns = floor(textureWidth / frameWidth)
+    texture.numRows = floor(textureHeight / frameHeight)
+    texture.columnWidth = frameWidth / textureWidth
+    texture.rowHeight = frameHeight / textureHeight
+  end
+
+  local frame = texture.frame
+  if not texture.throttle or texture.throttle > throttle then
+    local framesToAdvance = floor(texture.throttle / throttle)
+    while frame + framesToAdvance > numFrames do
+      frame = frame - numFrames
+    end
+
+    frame = frame + framesToAdvance
+    texture.throttle = 0
+
+    local left = mod(frame - 1, texture.numColumns) * texture.columnWidth
+    local right = left + texture.columnWidth
+    local bottom = ceil(frame / texture.numColumns) * texture.rowHeight
+    local top = bottom - texture.rowHeight
+    texture:SetTexCoord(left, right, top, bottom)
+
+    texture.frame = frame
+  else
+    texture.throttle = texture.throttle + elapsed
+  end
+end
 
 -- ===============================================================================
 -- !!! IMPORTANT: Requires Pools.lua to be loaded before this file !!!
@@ -612,7 +643,7 @@ local function bgHide(self)
 end
 
 local function bgUpdate(self, elapsed)
-  AnimateTexCoords(self.ants, 256, 256, 48, 48, 22, elapsed * 0.1 / self.throttle)
+  AnimateTexCoords(self.ants, 256, 256, 48, 48, 22, elapsed, self.throttle)
 end
 
 local function IsAnimPlaying(self)
@@ -662,13 +693,6 @@ local function configureButtonGlow(f, alpha)
   f.ants:SetPoint("CENTER")
   f.ants:SetAlpha(0)
   f.ants:SetTexture(textureList.buttonGlowAnts)
-  -- Wrath's AnimateTexCoords does not floor partial texture columns.
-  -- Seed the 5x5 grid used by this 256x256 sheet with 48x48 frames.
-  f.ants.frame = 1
-  f.ants.numColumns = 5
-  f.ants.numRows = 5
-  f.ants.columnWidth = 48 / 256
-  f.ants.rowHeight = 48 / 256
 
   f.animIn = f:CreateAnimationGroup()
   f.animIn.appear = {}
@@ -844,65 +868,55 @@ lib.stopList["Action Button Glow"] = lib.ButtonGlow_Stop
 
 -- ProcGlow
 
-local BaseTexCoord = {
-  ["Loop"] = {0.412598, 0.575195, 0.000976562, 0.391602},
-  ["Start"] = {0.000488281, 0.411621, 0.000976562, 0.987305},
+local ProcGlowRows = 6
+local ProcGlowColumns = 5
+local ProcGlowFrames = 30
+local ProcGlowStartDuration = 0.7
+
+local ProcGlowTexCoord = {
+  ["Loop"] = {
+    left = 0.412598,
+    top = 0.000976562,
+    frameWidth = (0.575195 - 0.412598) / ProcGlowColumns,
+    frameHeight = (0.391602 - 0.000976562) / ProcGlowRows,
+  },
+  ["Start"] = {
+    left = 0.000488281,
+    top = 0.000976562,
+    frameWidth = (0.411621 - 0.000488281) / ProcGlowColumns,
+    frameHeight = (0.987305 - 0.000976562) / ProcGlowRows,
+  },
 }
 
-local function SetTile(texture, frame, rows, columns, frameScaleW, frameScaleH, key)
+local function SetTile(texture, frame, texCoord)
   frame = frame - 1
-  local row = math.floor(frame / columns)
-  local column = frame % columns
-
-  local leftStart, rightEnd, topStart, bottomEnd = BaseTexCoord[key][1], BaseTexCoord[key][2], BaseTexCoord[key][3], BaseTexCoord[key][4]
-
-  local fullWidth = rightEnd - leftStart
-  local fullHeight = bottomEnd - topStart
-
-  local baseDeltaX = fullWidth / columns
-  local baseDeltaY = fullHeight / rows
-
-  local deltaX = baseDeltaX * frameScaleW
-  local deltaY = baseDeltaY * frameScaleH
-
-  local left = leftStart + baseDeltaX * column + (baseDeltaX - deltaX) / 2
-  local right = left + deltaX
-
-  local top = topStart + baseDeltaY * row + (baseDeltaY - deltaY) / 2
-  local bottom = top + deltaY
-
-  pcall(function()
-    texture:SetTexCoord(left, right, top, bottom)
-  end)
+  local row = floor(frame / ProcGlowColumns)
+  local column = mod(frame, ProcGlowColumns)
+  local left = texCoord.left + texCoord.frameWidth * column
+  local top = texCoord.top + texCoord.frameHeight * row
+  texture:SetTexCoord(left, left + texCoord.frameWidth, top, top + texCoord.frameHeight)
 end
 
 local StartFlipbook
-local FlipbookAnimation_OnUpdate
 
-FlipbookAnimation_OnUpdate = function(self, elapsed)
+local function FlipbookAnimation_OnUpdate(self, elapsed)
   local data = self.flipbookData
   if not data then return end
 
-  if data.animElapsed then
-    data.animElapsed = data.animElapsed + elapsed
-    if data.animElapsed >= 0.7 then
-      if self:IsShown() then
-        StartFlipbook(self, self.ProcLoop, 6, 5, 30, ((data.animOptions and (30 / data.animOptions)) or 30), nil, nil, "Loop")
-      end
-      data.animElapsed = nil
-      data.animOptions = nil
-    end
-  end
   data.elapsedTime = data.elapsedTime + elapsed
-  local frameDuration = 1 / data.frameRate
 
-  if data.elapsedTime >= frameDuration then
-    data.elapsedTime = data.elapsedTime - frameDuration
-    data.currentFrame = data.currentFrame + 1
-    if data.currentFrame > data.totalFrames then
-      data.currentFrame = 1
-    end
-    SetTile(data.texture, data.currentFrame, data.rows, data.columns, 1, 1, data.key)
+  if data.loopDuration and data.elapsedTime >= ProcGlowStartDuration then
+    local loopElapsed = data.elapsedTime - ProcGlowStartDuration
+    StartFlipbook(self, self.ProcLoop, ProcGlowFrames / data.loopDuration, "Loop")
+    data = self.flipbookData
+    data.elapsedTime = loopElapsed
+  end
+
+  local framesToAdvance = floor(data.elapsedTime * data.frameRate)
+  if framesToAdvance > 0 then
+    data.elapsedTime = data.elapsedTime - framesToAdvance / data.frameRate
+    data.currentFrame = mod(data.currentFrame - 1 + framesToAdvance, ProcGlowFrames) + 1
+    SetTile(data.texture, data.currentFrame, data.texCoord)
   end
 end
 
@@ -914,20 +928,17 @@ local function StopFlipbook(f)
   f.flipbookData = nil
 end
 
-StartFlipbook = function(f, texture, rows, columns, totalFrames, frameRate, startAnim, startOptionsDur, key)
+StartFlipbook = function(f, texture, frameRate, key, loopDuration)
   StopFlipbook(f)
   f.flipbookData = {
-    key = key,
     texture = texture,
-    rows = rows,
-    columns = columns,
-    totalFrames = totalFrames,
+    texCoord = ProcGlowTexCoord[key],
     frameRate = frameRate,
     currentFrame = 1,
     elapsedTime = 0,
-    animElapsed = startAnim,
-    animOptions = startOptionsDur,
+    loopDuration = loopDuration,
   }
+  SetTile(texture, 1, f.flipbookData.texCoord)
   texture:Show()
   f:SetScript("OnUpdate", FlipbookAnimation_OnUpdate)
 end
@@ -979,9 +990,9 @@ local function SetupProcGlow(f, options)
     if self.startAnim then
       local width, height = self:GetSize()
       self.ProcStart:SetSize((width / 42 * 150) / 1.4, (height / 42 * 150) / 1.4)
-      StartFlipbook(self, self.ProcStart, 6, 5, 30, 30, 0, options.duration, "Start")
+      StartFlipbook(self, self.ProcStart, ProcGlowFrames / ProcGlowStartDuration, "Start", options.duration)
     else
-      StartFlipbook(self, self.ProcLoop , 6, 5, 30, (30 / options.duration), nil, nil, "Loop")
+      StartFlipbook(self, self.ProcLoop, ProcGlowFrames / options.duration, "Loop")
     end
   end)
 
