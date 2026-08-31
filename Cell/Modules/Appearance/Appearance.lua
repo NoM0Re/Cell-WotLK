@@ -1726,8 +1726,21 @@ Cell.RegisterCallback("UpdateIndicators", "AppearanceTab_UpdateIndicators", Upda
 -------------------------------------------------
 -- update appearance
 -------------------------------------------------
+local pendingScale, pendingStrata
+local appearanceUpdateFrame = CreateFrame("Frame")
+
 local function UpdateAppearance(which)
     F.Debug("|cff7f7fffUpdateAppearance:|r", which)
+
+    local updateScale = not which or which == "scale"
+    local updateStrata = not which or which == "strata"
+    -- Delayed header initialization can finish after combat starts or during a combat login.
+    if InCombatLockdown() then
+        if updateScale then pendingScale = true end
+        if updateStrata then pendingStrata = true end
+        if pendingScale or pendingStrata then appearanceUpdateFrame:RegisterEvent("PLAYER_REGEN_ENABLED") end
+        updateScale, updateStrata = false, false
+    end
 
     if not which or which == "texture" or which == "color" or which == "fullColor" or which == "deathColor" or which == "alpha" or which == "outOfRangeAlpha" or which == "shields" or which == "animation" or which == "highlightColor" or which == "highlightSize" or which == "reset" then
         local tex
@@ -1801,7 +1814,8 @@ local function UpdateAppearance(which)
     end
 
     -- scale
-    if not which or which == "scale" then
+    if updateScale then
+        pendingScale = nil
         CellParent:SetScale(CellDB["appearance"]["scale"])
 
         CellTooltip:UpdatePixelPerfect()
@@ -1822,7 +1836,8 @@ local function UpdateAppearance(which)
     end
 
     -- strata
-    if not which or which == "strata" then
+    if updateStrata then
+        pendingStrata = nil
         Cell.frames.mainFrame:SetFrameStrata(CellDB["appearance"]["strata"])
         Cell.frames.optionsFrame:SetFrameStrata("DIALOG")
         Cell.frames.raidRosterFrame:SetFrameStrata("DIALOG")
@@ -1834,3 +1849,10 @@ local function UpdateAppearance(which)
     end
 end
 Cell.RegisterCallback("UpdateAppearance", "UpdateAppearance", UpdateAppearance)
+
+appearanceUpdateFrame:SetScript("OnEvent", function(self)
+    if InCombatLockdown() then return end
+    self:UnregisterEvent("PLAYER_REGEN_ENABLED")
+    if pendingScale then UpdateAppearance("scale") end
+    if pendingStrata then UpdateAppearance("strata") end
+end)
