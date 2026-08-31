@@ -70,7 +70,7 @@ Use [Instance Spell Collector](https://github.com/NoM0Re/Instance-Spell-Collecto
 
 ## Examples
 
-For some examples of what WeakAuras can do, take a look at [wago.io](https://wago.io/search/imports/wow/cell/) where tons of people upload their creations utilizing Cell!
+For some examples of what Cell can do, take a look at [wago.io](https://wago.io/search/imports/wow/cell/) where tons of people upload their creations utilizing Cell!
 
 ## Problems
 
