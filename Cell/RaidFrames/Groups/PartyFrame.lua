@@ -45,8 +45,6 @@ header:SetAttribute("showParty", true)
 
 --! to make needButtons == 5 cheat configureChildren in SecureGroupHeaders.lua
 header:SetAttribute("startingIndex", -4)
-header:Show()
-header:SetAttribute("startingIndex", 1)
 
 local function SyncHeaderChildren()
     local children = {header:GetChildren()}
@@ -80,6 +78,8 @@ end
 local petButtonsInitialized
 local function RefreshLateUnitButtons()
     Cell.Fire("UpdateAppearance")
+    Cell.Fire("UpdateRequests", "spellRequest_icon")
+    Cell.Fire("UpdateRequests", "dispelRequest_text")
     B.ForceInitButtons()
 end
 
@@ -109,8 +109,37 @@ local function InitPetButtons()
     F.C_Timer.After(0.5, RefreshLateUnitButtons)
 end
 
-SyncHeaderChildren()
-InitPetButtons()
+local headerInitFrame = CreateFrame("Frame")
+local headerInitialized
+
+local function InitializeHeader()
+    if headerInitialized then return end
+
+    if InCombatLockdown() then
+        headerInitFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
+        return
+    end
+
+    headerInitialized = true
+    headerInitFrame:UnregisterEvent("PLAYER_REGEN_ENABLED")
+    header:Show()
+    header:SetAttribute("startingIndex", 1)
+    InitPetButtons()
+    SyncPartyUnits()
+    Cell.Fire("UpdateClickCastings")
+
+    if Cell.vars.groupType then
+        F.UpdateLayout(Cell.vars.groupType)
+    end
+end
+
+headerInitFrame:RegisterEvent("PLAYER_LOGIN")
+headerInitFrame:SetScript("OnEvent", function(self, event)
+    if event == "PLAYER_LOGIN" then
+        self:UnregisterEvent("PLAYER_LOGIN")
+    end
+    InitializeHeader()
+end)
 
 local function SetHeaderAttribute(name, value)
     if header:GetAttribute(name) ~= value then
