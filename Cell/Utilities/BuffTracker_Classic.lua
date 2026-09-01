@@ -29,7 +29,8 @@ local unaffected = {}
 buffs = {
     -- 1243: Power Word: Fortitude
     -- 21562: Prayer of Fortitude
-    ["PWF"] = {buff1 = 1243, buff2 = 21562, provider = "PRIEST", order = 1},
+    -- 72590: Fortitude
+    ["PWF"] = {buff1 = 1243, buff2 = 21562, aliases = {72590}, provider = "PRIEST", order = 1},
 
     -- 14752: Divine Spirit
     -- 27681: Prayer of Spirit
@@ -41,7 +42,9 @@ buffs = {
 
     -- 1459: Arcane Intellect
     -- 23028: Arcane Brilliance
-    ["AB"] = {buff1 = 1459, buff2 = 23028, provider = "MAGE", order = 2},
+    -- 61024: Dalaran Intellect
+    -- 61316: Dalaran Brilliance
+    ["AB"] = {buff1 = 1459, buff2 = 23028, aliases = {61024, 61316}, provider = "MAGE", order = 2},
 
     -- 6673: Battle Shout
     -- ["BS"] = {buff1 = 6673, provider="WARRIOR"},
@@ -124,6 +127,11 @@ do
     for k, t in pairs(buffs) do
         if t.buff1 then Handle(k, t, "buff1") end
         if t.buff2 then Handle(k, t, "buff2") end
+        if t.aliases then
+            for i, spellId in ipairs(t.aliases) do
+                t.aliases[i] = F.GetSpellInfo(spellId)
+            end
+        end
 
         tinsert(buffOrder, k)
     end
@@ -519,6 +527,15 @@ local function UnitBuffExists(unit, buff)
         aura = GetAuraDataBySpellName(unit, name, "HELPFUL")
         if aura then
             return true, aura.sourceUnit == "player"
+        end
+    end
+
+    if buffs[buff]["aliases"] then
+        for _, alias in ipairs(buffs[buff]["aliases"]) do
+            aura = GetAuraDataBySpellName(unit, alias, "HELPFUL")
+            if aura then
+                return true, aura.sourceUnit == "player"
+            end
         end
     end
 end
