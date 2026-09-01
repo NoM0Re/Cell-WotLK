@@ -75,7 +75,6 @@ local function SyncPartyUnits()
     end
 end
 
-local petButtonsInitialized
 local function RefreshLateUnitButtons()
     Cell.Fire("UpdateAppearance")
     Cell.Fire("UpdateRequests", "spellRequest_icon")
@@ -84,20 +83,25 @@ local function RefreshLateUnitButtons()
 end
 
 local function InitPetButtons()
-    if petButtonsInitialized then return end
     if SyncHeaderChildren() == 0 then return end
-    petButtonsInitialized = true
+
+    local initialized
 
     for i, playerButton in ipairs(header) do
-        -- playerButton.type = "main" -- layout setup
+        local petButton = playerButton.petButton
+        if not petButton then
+            initialized = true
+            -- playerButton.type = "main" -- layout setup
 
-        local petButton = CreateFrame("Button", playerButton:GetName().."Pet", playerButton, "CellUnitButtonTemplate")
-        -- petButton.type = "pet" -- layout setup
-        --! button for pet/vehicle only, toggleForVehicle MUST be false
-        petButton:SetAttribute("toggleForVehicle", false)
+            petButton = CreateFrame("Button", playerButton:GetName().."Pet", playerButton, "CellUnitButtonTemplate")
+            -- petButton.type = "pet" -- layout setup
+            --! button for pet/vehicle only, toggleForVehicle MUST be false
+            petButton:SetAttribute("toggleForVehicle", false)
 
-        playerButton.petButton = petButton
-        SecureHandlerSetFrameRef(playerButton, "petButton", petButton)
+            playerButton.petButton = petButton
+            SecureHandlerSetFrameRef(playerButton, "petButton", petButton)
+        end
+
         -- for IterateAllUnitButtons
         Cell.unitButtons.party["player"..i] = playerButton
         Cell.unitButtons.party["pet"..i] = petButton
@@ -106,7 +110,10 @@ local function InitPetButtons()
         _G["CellPartyFrameMember"..i] = playerButton
     end
 
-    F.C_Timer.After(0.5, RefreshLateUnitButtons)
+    if initialized then
+        F.C_Timer.After(0.5, RefreshLateUnitButtons)
+    end
+    return initialized
 end
 
 local headerInitFrame = CreateFrame("Frame")
@@ -197,6 +204,12 @@ local function UpdateRoleSort(layout)
 end
 
 local function PartyFrame_UpdateLayout(layout, which)
+    local initializedPetButtons
+
+    -- PLAYER_LOGIN initializes the secure header and then requests a full layout update.
+    -- Roster events may request the party layout earlier, while the header has no children.
+    if Cell.vars.groupType == "party" and not headerInitialized then return end
+
     -- visibility
     if Cell.vars.groupType ~= "party" or Cell.vars.isHidden then
         UnregisterStateDriver(partyFrame, "visibility")
@@ -205,7 +218,7 @@ local function PartyFrame_UpdateLayout(layout, which)
     else
         RegisterStateDriver(partyFrame, "visibility", "[@raid1,exists] hide;[@party1,exists] show;[group:party] show;hide")
         SyncHeaderChildren()
-        InitPetButtons()
+        initializedPetButtons = InitPetButtons()
     end
 
     -- update
@@ -350,6 +363,9 @@ local function PartyFrame_UpdateLayout(layout, which)
     end
 
     SyncPartyUnits()
+    if initializedPetButtons then
+        Cell.Fire("UpdateClickCastings")
+    end
 end
 Cell.RegisterCallback("UpdateLayout", "PartyFrame_UpdateLayout", PartyFrame_UpdateLayout)
 
