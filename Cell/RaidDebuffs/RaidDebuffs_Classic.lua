@@ -152,7 +152,7 @@ local debuffs = {
         },
         [1561] = { -- 帕奇维克
         },
-        [15562] = { -- 格罗布鲁斯
+        [1562] = { -- 格罗布鲁斯
         },
         [1563] = { -- 格拉斯
         },
@@ -649,5 +649,19 @@ local debuffs = {
         },
     },
 }
+
+local classicNaxxramas = debuffs[745]
+if classicNaxxramas then
+    local remapped = {
+        ["general"] = classicNaxxramas["general"],
+    }
+    for bossId, bossDebuffs in pairs(classicNaxxramas) do
+        if type(bossId) == "number" then
+            remapped[900000 + bossId] = bossDebuffs
+        end
+    end
+    debuffs[745] = nil
+    debuffs[900745] = remapped
+end
 
 F.LoadBuiltInDebuffs(debuffs)

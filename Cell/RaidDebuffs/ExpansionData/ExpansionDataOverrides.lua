@@ -14,6 +14,100 @@ local expansions = {
     ["Classic"] = 3,
 }
 
+-- 3.3.5a client names from LibBabble-Zone-3.0 that differ from the localized expansion data.
+local localizedInstanceNames = {
+    enUS = {
+        ["The Stockade"] = "Stormwind Stockade",
+    },
+    enGB = {
+        ["The Stockade"] = "Stormwind Stockade",
+    },
+    deDE = {
+        ["Eiskronenzitadelle"] = "Die Eiskronenzitadelle",
+        ["Die Hallen der Blitze"] = "Hallen der Blitze",
+        ["Die Hallen des Steins"] = "Hallen des Steins",
+        ["Die Schmiede der Seelen"] = "Die Seelenschmiede",
+        ["Der schwarze Morast"] = "Der Schwarze Morast",
+        ["Die zerschmetterten Hallen"] = "Die Zerschmetterten Hallen",
+        ["Geschmolzener Kern"] = "Der Geschmolzene Kern",
+        ["Die Höhlen des Wehklagens"] = "Höhlen des Wehklagens",
+        ["Das Verlies"] = "Verlies von Sturmwind",
+    },
+    esES = {
+        ["Cima Hyjal"] = "Hyjal Summit",
+        ["El Templo Oscuro"] = "Black Temple",
+        ["Meseta de la Fuente del Sol"] = "Sunwell Plateau",
+        ["Bancal Del Magister"] = "Magisters' Terrace",
+        ["El Alcatraz"] = "The Arcatraz",
+        ["Cumbre inferior de Roca Negra"] = "Lower Blackrock Spire",
+        ["Sima ígnea"] = "Ragefire Chasm",
+        ["El Templo Sumergido"] = "Sunken Temple",
+        ["Las Mazmorras"] = "Stormwind Stockade",
+    },
+    esMX = {
+        ["Camáras de Reflexión"] = "Halls of Reflection",
+        ["Pueba del Campeon"] = "Trial of the Champion",
+        ["Cima Hyjal"] = "Hyjal Summit",
+        ["El Templo Oscuro"] = "Black Temple",
+        ["Meseta de la Fuente del Sol"] = "Sunwell Plateau",
+        ["Bancal Del Magister"] = "Magisters' Terrace",
+        ["El Alcatraz"] = "The Arcatraz",
+        ["Cumbre inferior de Roca Negra"] = "Lower Blackrock Spire",
+        ["Sima ígnea"] = "Ragefire Chasm",
+        ["El Templo Sumergido"] = "Sunken Temple",
+        ["Las Mazmorras"] = "Stormwind Stockade",
+    },
+    frFR = {
+        ["Les salles des Reflets"] = "Salles des Reflets",
+        ["La Forge des âmes"] = "La Forge des Âmes",
+        ["Donjon de la Tempête"] = "Donjon de la tempête",
+        ["Temple noir"] = "Le Temple noir",
+        ["Labyrinthe des ombres"] = "Labyrinthe des Ombres",
+        ["Le Noir Marécage"] = "Le Noir marécage",
+        ["Les Salles brisées"] = "Les salles Brisées",
+        ["Le Caveau de la vapeur"] = "Le caveau de la Vapeur",
+        ["Hache-tripes"] = "Hache-Tripes",
+        ["Pic de Rochenoire inférieur"] = "Bas du pic Rochenoire",
+        ["Monastère écarlate"] = "Monastère Écarlate",
+        ["Cavernes des lamentations"] = "Cavernes des Lamentations",
+        ["La Prison"] = "Prison de Hurlevent",
+    },
+    koKR = {
+        ["옛 힐스브래드 구릉지"] = "옛 언덕마루 구릉지",
+        ["검은심연의 나락"] = "검은심연 나락",
+        ["줄구룹"] = "Zul'Gurub",
+    },
+    ruRU = {
+        ["Склеп Аркавона"] = "Хранилище Аркавона",
+        ["Гробницы Маны"] = "Гробницы маны",
+        ["Огненные Недра"] = "Огненные недра",
+        ["Забытый Город"] = "Забытый город",
+        ["Нижний ярус Черной горы"] = "Нижняя часть пика Черной горы",
+        ["Огненная пропасть"] = "Огненная Пропасть",
+        ["Зул'Гуруб"] = "Zul'Gurub",
+        ["Тюрьма"] = "Тюрьма Штормграда",
+    },
+    zhCN = {
+        ["安卡雷：古代王国"] = "安卡赫特：古代王国",
+        ["下层黑石塔"] = "黑石塔下层",
+        ["监狱"] = "暴风城监狱",
+    },
+    zhTW = {
+        ["安卡罕特:古王國"] = "安卡罕特：古王國",
+        ["海加爾山"] = "海加爾山巔",
+        ["黑暗深淵"] = "黑澗深淵",
+        ["黑石塔"] = "黑石塔下層",
+        ["監獄"] = "暴風城監獄",
+    },
+}
+
+local localizedNames = localizedInstanceNames[GetLocale()]
+if localizedNames then
+    for localizedName, instanceName in pairs(localizedNames) do
+        Cell_ExpansionData.localizedInstanceNames[localizedName] = instanceName
+    end
+end
+
 -------------------------------------------------
 -- overrides
 -------------------------------------------------
@@ -61,6 +155,32 @@ for instanceId, data in pairs(Cell_ExpansionDataOverrides) do
         end
     end
 end
+
+local function FindInstance(expansionName, instanceId)
+    local expansion = Cell_ExpansionData.expansions[expansions[expansionName]]
+    local expansionData = expansion and Cell_ExpansionData.data[expansion]
+    if not expansionData then return end
+
+    for _, instance in ipairs(expansionData) do
+        if instance.id == instanceId then
+            return instance
+        end
+    end
+end
+
+local function PrepareClassicNaxxramas()
+    local classicNaxxramas = FindInstance("Classic", 745)
+    if not classicNaxxramas then return end
+
+    -- Classic Naxxramas reuses Karazhan's generated IDs. Keep imports and saved data separate.
+    classicNaxxramas.id = 900745
+    classicNaxxramas.name = classicNaxxramas.name.." (40)"
+    for _, boss in ipairs(classicNaxxramas.bosses) do
+        boss.id = 900000 + boss.id
+    end
+end
+
+PrepareClassicNaxxramas()
 
 local zulGurubNames = {
     zhCN = {

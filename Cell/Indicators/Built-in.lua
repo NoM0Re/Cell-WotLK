@@ -792,7 +792,10 @@ local function UpdateDebuffsForCurrentZone(instanceName)
     local iName = F.GetInstanceName()
     if iName == "" then return end
 
-    if iName == instanceName or instanceName == nil then
+    local currentInstanceId = F.GetInstanceAndBossId(iName)
+    local updatedInstanceId = instanceName and F.GetInstanceAndBossId(instanceName)
+    if iName == instanceName or instanceName == nil or
+        (currentInstanceId and currentInstanceId == updatedInstanceId) then
         currentAreaDebuffs = F.GetDebuffList(iName)
         F.Debug("|cffff77AARaidDebuffsChanged:|r", iName)
     end
