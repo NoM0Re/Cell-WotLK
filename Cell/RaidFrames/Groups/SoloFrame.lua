@@ -59,19 +59,28 @@ local function SoloFrame_UpdateLayout(layout, which)
 
     if not which or which == "main-arrangement" or which == "pet-arrangement" then
         petButton:ClearAllPoints()
-        if layout["main"]["orientation"] == "vertical" then
+        local orientation, anchor
+        if layout["pet"]["sameArrangementAsMain"] then
+            orientation = layout["main"]["orientation"]
+            anchor = layout["main"]["anchor"]
+        else
+            orientation = layout["pet"]["orientation"]
+            anchor = layout["pet"]["anchor"]
+        end
+
+        if orientation == "vertical" then
             -- anchor
             local point, anchorPoint
             local petSpacing = layout["pet"]["sameArrangementAsMain"] and layout["main"]["spacingY"] or layout["pet"]["spacingY"]
 
-            if layout["main"]["anchor"] == "BOTTOMLEFT" then
+            if anchor == "BOTTOMLEFT" then
                 point, anchorPoint = "BOTTOMLEFT", "TOPLEFT"
-            elseif layout["main"]["anchor"] == "BOTTOMRIGHT" then
+            elseif anchor == "BOTTOMRIGHT" then
                 point, anchorPoint = "BOTTOMRIGHT", "TOPRIGHT"
-            elseif layout["main"]["anchor"] == "TOPLEFT" then
+            elseif anchor == "TOPLEFT" then
                 point, anchorPoint = "TOPLEFT", "BOTTOMLEFT"
                 petSpacing = -petSpacing
-            elseif layout["main"]["anchor"] == "TOPRIGHT" then
+            elseif anchor == "TOPRIGHT" then
                 point, anchorPoint = "TOPRIGHT", "BOTTOMRIGHT"
                 petSpacing = -petSpacing
             end
@@ -82,14 +91,14 @@ local function SoloFrame_UpdateLayout(layout, which)
             local point, anchorPoint
             local petSpacing = layout["pet"]["sameArrangementAsMain"] and layout["main"]["spacingX"] or layout["pet"]["spacingX"]
 
-            if layout["main"]["anchor"] == "BOTTOMLEFT" then
+            if anchor == "BOTTOMLEFT" then
                 point, anchorPoint = "BOTTOMLEFT", "BOTTOMRIGHT"
-            elseif layout["main"]["anchor"] == "BOTTOMRIGHT" then
+            elseif anchor == "BOTTOMRIGHT" then
                 point, anchorPoint = "BOTTOMRIGHT", "BOTTOMLEFT"
                 petSpacing = -petSpacing
-            elseif layout["main"]["anchor"] == "TOPLEFT" then
+            elseif anchor == "TOPLEFT" then
                 point, anchorPoint = "TOPLEFT", "TOPRIGHT"
-            elseif layout["main"]["anchor"] == "TOPRIGHT" then
+            elseif anchor == "TOPRIGHT" then
                 point, anchorPoint = "TOPRIGHT", "TOPLEFT"
                 petSpacing = -petSpacing
             end

@@ -94,9 +94,18 @@ header.initialConfigFunction = function(child)
 end
 
 function header:UpdateButtonUnit(bName, unit)
-    if not unit then return end
-    Cell.unitButtons.pet.units[unit] = _G[bName]
-    _G[bName].isGroupPet = true
+    local button = _G[bName]
+    local oldUnit = button.groupPetUnit
+
+    if oldUnit and Cell.unitButtons.pet.units[oldUnit] == button then
+        Cell.unitButtons.pet.units[oldUnit] = nil
+    end
+
+    button.groupPetUnit = unit
+    button.isGroupPet = true
+    if unit then
+        Cell.unitButtons.pet.units[unit] = button
+    end
 end
 
 header:SetAttribute("template", "CellUnitButtonTemplate")
@@ -105,44 +114,34 @@ header:SetAttribute("columnAnchorPoint", "LEFT")
 header:SetAttribute("unitsPerColumn", 5)
 header:SetAttribute("showPlayer", true) -- show player pet while not in a raid
 
-header:SetAttribute("maxColumns", 5)
---! make needButtons == 25
-header:SetAttribute("startingIndex", -24)
+header:SetAttribute("maxColumns", 8)
+--! make needButtons == 40
+header:SetAttribute("startingIndex", -39)
 header:Show()
 header:SetAttribute("startingIndex", 1)
 
-local function SyncHeaderChildren()
-    wipe(Cell.unitButtons.pet.units)
-    local children = {header:GetChildren()}
-    table.sort(children, function(a, b)
-        return (a:GetName() or "") < (b:GetName() or "")
-    end)
+wipe(Cell.unitButtons.pet.units)
+for i = 1, 40 do
+    local button = header:GetAttribute("child"..i)
+    header[i] = button
+    Cell.unitButtons.pet[i] = button
+    -- button.type = "pet" -- layout setup
 
-    for i, child in ipairs(children) do
-        header[i] = child
-        Cell.unitButtons.pet[i] = child
-        -- child.type = "pet" -- layout setup
-
-        local unit = child:GetAttribute("unit")
-        if unit then
-            header:UpdateButtonUnit(child:GetName(), unit)
+    button:HookScript("OnAttributeChanged", function(self, name, value)
+        if name == "unit" then
+            header:UpdateButtonUnit(self:GetName(), value)
         end
-    end
-    return #children
+    end)
+    header:UpdateButtonUnit(button:GetName(), button:GetAttribute("unit"))
 end
-
-SyncHeaderChildren()
-header:HookScript("OnEvent", SyncHeaderChildren)
 
 -- update mover
-if header[1] then
-    header[1]:HookScript("OnShow", function()
-        UpdateAnchor()
-    end)
-    header[1]:HookScript("OnHide", function()
-        UpdateAnchor()
-    end)
-end
+header[1]:HookScript("OnShow", function()
+    UpdateAnchor()
+end)
+header[1]:HookScript("OnHide", function()
+    UpdateAnchor()
+end)
 
 -------------------------------------------------
 -- functions
@@ -225,7 +224,6 @@ local function PetFrame_UpdateLayout(layout, which)
         return
     end
     RegisterStateDriver(petFrame, "visibility", "[@raid1,exists] show;[@party1,exists] show;hide")
-    SyncHeaderChildren()
 
     -- update
     layout = CellDB["layouts"][layout]

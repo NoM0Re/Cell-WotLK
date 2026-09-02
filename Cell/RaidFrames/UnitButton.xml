@@ -15,6 +15,19 @@
         </Scripts>
     </Button>
 
+    <Button name="CellPartyUnitButtonTemplate" inherits="CellUnitButtonTemplate" hidden="true" virtual="true">
+        <Frames>
+            <Button name="$parentPet" inherits="CellUnitButtonTemplate">
+                <Attributes>
+                    <Attribute name="unitsuffix" type="string" value="pet"/>
+                    <Attribute name="useparent-unit" type="boolean" value="true"/>
+                    <Attribute name="initial-unitWatch" type="boolean" value="true"/>
+                    <Attribute name="toggleForVehicle" type="boolean" value="false"/>
+                </Attributes>
+            </Button>
+        </Frames>
+    </Button>
+
     <Button name="CellPreviewButtonTemplate" hidden="true" virtual="true">
         <Scripts>
             <OnLoad>

@@ -95,15 +95,11 @@ end
 -------------------------------------------------
 -- NOTE: update each npc unit button
 -------------------------------------------------
-local helperPointUpdater = [[
-    local npcFrame = self:GetFrameRef("npcFrame")
-    local orientation = npcFrame:GetAttribute("orientation")
-    local point = npcFrame:GetAttribute("point")
-    local anchorPoint = npcFrame:GetAttribute("anchorPoint")
-    local unitSpacing = npcFrame:GetAttribute("unitSpacing")
+local pointUpdater = [[
+    local orientation, point, anchorPoint, unitSpacing = ...
     local last
     for i = 1, 4 do
-        local button = npcFrame:GetFrameRef("button"..i)
+        local button = self:GetFrameRef("button"..i)
         button:ClearAllPoints()
         if button:IsVisible() then
             if last then
@@ -113,13 +109,14 @@ local helperPointUpdater = [[
                     button:SetPoint(point, last, anchorPoint, unitSpacing, 0)
                 end
             else
-                button:SetPoint("TOPLEFT", npcFrame)
+                button:SetPoint("TOPLEFT", self)
             end
             last = button
         end
     end
 
 ]]
+npcFrame:SetAttribute("pointUpdater", pointUpdater)
 
 -------------------------------------------------
 -- create buttons
@@ -185,8 +182,17 @@ for i = 1, 4 do
     -- NOTE: update each npc unitbutton's point on show/hide
     button.helper = CreateFrame("Frame", nil, button, "SecureHandlerShowHideTemplate")
     button.helper:SetFrameRef("npcFrame", npcFrame)
-    button.helper:SetAttribute("_onshow", helperPointUpdater)
-    button.helper:SetAttribute("_onhide", helperPointUpdater)
+    button.helper:SetAttribute("pointUpdater", [[
+        local orientation = self:GetAttribute("orientation")
+        local point = self:GetAttribute("point")
+        local anchorPoint = self:GetAttribute("anchorPoint")
+        local unitSpacing = self:GetAttribute("unitSpacing")
+
+        local npcFrame = self:GetFrameRef("npcFrame")
+        self:RunFor(npcFrame, npcFrame:GetAttribute("pointUpdater"), orientation, point, anchorPoint, unitSpacing)
+    ]])
+    button.helper:SetAttribute("_onshow", [[ self:RunAttribute("pointUpdater") ]])
+    button.helper:SetAttribute("_onhide", [[ self:RunAttribute("pointUpdater") ]])
 end
 
 -------------------------------------------------
@@ -240,24 +246,7 @@ npcFrame:SetAttribute("_onstate-groupstate", [[
     end
 
     -- NOTE: update each npc button
-    local last
-    for i = 1, 4 do
-        local button = self:GetFrameRef("button"..i)
-        button:ClearAllPoints()
-        if button:IsVisible() then
-            if last then
-                if orientation == "vertical" then
-                    button:SetPoint(point, last, anchorPoint, 0, unitSpacing)
-                else
-                    button:SetPoint(point, last, anchorPoint, unitSpacing, 0)
-                end
-            else
-                button:SetPoint("TOPLEFT", self)
-            end
-            last = button
-        end
-    end
-
+    self:RunAttribute("pointUpdater", orientation, point, anchorPoint, unitSpacing)
 ]])
 
 -------------------------------------------------
@@ -306,7 +295,7 @@ local function UpdatePosition()
         P.LoadPosition(separateAnchor, layout["npc"]["position"])
 
         local anchor
-        if layout["pet"]["sameArrangementAsMain"] then
+        if layout["npc"]["sameArrangementAsMain"] then
             anchor = layout["main"]["anchor"]
         else
             anchor = layout["npc"]["anchor"]
@@ -530,6 +519,11 @@ local function NPCFrame_UpdateLayout(layout, which)
         local last
         for i = 1, 4 do
             local button = Cell.unitButtons.npc[i]
+            button.helper:SetAttribute("orientation", orientation)
+            button.helper:SetAttribute("point", point)
+            button.helper:SetAttribute("anchorPoint", anchorPoint)
+            button.helper:SetAttribute("unitSpacing", P.Scale(unitSpacing))
+
             -- update each npc button now
             if button:IsVisible() then
                 button:ClearAllPoints()

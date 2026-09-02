@@ -56,6 +56,7 @@ local UnitAffectingCombat = UnitAffectingCombat
 local UnitBuff = UnitBuff
 local UnitDebuff = UnitDebuff
 local UnitDetailedThreatSituation = UnitDetailedThreatSituation
+local SecureButton_GetUnit = _G.SecureButton_GetUnit
 
 local barAnimationType, highlightEnabled, predictionEnabled, absorbEnabled
 local shieldEnabled, overshieldEnabled, overshieldReverseFillEnabled
@@ -3663,6 +3664,12 @@ function B.UpdatePixelPerfect(button, updateIndicators)
 end
 
 B.UpdateAll = UnitButton_UpdateAll
+B.UpdateEffectiveUnit = function(button)
+    local unit = SecureButton_GetUnit(button)
+    UnitButton_OnAttributeChanged(button, "unit", unit)
+    UnitButton_UpdateAll(button)
+    return unit
+end
 B.UpdateHealth = UnitButton_UpdateHealth
 B.UpdateHealthMax = UnitButton_UpdateHealthMax
 B.UpdateAuras = UnitButton_UpdateAuras

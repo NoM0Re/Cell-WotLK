@@ -251,6 +251,15 @@ local function SetBindingClicks(b)
 
         --! vehicle
         local unit = self:GetAttribute("unit")
+        if not unit and self:GetAttribute("useparent-unit") then
+            unit = self:GetParent():GetAttribute("unit")
+            local suffix = self:GetAttribute("unitsuffix")
+            if unit == "player" and suffix == "pet" then
+                unit = "pet"
+            elseif unit and suffix then
+                unit = string.gsub(unit..suffix, "^([^%d]+)([%d]+)[pP][eE][tT]", "%1pet%2")
+            end
+        end
         local vehicle
         if UnitHasVehicleUI(unit) then
             if unit == "player" then
@@ -433,8 +442,7 @@ unitMenu.initialize = function(self)
     UnitPopup_ShowMenu(self, menu, unit, name, id)
 end
 
-local function ShowUnitMenu(self)
-    local unit = self:GetAttribute("unit")
+local function ShowUnitMenu(self, unit)
     if not unit then return end
 
     HideDropDownMenu(1)

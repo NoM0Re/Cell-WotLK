@@ -142,6 +142,7 @@ local function CreateAssignmentButton(index)
         if button == "RightButton" then --! clear
             local spotlight = menu:GetFrameRef("spotlight"..index)
             spotlight:SetAttribute("unit", nil)
+            spotlight:SetAttribute("specialUnit", nil)
             spotlight:SetAttribute("refreshOnUpdate", nil)
             spotlight:SetAttribute("updateOnTargetChanged", nil)
             menu:GetFrameRef("assignment"..index):SetAttribute("text", nil)
@@ -271,7 +272,7 @@ for i = 1, 15 do
         end
     ]])
     wrapFrame:WrapScript(b, "OnAttributeChanged", [[
-        if name ~= "unit" then return end
+        if name ~= "unit" and name ~= "specialUnit" and name ~= "hidePlaceholder" then return end
         if (self:GetAttribute("unit") or self:GetAttribute("specialUnit")) and not self:IsShown() and not self:GetAttribute("hidePlaceholder") then
             self:GetFrameRef("placeholder"):Show()
         else
@@ -285,6 +286,12 @@ for i = 1, 15 do
         self.unit = value
         F.UpdateOmniCDPosition("Cell-Spotlight")
     end)
+end
+
+local function SetSpotlightUnit(index, unit)
+    local button = Cell.unitButtons.spotlight[index]
+    button:SetAttribute("toggleForVehicle", not (unit and strfind(unit, "pet")))
+    button:SetAttribute("unit", unit)
 end
 
 -------------------------------------------------
@@ -323,6 +330,7 @@ target:SetAttribute("_onclick", [[
     local menu = self:GetParent()
     local index = menu:GetAttribute("index")
     local spotlight = menu:GetFrameRef("spotlight"..index)
+    spotlight:SetAttribute("toggleForVehicle", true)
     spotlight:SetAttribute("unit", "target")
     spotlight:SetAttribute("specialUnit", nil)
     spotlight:SetAttribute("refreshOnUpdate", nil)
@@ -342,6 +350,7 @@ targettarget:SetAttribute("_onclick", [[
     local menu = self:GetParent()
     local index = menu:GetAttribute("index")
     local spotlight = menu:GetFrameRef("spotlight"..index)
+    spotlight:SetAttribute("toggleForVehicle", true)
     spotlight:SetAttribute("unit", "targettarget")
     spotlight:SetAttribute("specialUnit", nil)
     spotlight:SetAttribute("refreshOnUpdate", true)
@@ -360,6 +369,7 @@ focus:SetAttribute("_onclick", [[
     local menu = self:GetParent()
     local index = menu:GetAttribute("index")
     local spotlight = menu:GetFrameRef("spotlight"..index)
+    spotlight:SetAttribute("toggleForVehicle", true)
     spotlight:SetAttribute("unit", "focus")
     spotlight:SetAttribute("specialUnit", nil)
     spotlight:SetAttribute("refreshOnUpdate", nil)
@@ -378,6 +388,7 @@ focustarget:SetAttribute("_onclick", [[
     local menu = self:GetParent()
     local index = menu:GetAttribute("index")
     local spotlight = menu:GetFrameRef("spotlight"..index)
+    spotlight:SetAttribute("toggleForVehicle", true)
     spotlight:SetAttribute("unit", "focustarget")
     spotlight:SetAttribute("specialUnit", nil)
     spotlight:SetAttribute("refreshOnUpdate", true)
@@ -406,8 +417,8 @@ unit:SetAttribute("_onclick", [[
 function unit:SetUnit(index, target)
     local unitId = F.GetTargetUnitID(target)
     if unitId then
-        Cell.unitButtons.spotlight[index]:SetAttribute("unit", unitId)
-        assignmentButtons[index]:SetText(unitId)
+        SetSpotlightUnit(index, unitId)
+        assignmentButtons[index]:SetAttribute("text", unitId)
         menu:Save(index, unitId)
     else
         F.Print(L["Invalid unit."])
@@ -432,16 +443,20 @@ function unitname:SetUnit(index, target)
     local unitId = F.GetTargetUnitID(target)
     if unitId and UnitIsPlayer(unitId) then
         local name = GetUnitName(unitId, true)
-        Cell.unitButtons.spotlight[index]:SetAttribute("unit", unitId)
-        assignmentButtons[index]:SetText(name)
+        if not name or name == UNKNOWNOBJECT then
+            F.Print(L["Invalid unit."])
+            return
+        end
+        SetSpotlightUnit(index, unitId)
+        assignmentButtons[index]:SetAttribute("text", name)
         menu:Save(index, ":"..name)
 
         local previous = names[name]
         names[name] = index
 
         if previous and previous ~= index then -- exists, remove previous
-            Cell.unitButtons.spotlight[previous]:SetAttribute("unit", nil)
-            assignmentButtons[previous]:SetText("|cffababab"..NONE)
+            SetSpotlightUnit(previous, nil)
+            assignmentButtons[previous]:SetAttribute("text", nil)
             menu:Save(previous, nil)
         end
     else
@@ -466,8 +481,8 @@ unitpet:SetAttribute("_onclick", [[
 function unitpet:SetUnit(index, target)
     local unitId = F.GetTargetPetID(target)
     if unitId then
-        Cell.unitButtons.spotlight[index]:SetAttribute("unit", unitId)
-        assignmentButtons[index]:SetText(unitId)
+        SetSpotlightUnit(index, unitId)
+        assignmentButtons[index]:SetAttribute("text", unitId)
         menu:Save(index, unitId)
     else
         F.Print(L["Invalid unit."])
@@ -487,6 +502,7 @@ unittarget:SetAttribute("_onclick", [[
 function unittarget:SetUnit(index, target)
     local unitId = F.GetTargetUnitID(target)
     if unitId then
+        local isPet = strfind(unitId, "pet")
         if unitId == "player" then
             unitId = "target"
             Cell.unitButtons.spotlight[index]:SetAttribute("refreshOnUpdate", nil)
@@ -497,9 +513,11 @@ function unittarget:SetUnit(index, target)
             Cell.unitButtons.spotlight[index]:SetAttribute("refreshOnUpdate", true)
             Cell.unitButtons.spotlight[index]:SetAttribute("updateOnTargetChanged", nil)
         end
-        Cell.unitButtons.spotlight[index]:SetAttribute("unit", unitId)
+        local button = Cell.unitButtons.spotlight[index]
+        button:SetAttribute("toggleForVehicle", not isPet)
+        button:SetAttribute("unit", unitId)
         Cell.unitButtons.spotlight[index]:SetAttribute("specialUnit", nil)
-        assignmentButtons[index]:SetText(unitId)
+        assignmentButtons[index]:SetAttribute("text", unitId)
         menu:Save(index, unitId)
     else
         F.Print(L["Invalid unit."])
@@ -557,6 +575,7 @@ boss1target:SetAttribute("_onclick", [[
     local menu = self:GetParent()
     local index = menu:GetAttribute("index")
     local spotlight = menu:GetFrameRef("spotlight"..index)
+    spotlight:SetAttribute("toggleForVehicle", true)
     spotlight:SetAttribute("unit", "boss1target")
     spotlight:SetAttribute("specialUnit", nil)
     spotlight:SetAttribute("refreshOnUpdate", true)
@@ -610,9 +629,9 @@ UpdateTanks = function()
 
         if tanks[index] then
             if units[n] then
-                Cell.unitButtons.spotlight[index]:SetAttribute("unit", units[n])
+                SetSpotlightUnit(index, units[n])
             else
-                Cell.unitButtons.spotlight[index]:SetAttribute("unit", nil)
+                SetSpotlightUnit(index, nil)
             end
             n = n + 1
         end
@@ -642,9 +661,9 @@ UpdateHealers = function()
 
         if healers[index] then
             if units[n] then
-                Cell.unitButtons.spotlight[index]:SetAttribute("unit", units[n])
+                SetSpotlightUnit(index, units[n])
             else
-                Cell.unitButtons.spotlight[index]:SetAttribute("unit", nil)
+                SetSpotlightUnit(index, nil)
             end
             n = n + 1
         end
@@ -655,6 +674,10 @@ end
 
 UpdateNames = function()
     if not nameUpdateRequired then return end
+    if not next(names) then
+        nameUpdateRequired = nil
+        return
+    end
 
     -- search for names
     local found = {}
@@ -664,8 +687,12 @@ UpdateNames = function()
             return
         end
         local name = GetUnitName(unit, true)
+        if not UnitExists(unit) or not name or name == UNKNOWNOBJECT or not UnitGUID(unit) then
+            nameUpdateRequired = true
+            return
+        end
         if names[name] then
-            Cell.unitButtons.spotlight[names[name]]:SetAttribute("unit", unit)
+            SetSpotlightUnit(names[name], unit)
             found[name] = true
         end
     end
@@ -677,16 +704,14 @@ UpdateNames = function()
             return
         end
         if not found[name] then
-            Cell.unitButtons.spotlight[index]:SetAttribute("unit", nil)
+            SetSpotlightUnit(index, nil)
         end
     end
 
     nameUpdateRequired = nil
 end
 
-local timer
 local function UpdateAll()
-    timer = nil
     tankUpdateRequired = true
     UpdateTanks()
     healerUpdateRequired = true
@@ -695,16 +720,28 @@ local function UpdateAll()
     UpdateNames()
 end
 
+local rosterUpdateTimer
+local roleUpdatePending
+
 menu:RegisterEvent("RAID_ROSTER_UPDATE")
 menu:RegisterEvent("PARTY_MEMBERS_CHANGED")
+menu:RegisterEvent("UNIT_NAME_UPDATE")
 menu:RegisterEvent("PLAYER_REGEN_ENABLED")
 menu:RegisterEvent("PLAYER_REGEN_DISABLED")
-menu:SetScript("OnEvent", function(self, event)
+menu:SetScript("OnEvent", function(self, event, eventUnit)
     if event == "RAID_ROSTER_UPDATE" or event == "PARTY_MEMBERS_CHANGED" then
-        if timer then
-            timer:Cancel()
+        if rosterUpdateTimer then
+            rosterUpdateTimer:Cancel()
         end
-        timer = F.C_Timer.NewTimer(1, UpdateAll)
+        rosterUpdateTimer = F.C_Timer.NewTimer(1, function()
+            rosterUpdateTimer = nil
+            UpdateAll()
+        end)
+    elseif event == "UNIT_NAME_UPDATE" and next(names)
+    and (eventUnit == "player" or strfind(eventUnit or "", "^party%d+$") or strfind(eventUnit or "", "^raid%d+$"))
+    then
+        nameUpdateRequired = true
+        UpdateNames()
     elseif event == "PLAYER_REGEN_DISABLED" then
         F.SetEnabled(unit, false)
         F.SetEnabled(unitname, false)
@@ -726,10 +763,17 @@ menu:SetScript("OnEvent", function(self, event)
 end)
 
 Cell.RegisterCallback("GroupRoleChanged", "SpotlightFrame_GroupRoleChanged", function()
-    if timer then
-        timer:Cancel()
-    end
-    timer = F.C_Timer.NewTimer(0.1, UpdateAll)
+    if roleUpdatePending then return end
+
+    roleUpdatePending = true
+    F.C_Timer.After(0, function()
+        roleUpdatePending = nil
+        if rosterUpdateTimer then
+            rosterUpdateTimer:Cancel()
+            rosterUpdateTimer = nil
+        end
+        UpdateAll()
+    end)
 end)
 
 function menu:Save(index, unit)
@@ -955,7 +999,7 @@ local function UpdateLayout(layout, which)
         menu:Hide()
 
         local last
-        for i, f in pairs(placeholders) do
+        for i, f in ipairs(placeholders) do
             f:ClearAllPoints()
             if last then
                 if strfind(orientation, "^vertical") then
@@ -1021,7 +1065,7 @@ local function UpdateLayout(layout, which)
                     unit = strsub(unit, 2)
                     names[unit] = i
                 else -- unitid
-                    Cell.unitButtons.spotlight[i]:SetAttribute("unit", unit)
+                    SetSpotlightUnit(i, unit)
                     if unit and strfind(unit, "^.+target$") then
                         Cell.unitButtons.spotlight[i]:SetAttribute("refreshOnUpdate", true)
                     elseif unit == "target" then
@@ -1040,11 +1084,12 @@ local function UpdateLayout(layout, which)
             spotlightFrame:Show()
         else
             for i = 1, 15 do
-                Cell.unitButtons.spotlight[i]:SetAttribute("unit", nil)
+                SetSpotlightUnit(i, nil)
+                Cell.unitButtons.spotlight[i]:SetAttribute("specialUnit", nil)
                 Cell.unitButtons.spotlight[i]:SetAttribute("refreshOnUpdate", nil)
                 Cell.unitButtons.spotlight[i]:SetAttribute("updateOnTargetChanged", nil)
                 UnregisterUnitWatch(Cell.unitButtons.spotlight[i])
-                assignmentButtons[i]:SetText("|cffababab"..NONE)
+                assignmentButtons[i]:SetAttribute("text", nil)
                 Cell.unitButtons.spotlight[i]:Hide()
             end
             spotlightFrame:Hide()

@@ -8,32 +8,36 @@ Cell.frames.partyFrame = partyFrame
 partyFrame:SetAllPoints(Cell.frames.mainFrame)
 
 local header = CreateFrame("Frame", "CellPartyFrameHeader", partyFrame, "SecureGroupHeaderTemplate")
-header:SetAttribute("template", "CellUnitButtonTemplate")
+header:SetAttribute("template", "CellPartyUnitButtonTemplate")
 
 function header:UpdateButtonUnit(bName, unit)
-    if not unit then return end
+    local playerButton = _G[bName]
+    local petButton = playerButton.petButton
 
-    _G[bName].unit = unit -- OmniCD
-
-    local petUnit
-    if unit == "player" then
-        petUnit = "pet"
-    else
-        petUnit = string.gsub(unit, "party", "partypet")
+    if playerButton.partyUnit then
+        if Cell.unitButtons.party.units[playerButton.partyUnit] == playerButton then
+            Cell.unitButtons.party.units[playerButton.partyUnit] = nil
+        end
+        if Cell.unitButtons.party.units[petButton.partyUnit] == petButton then
+            Cell.unitButtons.party.units[petButton.partyUnit] = nil
+        end
     end
-    Cell.unitButtons.party.units[unit] = _G[bName]
-    Cell.unitButtons.party.units[petUnit] = _G[bName].petButton
+
+    playerButton.partyUnit = unit
+    playerButton.unit = unit -- OmniCD
+
+    local petUnit = B.UpdateEffectiveUnit(petButton)
+    petButton.partyUnit = petUnit
+
+    if unit then
+        Cell.unitButtons.party.units[unit] = playerButton
+        Cell.unitButtons.party.units[petUnit] = petButton
+    end
 end
 
--- 3.3.5 SecureGroupHeaderTemplate has no _initialAttribute-* child update mechanism.
--- Synchronize the final unit attributes after the header has applied sorting instead.
--- header:SetAttribute("initialConfigFunction", [[
---     RegisterUnitWatch(self)
-
---     local header = self:GetParent()
---     self:SetWidth(header:GetAttribute("buttonWidth") or 66)
---     self:SetHeight(header:GetAttribute("buttonHeight") or 46)
--- ]])
+-- Required by Wrath's SetupUnitButtonConfiguration to apply initial-* attributes
+-- recursively to the pet button defined by CellPartyUnitButtonTemplate.
+header.initialConfigFunction = function() end
 
 header:SetAttribute("point", "TOP")
 header:SetAttribute("xOffset", 0)
@@ -48,74 +52,68 @@ header:SetAttribute("startingIndex", -4)
 header:Show()
 header:SetAttribute("startingIndex", 1)
 
-local function SyncHeaderChildren()
-    local children = {header:GetChildren()}
-    table.sort(children, function(a, b)
-        return (a:GetName() or "") < (b:GetName() or "")
-    end)
+-- init pet buttons
+for i = 1, 5 do
+    local playerButton = header:GetAttribute("child"..i)
+    header[i] = playerButton
+    -- playerButton.type = "main" -- layout setup
 
-    for i, child in ipairs(children) do
-        header[i] = child
-    end
-    return #children
-end
+    local petButton = _G[playerButton:GetName().."Pet"]
+    -- petButton.type = "pet" -- layout setup
 
-local function SyncPartyUnits()
-    wipe(Cell.unitButtons.party.units)
-    for _, child in ipairs({header:GetChildren()}) do
-        local unit = child:GetAttribute("unit")
-        if unit then
-            local petUnit = unit == "player" and "pet" or string.gsub(unit, "party", "partypet")
-            if not InCombatLockdown() then
-                child.petButton:SetAttribute("unit", petUnit)
-                if header:GetAttribute("showPartyPets") and not header:GetAttribute("partyDetached") then
-                    RegisterUnitWatch(child.petButton)
-                end
-            end
-            header:UpdateButtonUnit(child:GetName(), unit)
+    playerButton.petButton = petButton
+    playerButton:HookScript("OnAttributeChanged", function(self, name, value)
+        if name == "unit" then
+            header:UpdateButtonUnit(self:GetName(), value)
         end
-    end
+    end)
+    header:UpdateButtonUnit(playerButton:GetName(), playerButton:GetAttribute("unit"))
+
+    -- for IterateAllUnitButtons
+    Cell.unitButtons.party["player"..i] = playerButton
+    Cell.unitButtons.party["pet"..i] = petButton
+
+    -- OmniCD
+    _G["CellPartyFrameMember"..i] = playerButton
 end
 
-local petButtonsInitialized
-local function RefreshLateUnitButtons()
-    Cell.Fire("UpdateAppearance")
-    B.ForceInitButtons()
-end
-
-local function InitPetButtons()
-    if petButtonsInitialized then return end
-    if SyncHeaderChildren() == 0 then return end
-    petButtonsInitialized = true
-
-    for i, playerButton in ipairs(header) do
-        -- playerButton.type = "main" -- layout setup
-
-        local petButton = CreateFrame("Button", playerButton:GetName().."Pet", playerButton, "CellUnitButtonTemplate")
-        -- petButton.type = "pet" -- layout setup
-        --! button for pet/vehicle only, toggleForVehicle MUST be false
-        petButton:SetAttribute("toggleForVehicle", false)
-
-        playerButton.petButton = petButton
-        SecureHandlerSetFrameRef(playerButton, "petButton", petButton)
-        -- for IterateAllUnitButtons
-        Cell.unitButtons.party["player"..i] = playerButton
-        Cell.unitButtons.party["pet"..i] = petButton
-
-        -- OmniCD
-        _G["CellPartyFrameMember"..i] = playerButton
-    end
-
-    F.C_Timer.After(0.5, RefreshLateUnitButtons)
-end
-
-SyncHeaderChildren()
-InitPetButtons()
+partyFrame:Hide()
 
 local function SetHeaderAttribute(name, value)
     if header:GetAttribute(name) ~= value then
         header:SetAttribute(name, value)
     end
+end
+
+local configuredPartyLayout
+local partyVisibilityRegistered
+
+local function GetAssignedPartyLayout()
+    local layouts = CellCharacterDB["layoutAutoSwitch"]
+    local talent = Cell.vars.activeTalentGroup or GetActiveTalentGroup()
+    if layouts and layouts[talent] then
+        return layouts[talent]["party"]
+    end
+end
+
+local function UpdatePartyVisibility()
+    if GetAssignedPartyLayout() == "hide" then
+        if partyVisibilityRegistered then
+            UnregisterStateDriver(partyFrame, "visibility")
+            partyVisibilityRegistered = nil
+        end
+        partyFrame:Hide()
+    elseif not partyVisibilityRegistered then
+        RegisterStateDriver(partyFrame, "visibility", "[@raid1,exists][nogroup] hide;show")
+        partyVisibilityRegistered = true
+    end
+end
+
+local function SortRoleMembers(a, b)
+    if a.priority ~= b.priority then
+        return a.priority < b.priority
+    end
+    return a.name < b.name
 end
 
 local function GetRoleSortedNameList(layout)
@@ -125,25 +123,21 @@ local function GetRoleSortedNameList(layout)
     end
 
     local members = {}
-    for i = 0, 4 do
+    for i = 0, GetNumPartyMembers() do
         local unit = i == 0 and "player" or "party"..i
-        if UnitExists(unit) and not (i == 0 and layout["main"]["hideSelf"]) then
+        if i ~= 0 or not layout["main"]["hideSelf"] then
             local name = UnitName(unit)
-            if name then
-                tinsert(members, {
-                    name = name,
-                    priority = rolePriority[F.UnitGroupRolesAssigned(unit)] or 4,
-                })
+            if not UnitExists(unit) or not name or name == UNKNOWNOBJECT or not UnitGUID(unit) then
+                return
             end
+            tinsert(members, {
+                name = name,
+                priority = rolePriority[F.UnitGroupRolesAssigned(unit)] or 4,
+            })
         end
     end
 
-    table.sort(members, function(a, b)
-        if a.priority ~= b.priority then
-            return a.priority < b.priority
-        end
-        return a.name < b.name
-    end)
+    table.sort(members, SortRoleMembers)
 
     local names = {}
     for _, member in ipairs(members) do
@@ -152,35 +146,53 @@ local function GetRoleSortedNameList(layout)
     return table.concat(names, ",")
 end
 
+local roleSortFrame = CreateFrame("Frame")
+
 local function UpdateRoleSort(layout)
     SetHeaderAttribute("groupBy", nil)
     SetHeaderAttribute("groupingOrder", "")
+    SetHeaderAttribute("sortMethod", "INDEX")
 
     if layout["main"]["sortByRole"] then
-        SetHeaderAttribute("sortMethod", "INDEX")
+        local nameList = GetRoleSortedNameList(layout)
         SetHeaderAttribute("groupFilter", nil)
-        SetHeaderAttribute("nameList", GetRoleSortedNameList(layout))
+        if nameList then
+            roleSortFrame:UnregisterEvent("UNIT_NAME_UPDATE")
+            SetHeaderAttribute("nameList", nameList)
+        else
+            roleSortFrame:RegisterEvent("UNIT_NAME_UPDATE")
+        end
     else
+        roleSortFrame:UnregisterEvent("UNIT_NAME_UPDATE")
         SetHeaderAttribute("nameList", nil)
         SetHeaderAttribute("groupFilter", nil)
-        SetHeaderAttribute("sortMethod", "INDEX")
     end
 end
 
 local function PartyFrame_UpdateLayout(layout, which)
-    -- visibility
-    if Cell.vars.groupType ~= "party" or Cell.vars.isHidden then
-        UnregisterStateDriver(partyFrame, "visibility")
-        partyFrame:Hide()
+    if layout ~= GetAssignedPartyLayout() then return end
+    if layout == "hide" then
+        configuredPartyLayout = nil
+        UpdatePartyVisibility()
         return
-    else
-        RegisterStateDriver(partyFrame, "visibility", "[@raid1,exists] hide;[@party1,exists] show;[group:party] show;hide")
-        SyncHeaderChildren()
-        InitPetButtons()
+    end
+    UpdatePartyVisibility()
+    if not which and configuredPartyLayout == layout then return end
+    if configuredPartyLayout ~= layout then
+        which = nil
     end
 
     -- update
+    local layoutName = layout
     layout = CellDB["layouts"][layout]
+
+    -- Configure the secure header while hidden, then let showing it perform one refresh.
+    local configureHeader = not which or which == "main-arrangement" or which == "pet-arrangement"
+        or strfind(which, "size$") or which == "pet" or which == "sort" or which == "hideSelf"
+    local headerWasShown = configureHeader and header:IsShown()
+    if headerWasShown then
+        header:Hide()
+    end
 
     -- anchor
     if not which or which == "main-arrangement" or which == "pet-arrangement" then
@@ -251,7 +263,6 @@ local function PartyFrame_UpdateLayout(layout, which)
 
         --! force update unitbutton's point
         for j = 1, 5 do
-            if not header[j] then break end
             header[j]:ClearAllPoints()
             -- update petButton's point
             header[j].petButton:ClearAllPoints()
@@ -320,19 +331,46 @@ local function PartyFrame_UpdateLayout(layout, which)
         header:SetAttribute("showPlayer", not layout["main"]["hideSelf"])
     end
 
-    SyncPartyUnits()
+    if headerWasShown then
+        header:Show()
+    end
+
+    configuredPartyLayout = layoutName
 end
 Cell.RegisterCallback("UpdateLayout", "PartyFrame_UpdateLayout", PartyFrame_UpdateLayout)
 
+local function ConfigureAssignedPartyLayout()
+    if InCombatLockdown() then return end
+
+    local layout = GetAssignedPartyLayout()
+    if layout and layout ~= "hide" then
+        PartyFrame_UpdateLayout(layout)
+    end
+    UpdatePartyVisibility()
+end
+Cell.RegisterCallback("AddonLoaded", "PartyFrame_AddonLoaded", ConfigureAssignedPartyLayout)
+Cell.RegisterCallback("ActiveTalentGroupChanged", "PartyFrame_ActiveTalentGroupChanged", ConfigureAssignedPartyLayout)
+
 local roleSortUpdatePending
-local roleSortFrame = CreateFrame("Frame")
 roleSortFrame:RegisterEvent("PARTY_MEMBERS_CHANGED")
+
+local function ApplyRoleSortedNameList(layout)
+    local nameList = GetRoleSortedNameList(layout)
+    if not nameList then
+        roleSortFrame:RegisterEvent("UNIT_NAME_UPDATE")
+        return
+    end
+
+    roleSortFrame:UnregisterEvent("UNIT_NAME_UPDATE")
+    SetHeaderAttribute("nameList", nameList)
+end
 
 local function RefreshRoleSort()
     local layout = Cell.vars.currentLayoutTable
     if Cell.vars.groupType ~= "party" or Cell.vars.isHidden
     or not layout or not layout["main"]["sortByRole"]
     then
+        roleSortFrame:UnregisterEvent("UNIT_NAME_UPDATE")
         return
     end
 
@@ -352,14 +390,16 @@ local function RefreshRoleSort()
         elseif Cell.vars.groupType == "party" and not Cell.vars.isHidden
         and currentLayout and currentLayout["main"]["sortByRole"]
         then
-            PartyFrame_UpdateLayout(Cell.vars.currentLayout, "sort")
+            ApplyRoleSortedNameList(currentLayout)
         end
     end)
 end
 
-roleSortFrame:SetScript("OnEvent", function(self, event)
+roleSortFrame:SetScript("OnEvent", function(self, event, unit)
     if event == "PLAYER_REGEN_ENABLED" then
         self:UnregisterEvent("PLAYER_REGEN_ENABLED")
+    elseif event == "UNIT_NAME_UPDATE" and unit ~= "player" and not strfind(unit or "", "^party%d$") then
+        return
     end
     RefreshRoleSort()
 end)

@@ -185,7 +185,7 @@ end
 function A.ApplyFadeInOutToMenu(anchorFrame, hoverFrame)
     local fadingIn, fadedIn, fadingOut
     local fadedOut = true
-    anchorFrame:Hide()
+    anchorFrame:SetAlpha(0)
     anchorFrame.fadeIn = anchorFrame:CreateAnimationGroup()
     anchorFrame.fadeIn.alpha = anchorFrame.fadeIn:CreateAnimation("Alpha")
     F.AlphaSetFromTo(anchorFrame.fadeIn.alpha, 0, 1)
@@ -193,7 +193,6 @@ function A.ApplyFadeInOutToMenu(anchorFrame, hoverFrame)
     anchorFrame.fadeIn.alpha:SetSmoothing("OUT")
     anchorFrame.fadeIn:SetScript("OnPlay", function()
         anchorFrame.fadeOut:Finish()
-        anchorFrame:Show()
         fadingIn = true
     end)
     anchorFrame.fadeIn:SetScript("OnFinished", function()
@@ -201,6 +200,7 @@ function A.ApplyFadeInOutToMenu(anchorFrame, hoverFrame)
         fadingOut = false
         fadedIn = true
         fadedOut = false
+        anchorFrame:SetAlpha(1)
 
         if CellDB["general"]["fadeOut"] and not hoverFrame:IsMouseOver() then
             anchorFrame.fadeOut:Play()
@@ -221,7 +221,7 @@ function A.ApplyFadeInOutToMenu(anchorFrame, hoverFrame)
         fadingOut = false
         fadedIn = false
         fadedOut = true
-        anchorFrame:Hide()
+        anchorFrame:SetAlpha(0)
 
         if hoverFrame:IsMouseOver() then
             anchorFrame.fadeIn:Play()
