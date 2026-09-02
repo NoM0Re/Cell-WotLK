@@ -85,7 +85,6 @@ local ActionDurations = {
     A = 1.1,
     B = 0.7,
     D = 1,
-    E = 0.8,
     F = 1,
     G = 1,
 }
@@ -94,7 +93,6 @@ local ActionAtlases = {
     AVertical = ActionMediaPath .. "Action_A_vertical.tga",
     B = ActionMediaPath .. "Action_B.tga",
     D = ActionMediaPath .. "Action_D.tga",
-    E = ActionMediaPath .. "Action_E.tga",
     F = ActionMediaPath .. "Action_F.tga",
     G = ActionMediaPath .. "Action_G.tga",
 }
@@ -159,60 +157,47 @@ end
 animationPool.A = CreateObjectPool(function() return CreateStopMotionAnimation("A") end, ResetterFunc)
 animationPool.B = CreateObjectPool(function() return CreateStopMotionAnimation("B") end, ResetterFunc)
 
-local function PlayNativeAnimation(animationGroup, frame)
-    if animationGroup:IsPlaying() then
-        animationGroup:Stop()
-    end
-    frame:SetAlpha(0)
-    animationGroup:Play()
-end
-
 -------------------------------------------------
 -- animation: C
 -------------------------------------------------
-local function CreateAnimationGroup_TypeC()
+local function TypeCOnUpdate(canvas, elapsed)
+    if not canvas.elapsed then return end
+    canvas.elapsed = canvas.elapsed + elapsed
+    local progress = canvas.elapsed / canvas.duration
+    if progress >= 2 then
+        canvas.elapsed = nil
+        canvas:SetScript("OnUpdate", nil)
+        canvas.frame:SetAlpha(0)
+        animationPool.C:Release(canvas)
+        return
+    end
+
+    local offset = canvas.distance
+    if progress < 1 then
+        local easedProgress = 1 - (1 - progress)^2
+        canvas.frame:SetAlpha(0.6 * easedProgress)
+        offset = offset * easedProgress
+    else
+        canvas.frame:SetAlpha(0.6 * (1 - (progress - 1)^2))
+    end
+    canvas.frame:SetPoint(canvas.point, canvas, canvas.point, 0, offset)
+end
+
+local function CreateAnimation_TypeC()
     local canvas = CreateFrame("Frame")
+    canvas:Hide()
+    canvas.ag = canvas
 
     -- frame
     local f = CreateFrame("Frame", nil, canvas)
+    canvas.frame = f
 
     -- texture
     local tex = f:CreateTexture(nil, "ARTWORK")
     tex:SetAllPoints(f)
     tex:SetTexture("Interface\\AddOns\\Cell\\Media\\Icons\\upgrade.tga")
 
-    -- animation
-    local ag = f:CreateAnimationGroup()
-    canvas.ag = ag
-
-    local a1 = ag:CreateAnimation("Alpha")
-    a1.duration = 0.5
-    F.AlphaSetFromTo(a1, 0, 0.6)
-    a1:SetOrder(1)
-    a1:SetDuration(a1.duration)
-    a1:SetSmoothing("OUT")
-    local t1 = ag:CreateAnimation("Translation")
-    t1.duration = 0.5
-    t1:SetOrder(1)
-    t1:SetSmoothing("OUT")
-    t1:SetDuration(t1.duration)
-
-    local a2 = ag:CreateAnimation("Alpha")
-    a2.duration = 0.5
-    F.AlphaSetFromTo(a2, 0.6, 0)
-    a2:SetDuration(a2.duration)
-    a2:SetOrder(2)
-    a2:SetSmoothing("IN")
-
-    ag:SetScript("OnPlay", function()
-        canvas:Show()
-    end)
-
-    ag:SetScript("OnFinished", function()
-        animationPool.C:Release(canvas)
-    end)
-
-    function ag:Display(parent, subType, r, g, b)
+    function canvas:Display(parent, subType, r, g, b)
         canvas:SetParent(parent)
         canvas:SetAllPoints(parent)
         canvas:SetFrameLevel(parent:GetFrameLevel() + 1)
@@ -220,30 +205,29 @@ local function CreateAnimationGroup_TypeC()
 
         f:ClearAllPoints()
         if subType == "1" then
-            f:SetPoint("BOTTOMLEFT")
-            f:SetPoint("TOPLEFT", canvas, "LEFT")
+            canvas.point = "BOTTOMLEFT"
         elseif subType == "2" then
-            f:SetPoint("BOTTOM")
-            f:SetPoint("TOP", canvas, "CENTER")
+            canvas.point = "BOTTOM"
         else
-            f:SetPoint("BOTTOMRIGHT")
-            f:SetPoint("TOPRIGHT", canvas, "RIGHT")
+            canvas.point = "BOTTOMRIGHT"
         end
 
-        a1:SetDuration(a1.duration / parent.speed)
-        t1:SetDuration(t1.duration / parent.speed)
-        a2:SetDuration(a2.duration / parent.speed)
+        canvas.elapsed = 0
+        canvas.duration = 0.5 / parent.speed
+        canvas.distance = canvas:GetHeight() / 2
 
-        f:SetWidth(canvas:GetHeight() / 2)
-        t1:SetOffset(0, canvas:GetHeight() / 2 * canvas:GetEffectiveScale())
+        f:SetSize(canvas.distance, canvas.distance)
+        f:SetPoint(canvas.point, canvas, canvas.point, 0, 0)
         tex:SetGradientAlpha("VERTICAL", r, g, b, 0, r, g, b, 1)
-        PlayNativeAnimation(ag, f)
+        f:SetAlpha(0)
+        canvas:SetScript("OnUpdate", TypeCOnUpdate)
+        canvas:Show()
     end
 
     return canvas
 end
 
-animationPool.C = CreateObjectPool(CreateAnimationGroup_TypeC, ResetterFunc)
+animationPool.C = CreateObjectPool(CreateAnimation_TypeC, ResetterFunc)
 
 -------------------------------------------------
 -- animation: D
@@ -253,7 +237,55 @@ animationPool.D = CreateObjectPool(function() return CreateStopMotionAnimation("
 -------------------------------------------------
 -- animation: E
 -------------------------------------------------
-animationPool.E = CreateObjectPool(function() return CreateStopMotionAnimation("E") end, ResetterFunc)
+local function CreateAnimation_TypeE()
+    local canvas = CreateFrame("Frame")
+    canvas:Hide()
+    canvas.ag = canvas
+
+    local texture = canvas:CreateTexture(nil, "ARTWORK")
+    texture:SetTexture("Interface\\AddOns\\Cell\\Media\\Icons\\arrow.tga")
+    canvas.texture = texture
+
+    function canvas:Display(parent, r, g, b)
+        canvas:SetParent(parent)
+        canvas:SetAllPoints(parent)
+        canvas:SetFrameLevel(parent:GetFrameLevel() + 1)
+        canvas.elapsed = 0
+        canvas.duration = 0.8 / parent.speed
+        canvas.arrowWidth = canvas:GetHeight() * 2
+
+        texture:SetVertexColor(r, g, b, 0.6)
+        texture:Hide()
+        canvas:SetScript("OnUpdate", function(self, elapsed)
+            self.elapsed = self.elapsed + elapsed
+            local progress = self.elapsed / self.duration
+            if progress >= 1 then
+                self:SetScript("OnUpdate", nil)
+                animationPool.E:Release(self)
+                return
+            end
+
+            local easedProgress = progress < 0.5 and 2 * progress^2 or 1 - 2 * (1 - progress)^2
+            local offset = -self.arrowWidth + (self.arrowWidth + self:GetWidth()) * easedProgress
+            local left = max(0, offset)
+            local right = min(self:GetWidth(), offset + self.arrowWidth)
+            if right <= left then
+                texture:Hide()
+                return
+            end
+
+            texture:SetPoint("TOPLEFT", self, "TOPLEFT", left, 0)
+            texture:SetSize(right - left, self:GetHeight())
+            texture:SetTexCoord((left - offset) / self.arrowWidth, (right - offset) / self.arrowWidth, 0, 1)
+            texture:Show()
+        end)
+        canvas:Show()
+    end
+
+    return canvas
+end
+
+animationPool.E = CreateObjectPool(CreateAnimation_TypeE, ResetterFunc)
 
 -------------------------------------------------
 -- animation: F
