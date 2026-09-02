@@ -4145,6 +4145,8 @@ local function CreateAuraButtons(parent, auraButtons, auraTable, noUpDownButtons
                 F.Print(L["Invalid spell id."])
             end
         end)
+        popup:SetParent(self)
+        popup:SetFrameLevel(self:GetFrameLevel() + 50)
         popup:SetPoint("TOPLEFT", self)
         popup:SetPoint("BOTTOMRIGHT", self)
         popup:ShowEditBox("")
@@ -4394,6 +4396,8 @@ local function CreateAuraButtons(parent, auraButtons, auraTable, noUpDownButtons
                 end
 
             end)
+            popup:SetParent(auraButtons[i])
+            popup:SetFrameLevel(auraButtons[i]:GetFrameLevel() + 50)
             popup:SetPoint("TOPLEFT", auraButtons[i])
             popup:SetPoint("BOTTOMRIGHT", auraButtons[i])
             popup:ShowEditBox(auraButtons[i].spellId or "")
@@ -5392,6 +5396,8 @@ local function CreateActionButtons(parent, spellTable, updateHeightFunc)
                 F.Print(L["Invalid spell id."])
             end
         end)
+        popup:SetParent(self)
+        popup:SetFrameLevel(self:GetFrameLevel() + 50)
         popup:SetPoint("TOPLEFT", self)
         popup:SetPoint("BOTTOMRIGHT", self)
         popup:ShowEditBox("")
@@ -5583,6 +5589,8 @@ local function CreateActionButtons(parent, spellTable, updateHeightFunc)
                     F.Print(L["Invalid spell id."])
                 end
             end)
+            popup:SetParent(actionButtons[i])
+            popup:SetFrameLevel(actionButtons[i]:GetFrameLevel() + 50)
             popup:SetPoint("TOPLEFT", actionButtons[i])
             popup:SetPoint("BOTTOMRIGHT", actionButtons[i])
             popup:ShowEditBox(actionButtons[i].spellId or "")

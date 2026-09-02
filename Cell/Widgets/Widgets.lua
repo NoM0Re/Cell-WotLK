@@ -1946,7 +1946,7 @@ function Cell.CreateConfirmPopup(parent, width, text, onAccept, onReject, mask, 
     end)
 
     -- parent.confirmPopup:SetFrameStrata("DIALOG")
-    parent.confirmPopup:SetFrameLevel(parent:GetFrameLevel() + 300)
+    parent.confirmPopup:SetFrameLevel(120)
     parent.confirmPopup:ClearAllPoints() -- prepare for SetPoint()
     parent.confirmPopup:Show()
 
@@ -2009,7 +2009,7 @@ function Cell.CreateNotificationPopup(parent, width, text, mask)
     end)
 
     -- parent.notificationPopup:SetFrameStrata("DIALOG")
-    parent.notificationPopup:SetFrameLevel(parent:GetFrameLevel() + 310)
+    parent.notificationPopup:SetFrameLevel(123)
     parent.notificationPopup:ClearAllPoints() -- prepare for SetPoint()
     parent.notificationPopup:Show()
 

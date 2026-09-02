@@ -201,6 +201,8 @@ local function CreateDRPane()
                 F.Print(L["Invalid spell id."])
             end
         end)
+        popup:SetParent(self)
+        popup:SetFrameLevel(self:GetFrameLevel() + 50)
         popup:SetPoint("TOPLEFT", self)
         popup:SetPoint("BOTTOMRIGHT", self)
         popup:ShowEditBox("")
