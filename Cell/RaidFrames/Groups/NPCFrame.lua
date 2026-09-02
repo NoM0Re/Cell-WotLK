@@ -189,10 +189,10 @@ for i = 1, 4 do
         local unitSpacing = self:GetAttribute("unitSpacing")
 
         local npcFrame = self:GetFrameRef("npcFrame")
-        self:RunFor(npcFrame, npcFrame:GetAttribute("pointUpdater"), orientation, point, anchorPoint, unitSpacing)
+        control:RunFor(npcFrame, npcFrame:GetAttribute("pointUpdater"), orientation, point, anchorPoint, unitSpacing)
     ]])
-    button.helper:SetAttribute("_onshow", [[ self:RunAttribute("pointUpdater") ]])
-    button.helper:SetAttribute("_onhide", [[ self:RunAttribute("pointUpdater") ]])
+    button.helper:SetAttribute("_onshow", [[ control:RunAttribute("pointUpdater") ]])
+    button.helper:SetAttribute("_onhide", [[ control:RunAttribute("pointUpdater") ]])
 end
 
 -------------------------------------------------
@@ -246,7 +246,7 @@ npcFrame:SetAttribute("_onstate-groupstate", [[
     end
 
     -- NOTE: update each npc button
-    self:RunAttribute("pointUpdater", orientation, point, anchorPoint, unitSpacing)
+    control:RunAttribute("pointUpdater", orientation, point, anchorPoint, unitSpacing)
 ]])
 
 -------------------------------------------------
