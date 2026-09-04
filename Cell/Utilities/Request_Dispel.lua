@@ -423,7 +423,7 @@ function U.CreateDispelRequestText(parent)
     end
 
     function drText:SetType(type)
-        tex:SetTexture("Interface/AddOns/Cell/Media/FlipBooks/dispel_"..type..".tga")
+        tex:SetTexture("Interface\\AddOns\\Cell\\Media\\FlipBooks\\dispel_"..type..".tga")
         flip:SetFrames(flipBookFrames[type])
     end
 
