@@ -13,6 +13,7 @@ local tanks, healers, names = {}, {}, {}
 local UpdateTanks, UpdateHealers, UpdateNames
 local tankUpdateRequired, healerUpdateRequired, nameUpdateRequired
 local tooltipPoint, tooltipRelativePoint, tooltipX, tooltipY
+local movingAnchor
 local NONE = strlower(_G.NONE)
 
 local function SaveAssignment(_, index, unit)
@@ -40,18 +41,28 @@ hoverFrame:SetPoint("RIGHT", anchorFrame, 1, 0)
 
 A.ApplyFadeInOutToMenu(anchorFrame, hoverFrame)
 
+local function StopMovingAnchor()
+    if not movingAnchor then return end
+    movingAnchor = false
+    anchorFrame:StopMovingOrSizing()
+    anchorFrame:UnregisterEvent("PLAYER_REGEN_DISABLED")
+    P.SavePosition(anchorFrame, Cell.vars.currentLayoutTable["spotlight"]["position"])
+end
+
+anchorFrame:SetScript("OnEvent", StopMovingAnchor)
+
 local config = Cell.CreateButton(anchorFrame, nil, "accent", {20, 10}, false, true, nil, nil, "SecureHandlerAttributeTemplate,SecureHandlerClickTemplate")
 config:SetFrameStrata("MEDIUM")
 config:SetAllPoints(anchorFrame)
 config:RegisterForDrag("LeftButton")
 config:SetScript("OnDragStart", function()
+    if InCombatLockdown() then return end
+    movingAnchor = true
+    anchorFrame:RegisterEvent("PLAYER_REGEN_DISABLED")
     anchorFrame:StartMoving()
     anchorFrame:SetUserPlaced(false)
 end)
-config:SetScript("OnDragStop", function()
-    anchorFrame:StopMovingOrSizing()
-    P.SavePosition(anchorFrame, Cell.vars.currentLayoutTable["spotlight"]["position"])
-end)
+config:SetScript("OnDragStop", StopMovingAnchor)
 config:SetAttribute("_onclick", [[
     for i = 1, 15 do
         local b = self:GetFrameRef("assignment"..i)
@@ -874,9 +885,9 @@ local function UpdateMenu(which)
 
     if not which or which == "fadeOut" then
         if CellDB["general"]["fadeOut"] then
-            anchorFrame.fadeOut:Play()
+            anchorFrame:FadeOut()
         else
-            anchorFrame.fadeIn:Play()
+            anchorFrame:FadeIn()
         end
     end
 

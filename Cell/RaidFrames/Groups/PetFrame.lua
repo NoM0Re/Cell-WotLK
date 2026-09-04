@@ -6,6 +6,7 @@ local A = Cell.animations
 local P = Cell.pixelPerfectFuncs
 
 local tooltipPoint, tooltipRelativePoint, tooltipX, tooltipY
+local movingAnchor
 
 local petFrame = CreateFrame("Frame", "CellPetFrame", Cell.frames.mainFrame, "SecureHandlerAttributeTemplate")
 Cell.frames.petFrame = petFrame
@@ -28,18 +29,28 @@ hoverFrame:SetPoint("RIGHT", anchorFrame, 1, 0)
 
 A.ApplyFadeInOutToMenu(anchorFrame, hoverFrame)
 
+local function StopMovingAnchor()
+    if not movingAnchor then return end
+    movingAnchor = false
+    anchorFrame:StopMovingOrSizing()
+    anchorFrame:UnregisterEvent("PLAYER_REGEN_DISABLED")
+    P.SavePosition(anchorFrame, Cell.vars.currentLayoutTable["pet"]["position"])
+end
+
+anchorFrame:SetScript("OnEvent", StopMovingAnchor)
+
 local dumb = Cell.CreateButton(anchorFrame, nil, "accent", {20, 10}, false, true)
 dumb:Hide()
 dumb:SetFrameStrata("MEDIUM")
 dumb:SetAllPoints(anchorFrame)
 dumb:SetScript("OnDragStart", function()
+    if InCombatLockdown() then return end
+    movingAnchor = true
+    anchorFrame:RegisterEvent("PLAYER_REGEN_DISABLED")
     anchorFrame:StartMoving()
     anchorFrame:SetUserPlaced(false)
 end)
-dumb:SetScript("OnDragStop", function()
-    anchorFrame:StopMovingOrSizing()
-    P.SavePosition(anchorFrame, Cell.vars.currentLayoutTable["pet"]["position"])
-end)
+dumb:SetScript("OnDragStop", StopMovingAnchor)
 dumb:HookScript("OnEnter", function()
     hoverFrame:GetScript("OnEnter")(hoverFrame)
     CellTooltip:SetOwner(dumb, "ANCHOR_NONE")
@@ -64,12 +75,12 @@ local function UpdateAnchor()
         dumb:Show()
         if CellDB["general"]["fadeOut"] then
             if hoverFrame:IsMouseOver() then
-                anchorFrame.fadeIn:Play()
+                anchorFrame:FadeIn()
             else
-                anchorFrame.fadeOut:GetScript("OnFinished")(anchorFrame.fadeOut)
+                anchorFrame:FadeOut()
             end
         else
-            anchorFrame:Show()
+            anchorFrame:FadeIn()
         end
     else
         dumb:Hide()
@@ -204,9 +215,9 @@ local function UpdateMenu(which)
 
     if not which or which == "fadeOut" then
         if CellDB["general"]["fadeOut"] then
-            anchorFrame.fadeOut:Play()
+            anchorFrame:FadeOut()
         else
-            anchorFrame.fadeIn:Play()
+            anchorFrame:FadeIn()
         end
     end
 

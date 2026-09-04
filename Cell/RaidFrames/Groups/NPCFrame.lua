@@ -25,6 +25,7 @@ end
 -- separateAnchor
 -------------------------------------------------
 local tooltipPoint, tooltipRelativePoint, tooltipX, tooltipY
+local movingAnchor
 
 local separateAnchor = CreateFrame("Frame", "CellSeparateNPCFrameAnchor", Cell.frames.mainFrame)
 Cell.frames.separateNpcFrameAnchor = separateAnchor
@@ -42,18 +43,28 @@ hoverFrame:SetPoint("RIGHT", separateAnchor, 1, 0)
 
 A.ApplyFadeInOutToMenu(separateAnchor, hoverFrame)
 
+local function StopMovingAnchor()
+    if not movingAnchor then return end
+    movingAnchor = false
+    separateAnchor:StopMovingOrSizing()
+    separateAnchor:UnregisterEvent("PLAYER_REGEN_DISABLED")
+    P.SavePosition(separateAnchor, Cell.vars.currentLayoutTable["npc"]["position"])
+end
+
+separateAnchor:SetScript("OnEvent", StopMovingAnchor)
+
 local dumb = Cell.CreateButton(separateAnchor, nil, "accent", {20, 10}, false, true)
 dumb:Hide()
 dumb:SetFrameStrata("MEDIUM")
 dumb:SetAllPoints(separateAnchor)
 dumb:SetScript("OnDragStart", function()
+    if InCombatLockdown() then return end
+    movingAnchor = true
+    separateAnchor:RegisterEvent("PLAYER_REGEN_DISABLED")
     separateAnchor:StartMoving()
     separateAnchor:SetUserPlaced(false)
 end)
-dumb:SetScript("OnDragStop", function()
-    separateAnchor:StopMovingOrSizing()
-    P.SavePosition(separateAnchor, Cell.vars.currentLayoutTable["npc"]["position"])
-end)
+dumb:SetScript("OnDragStop", StopMovingAnchor)
 dumb:HookScript("OnEnter", function()
     hoverFrame:GetScript("OnEnter")(hoverFrame)
     CellTooltip:SetOwner(dumb, "ANCHOR_NONE")
@@ -80,12 +91,12 @@ function npcFrame:UpdateSeparateAnchor()
         dumb:Show()
         if CellDB["general"]["fadeOut"] then
             if hoverFrame:IsMouseOver() then
-                separateAnchor.fadeIn:Play()
+                separateAnchor:FadeIn()
             else
-                separateAnchor.fadeOut:GetScript("OnFinished")(separateAnchor.fadeOut)
+                separateAnchor:FadeOut()
             end
         else
-            separateAnchor:Show()
+            separateAnchor:FadeIn()
         end
     else
         dumb:Hide()
@@ -348,9 +359,9 @@ local function UpdateMenu(which)
 
     if not which or which == "fadeOut" then
         if CellDB["general"]["fadeOut"] then
-            separateAnchor.fadeOut:Play()
+            separateAnchor:FadeOut()
         else
-            separateAnchor.fadeIn:Play()
+            separateAnchor:FadeIn()
         end
     end
 

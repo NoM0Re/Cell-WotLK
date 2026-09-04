@@ -2,6 +2,7 @@ local _, Cell = ...
 local L = Cell.L
 local F = Cell.funcs
 local B = Cell.bFuncs
+local A = Cell.animations
 local P = Cell.pixelPerfectFuncs
 
 Cell.unitButtons = {
@@ -26,6 +27,8 @@ Cell.unitButtons = {
 
 -- local hoverTop, hoverBottom, hoverLeft, hoverRight
 local tooltipPoint, tooltipRelativePoint, tooltipX, tooltipY
+local movingAnchor
+local menuFadedIn
 -------------------------------------------------
 -- CellMainFrame
 -------------------------------------------------
@@ -44,6 +47,8 @@ anchorFrame:SetMovable(true)
 anchorFrame:SetClampedToScreen(true)
 
 local function StopMovingAnchor()
+    if not movingAnchor then return end
+    movingAnchor = false
     anchorFrame:StopMovingOrSizing()
     anchorFrame:UnregisterEvent("PLAYER_REGEN_DISABLED")
     P.SavePosition(anchorFrame, Cell.vars.currentLayoutTable["main"]["position"])
@@ -55,6 +60,7 @@ local function RegisterButtonEvents(frame)
     -- frame:RegisterForDrag("LeftButton")
     frame:SetScript("OnDragStart", function()
         if InCombatLockdown() then return end
+        movingAnchor = true
         anchorFrame:RegisterEvent("PLAYER_REGEN_DISABLED")
         anchorFrame:StartMoving()
         anchorFrame:SetUserPlaced(false)
@@ -80,7 +86,7 @@ local menuFrame = CreateFrame("Frame", "CellMenuFrame", cellMainFrame)
 Cell.frames.menuFrame = menuFrame
 menuFrame:SetAllPoints(anchorFrame)
 menuFrame:SetFrameLevel(27)
-menuFrame:Hide()
+menuFrame:SetAlpha(0)
 
 local options = Cell.CreateButton(menuFrame, "", "red", {20, 10}, false, true)
 P.Point(options, "TOPLEFT", menuFrame)
@@ -204,75 +210,33 @@ P.Point(loadingBar, "BOTTOMRIGHT", options, -1, 1)
 -------------------------------------------------
 -- fadeIn & fadeOut
 -------------------------------------------------
-local fadingIn, fadedIn, fadingOut
-local fadedOut = true
-menuFrame.fadeIn = menuFrame:CreateAnimationGroup()
-menuFrame.fadeIn.initialAlpha = menuFrame.fadeIn:CreateAnimation("alpha")
-menuFrame.fadeIn.initialAlpha:SetChange(-1)
-menuFrame.fadeIn.initialAlpha:SetDuration(0)
-menuFrame.fadeIn.initialAlpha:SetOrder(1)
-menuFrame.fadeIn.alpha = menuFrame.fadeIn:CreateAnimation("alpha")
-F.AlphaSetFromTo(menuFrame.fadeIn.alpha, 0, 1)
-menuFrame.fadeIn.alpha:SetDuration(0.5)
-menuFrame.fadeIn.alpha:SetSmoothing("OUT")
-menuFrame.fadeIn.alpha:SetOrder(1)
-menuFrame.fadeIn:SetScript("OnPlay", function()
-    menuFrame.fadeOut:Finish()
-    menuFrame:Show()
-    fadingIn = true
-
+function menuFrame:FadeIn()
+    if menuFadedIn then return end
+    menuFadedIn = true
+    A.FrameFadeIn(self, 0.5, self:GetAlpha(), 1)
     if Cell.frames.battleResFrame and not CellDB["tools"]["battleResTimer"][2] and CellDB["general"]["menuPosition"] == "top_bottom" then
         Cell.frames.battleResFrame:OnMenuShow()
     end
-end)
-menuFrame.fadeIn:SetScript("OnFinished", function()
-    fadingIn = false
-    fadingOut = false
-    fadedIn = true
-    fadedOut = false
+end
 
-    if CellDB["general"]["fadeOut"] and not hoverFrame:IsMouseOver() then
-        menuFrame.fadeOut:Play()
-    end
-end)
-
-menuFrame.fadeOut = menuFrame:CreateAnimationGroup()
-menuFrame.fadeOut.alpha = menuFrame.fadeOut:CreateAnimation("alpha")
-F.AlphaSetFromTo(menuFrame.fadeOut.alpha, 1, 0)
-menuFrame.fadeOut.alpha:SetDuration(0.5)
-menuFrame.fadeOut.alpha:SetSmoothing("OUT")
-menuFrame.fadeOut:SetScript("OnPlay", function()
-    menuFrame.fadeIn:Finish()
-    fadingOut = true
-
+function menuFrame:FadeOut()
+    if hoverFrame:IsMouseOver() then return end
+    if not menuFadedIn then return end
+    menuFadedIn = false
+    A.FrameFadeOut(self, 0.5, self:GetAlpha(), 0)
     if Cell.frames.battleResFrame and not CellDB["tools"]["battleResTimer"][2] and CellDB["general"]["menuPosition"] == "top_bottom" then
         Cell.frames.battleResFrame:OnMenuHide()
     end
-end)
-menuFrame.fadeOut:SetScript("OnFinished", function()
-    fadingIn = false
-    fadingOut = false
-    fadedIn = false
-    fadedOut = true
-    menuFrame:Hide()
-
-    if hoverFrame:IsMouseOver() then
-        menuFrame.fadeIn:Play()
-    end
-end)
+end
 
 hoverFrame:SetScript("OnEnter", function()
     if not CellDB["general"]["fadeOut"] then return end
-    if not (fadingIn or fadedIn) then
-        menuFrame.fadeIn:Play()
-    end
+    menuFrame:FadeIn()
 end)
 hoverFrame:SetScript("OnLeave", function()
     if not CellDB["general"]["fadeOut"] then return end
     if hoverFrame:IsMouseOver() then return end
-    if not (fadingOut or fadedOut) then
-        menuFrame.fadeOut:Play()
-    end
+    menuFrame:FadeOut()
 end)
 
 local function UpdateHoverFrame()
@@ -505,7 +469,7 @@ local function UpdateMenu(which)
 
     if not which or which == "fadeOut" then
         if CellDB["general"]["fadeOut"] then
-            menuFrame.fadeOut:Play()
+            menuFrame:FadeOut()
             -- local totalElapsed = 0
             -- menuFrame:SetScript("OnUpdate", function(self, elapsed)
             --     totalElapsed = totalElapsed + elapsed
@@ -523,7 +487,7 @@ local function UpdateMenu(which)
             --     end
             -- end)
         else
-            menuFrame.fadeIn:Play()
+            menuFrame:FadeIn()
             -- menuFrame:SetScript("OnUpdate", nil)
         end
     end
@@ -546,9 +510,7 @@ local function MainFrame_UpdateLayout(layout, which)
         return
     else
         anchorFrame:Show()
-        if not fadedOut or not CellDB["general"]["fadeOut"] then
-            menuFrame:Show()
-        end
+        menuFrame:Show()
         hoverFrame:Show()
     end
 

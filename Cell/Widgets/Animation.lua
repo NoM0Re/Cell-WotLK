@@ -183,63 +183,30 @@ end
 -- apply fade in/out to menu
 -----------------------------------------
 function A.ApplyFadeInOutToMenu(anchorFrame, hoverFrame)
-    local fadingIn, fadedIn, fadingOut
-    local fadedOut = true
+    local fadedIn
     anchorFrame:SetAlpha(0)
-    anchorFrame.fadeIn = anchorFrame:CreateAnimationGroup()
-    anchorFrame.fadeIn.alpha = anchorFrame.fadeIn:CreateAnimation("Alpha")
-    F.AlphaSetFromTo(anchorFrame.fadeIn.alpha, 0, 1)
-    anchorFrame.fadeIn.alpha:SetDuration(0.5)
-    anchorFrame.fadeIn.alpha:SetSmoothing("OUT")
-    anchorFrame.fadeIn:SetScript("OnPlay", function()
-        anchorFrame.fadeOut:Finish()
-        fadingIn = true
-    end)
-    anchorFrame.fadeIn:SetScript("OnFinished", function()
-        fadingIn = false
-        fadingOut = false
+
+    function anchorFrame:FadeIn()
+        if fadedIn then return end
         fadedIn = true
-        fadedOut = false
-        anchorFrame:SetAlpha(1)
+        A.FrameFadeIn(self, 0.5, self:GetAlpha(), 1)
+    end
 
-        if CellDB["general"]["fadeOut"] and not hoverFrame:IsMouseOver() then
-            anchorFrame.fadeOut:Play()
-        end
-    end)
-
-    anchorFrame.fadeOut = anchorFrame:CreateAnimationGroup()
-    anchorFrame.fadeOut.alpha = anchorFrame.fadeOut:CreateAnimation("Alpha")
-    F.AlphaSetFromTo(anchorFrame.fadeOut.alpha, 1, 0)
-    anchorFrame.fadeOut.alpha:SetDuration(0.5)
-    anchorFrame.fadeOut.alpha:SetSmoothing("OUT")
-    anchorFrame.fadeOut:SetScript("OnPlay", function()
-        anchorFrame.fadeIn:Finish()
-        fadingOut = true
-    end)
-    anchorFrame.fadeOut:SetScript("OnFinished", function()
-        fadingIn = false
-        fadingOut = false
+    function anchorFrame:FadeOut()
+        if hoverFrame:IsMouseOver() then return end
+        if not fadedIn then return end
         fadedIn = false
-        fadedOut = true
-        anchorFrame:SetAlpha(0)
-
-        if hoverFrame:IsMouseOver() then
-            anchorFrame.fadeIn:Play()
-        end
-    end)
+        A.FrameFadeOut(self, 0.5, self:GetAlpha(), 0)
+    end
 
     hoverFrame:SetScript("OnEnter", function()
         if not CellDB["general"]["fadeOut"] then return end
-        if not (fadingIn or fadedIn) then
-            anchorFrame.fadeIn:Play()
-        end
+        anchorFrame:FadeIn()
     end)
     hoverFrame:SetScript("OnLeave", function()
         if not CellDB["general"]["fadeOut"] then return end
         if hoverFrame:IsMouseOver() then return end
-        if not (fadingOut or fadedOut) then
-            anchorFrame.fadeOut:Play()
-        end
+        anchorFrame:FadeOut()
     end)
     hoverFrame:EnableMouse(true)
 end
