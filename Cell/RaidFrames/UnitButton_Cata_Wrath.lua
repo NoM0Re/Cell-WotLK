@@ -2146,7 +2146,6 @@ local unitEventsRegistered = false
 local unitEvents = {
     "UNIT_HEALTH",
     "UNIT_MAXHEALTH",
-    "UNIT_AURA",
     "UNIT_ENTERED_VEHICLE",
     "UNIT_EXITING_VEHICLE",
     "UNIT_FLAGS",
@@ -2693,6 +2692,7 @@ local function UnitButton_RegisterEvents(self)
     self:RegisterEvent("RAID_ROSTER_UPDATE")
     self:RegisterEvent("PARTY_MEMBERS_CHANGED")
     self:RegisterEvent("PARTY_LEADER_CHANGED")
+    self:RegisterEvent("UNIT_AURA")
     self:RegisterEvent("PARTY_MEMBER_ENABLE")
     self:RegisterEvent("PARTY_MEMBER_DISABLE")
     self:RegisterEvent("ZONE_CHANGED_NEW_AREA")
