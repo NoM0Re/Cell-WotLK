@@ -796,6 +796,7 @@ LibGroupTalents.RegisterCallback(GroupTalentsCallback, "LibGroupTalents_RoleChan
 
 local LibResComm = LibStub("LibResComm-1.0", true)
 local incomingResurrectionCallbacks = {}
+local incomingResurrectionEndTimes = {}
 
 local function FireIncomingResurrectionChanged(name, event, resser, endTime, success)
     for _, callback in pairs(incomingResurrectionCallbacks) do
@@ -823,6 +824,21 @@ function IncomingResComm:ResCommUpdate(event, resser, endTimeOrTarget, targetOrS
     end
 
     if name then
+        if event == "ResComm_ResStart" and endTime then
+            local trackedEndTime = incomingResurrectionEndTimes[name]
+            if not trackedEndTime or endTime > trackedEndTime then
+                incomingResurrectionEndTimes[name] = endTime
+                F.C_Timer.After(max(0, endTime + 0.5 - GetTime()), function()
+                    -- LibResComm may retain a cast when its end message is lost.
+                    if incomingResurrectionEndTimes[name] == endTime then
+                        incomingResurrectionEndTimes[name] = nil
+                        FireIncomingResurrectionChanged(name, "ResComm_ResEnd", resser)
+                    end
+                end)
+            end
+        elseif event == "ResComm_ResEnd" and not LibResComm:IsUnitBeingRessed(name) then
+            incomingResurrectionEndTimes[name] = nil
+        end
         FireIncomingResurrectionChanged(name, event, resser, endTime, success)
     end
 end
@@ -834,7 +850,8 @@ end
 
 function F.UnitHasIncomingResurrection(unit)
     local name = unit and UnitName(unit)
-    return name and LibResComm and LibResComm:IsUnitBeingRessed(name)
+    local endTime = name and incomingResurrectionEndTimes[name]
+    return endTime and endTime + 0.5 > GetTime() and LibResComm and LibResComm:IsUnitBeingRessed(name)
 end
 
 function F.UnitFullName(unit)

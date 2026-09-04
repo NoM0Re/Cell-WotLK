@@ -34,6 +34,9 @@ local function SetResurrection(guid, button)
     if not guid then return end
 
     local start, duration = GetTime(), 60
+    if guid == Cell.vars.playerGUID then
+        duration = duration + GetCorpseRecoveryDelay()
+    end
     local entry = {start, duration}
     rez[guid] = entry
 
@@ -226,7 +229,7 @@ function I.UpdateStatusIcon(button)
     local icon = button.indicators.statusIcon
 
     -- Interface\FrameXML\CompactUnitFrame.lua, CompactUnitFrame_UpdateCenterStatusIcon
-    if F.UnitHasIncomingResurrection(unit) then
+    if UnitIsDeadOrGhost(unit) and F.UnitHasIncomingResurrection(unit) then
         icon:SetVertexColor(1, 1, 1, 1)
         icon:SetTexture(ResurrectionTexture)
         icon:SetTexCoord(0, 1, 0, 1)
