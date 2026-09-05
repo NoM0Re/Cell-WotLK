@@ -759,6 +759,11 @@ local function UpdateTools(which)
                 ShowMover(true)
             end
         else
+            if timer then
+                timer:Cancel()
+                timer = nil
+            end
+
             buffTrackerFrame:UnregisterAllEvents()
 
             Reset()
