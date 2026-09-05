@@ -1629,6 +1629,7 @@ end
 -----------------------------------------
 function Cell.CreateStatusBar(name, parent, width, height, maxValue, smooth, func, showText, texture, color)
     local bar = CreateFrame("StatusBar", name, parent)
+    F.FixStatusBarZeroValue(bar)
     RaiseAboveParent(bar, parent)
 
     if not color then color = {accentColor.t[1], accentColor.t[2], accentColor.t[3], 1} end
@@ -1672,7 +1673,8 @@ function Cell.CreateStatusBar(name, parent, width, height, maxValue, smooth, fun
         end
     end
 
-    bar:SetScript("OnValueChanged", function(self, value)
+    bar:SetScript("OnValueChanged", function(self)
+        local value = self:GetValue()
         if showText then
             bar.text:SetText(format("%d%%", value / maxValue * 100))
         end
@@ -1705,6 +1707,7 @@ function Cell.CreateStatusBarButton(parent, text, size, maxValue, template)
     end)
 
     local bar = CreateFrame("StatusBar", nil, b)
+    F.FixStatusBarZeroValue(bar)
     b.bar = bar
     bar:SetPoint("TOPLEFT", b)
     bar:SetPoint("BOTTOMRIGHT", b)

@@ -2484,6 +2484,7 @@ end
 
 function I.CreateAura_Overlay(name, parent)
     local overlay = CreateFrame("StatusBar", name, parent.widgets.healthBar)
+    F.FixStatusBarZeroValue(overlay)
     overlay:SetStatusBarTexture(Cell.vars.whiteTexture)
     overlay:Hide()
     overlay.indicatorType = "overlay"

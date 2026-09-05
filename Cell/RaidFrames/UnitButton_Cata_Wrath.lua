@@ -1972,9 +1972,6 @@ local function UnitButton_UpdateHealth(self, diff, skipStateUpdates)
     end
     local healthPercent = self.states.healthPercent
     local statusBarValue = self.states.health
-    if barAnimationType ~= "Smooth" and statusBarValue == 0 then
-        statusBarValue = 0.0001 -- 3.3.5 does not update the fill texture geometry at exactly zero.
-    end
 
     if barAnimationType == "Flash" then
         self.widgets.healthBar:SetValue(statusBarValue)
@@ -3594,10 +3591,6 @@ function B.UpdateAnimation(button)
         button.widgets.healthBar.SetBarValue = button.widgets.healthBar.SetValue
         button.widgets.powerBar:ResetSmoothedValue()
         button.widgets.powerBar.SetBarValue = button.widgets.powerBar.SetValue
-
-        if button.states.health == 0 then
-            button.widgets.healthBar:SetValue(0.0001)
-        end
     end
 
     if barAnimationType ~= "Flash" then
@@ -3714,6 +3707,7 @@ function CellUnitButton_OnLoad(button)
 
     -- healthbar
     local healthBar = CreateFrame("StatusBar", name.."HealthBar", button)
+    F.FixStatusBarZeroValue(healthBar)
     button.widgets.healthBar = healthBar
     healthBar.SetBarValue = healthBar.SetValue
     healthBar:SetStatusBarTexture(Cell.vars.texture)
@@ -3729,6 +3723,7 @@ function CellUnitButton_OnLoad(button)
 
     -- powerbar
     local powerBar = CreateFrame("StatusBar", name.."PowerBar", button)
+    F.FixStatusBarZeroValue(powerBar)
     button.widgets.powerBar = powerBar
     powerBar.SetBarValue = powerBar.SetValue
     powerBar:SetStatusBarTexture(Cell.vars.texture)

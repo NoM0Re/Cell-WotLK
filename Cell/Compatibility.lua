@@ -374,6 +374,25 @@ function F.CreateFromMixins(...)
 	return F.Mixin({}, ...)
 end
 
+function F.FixStatusBarZeroValue(statusBar)
+    local setValue, getValue = statusBar.SetValue, statusBar.GetValue
+    local empty = false
+
+    function statusBar:SetValue(value)
+        local minValue, maxValue = self:GetMinMaxValues()
+        empty = minValue == 0 and value <= 0
+        if empty and maxValue > 0 then
+            value = math.min(0.0001, maxValue * 0.0001)
+        end
+        setValue(self, value)
+    end
+
+    function statusBar:GetValue()
+        if empty and self:GetMinMaxValues() == 0 then return 0 end
+        return getValue(self)
+    end
+end
+
 function F.SetStatusBarRotatesTexture(statusBar, rotate)
     statusBar.rotatesTexture = rotate and true or false
 
