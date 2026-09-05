@@ -119,6 +119,7 @@ local externals = { -- true: track by name, false: track by id
     ["PALADIN"] = {
         [1022] = true, -- 保护祝福
         [6940] = true, -- 牺牲祝福
+        [1038] = true, -- 拯救之手
         [64205] = true, -- 神圣牺牲
         [70940] = true, -- 神圣护卫者
         [19752] = true, -- 神圣干涉
