@@ -1,38 +1,41 @@
--- show dispel highlight with solid color (entire unit button)
--- 使用纯色而非渐变色显示驱散高亮
+-- show dispel highlight with solid color over the entire unit button
 local ALPHA = 0.6
+local DISPEL_ORDER = {"Magic", "Curse", "Disease", "Poison", "Bleed"}
 
 local F = Cell.funcs
+local I = Cell.iFuncs
 
-F.IterateAllUnitButtons(function(b)
-    local dispels = b.indicators.dispels
+F.IterateAllUnitButtons(function(button)
+    local dispels = button.indicators.dispels
 
     dispels.highlight:ClearAllPoints()
-    dispels.highlight:SetPoint("BOTTOMLEFT", b.widgets.healthBar)
-    dispels.highlight:SetPoint("BOTTOMRIGHT", b.widgets.healthBar)
-    dispels.highlight:SetPoint("TOP", b.widgets.healthBar)
+    dispels.highlight:SetAllPoints(button.widgets.healthBar)
+    dispels.highlight:SetTexture(Cell.vars.whiteTexture)
 
     function dispels:SetDispels(dispelTypes)
-        local r, g, b, a = 0, 0, 0, 0
+        self.highlight:Hide()
+        local iconsShown = 0
+        local found
 
-        local i = 1
-        for dispelType, _ in pairs(dispelTypes) do
-            if a == 0 and dispelType then
-                r, g, b, a = DebuffTypeColor[dispelType].r, DebuffTypeColor[dispelType].g, DebuffTypeColor[dispelType].b, 1
+        for _, dispelType in ipairs(DISPEL_ORDER) do
+            local showHighlight = dispelTypes[dispelType]
+            if type(showHighlight) == "boolean" then
+                if not found and showHighlight then
+                    found = true
+                    local r, g, b = I.GetDebuffTypeColor(dispelType)
+                    self.highlight:SetVertexColor(r, g, b, ALPHA)
+                    self.highlight:Show()
+                end
+                if self.showIcons then
+                    iconsShown = iconsShown + 1
+                    self[iconsShown]:SetDispel(dispelType)
+                end
             end
-            dispels[i]:SetDispel(dispelType)
-            i = i + 1
         end
 
-        -- hide unused
-        for j = i, 4 do
-            dispels[j]:Hide()
+        self:UpdateSize(iconsShown)
+        for i = iconsShown + 1, 5 do
+            self[i]:Hide()
         end
-
-        -- highlight
-        dispels.highlight:SetTexture(r, g, b, a ~= 0 and ALPHA or 0)
     end
-
-    -- 修改护盾材质
-    -- b.widgets.shieldBar:SetTexture(Cell.vars.texture)
 end)

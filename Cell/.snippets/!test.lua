@@ -1,18 +1,21 @@
 Cell.funcs.IterateAllUnitButtons(function(b)
-    b:HookScript("OnAttributeChanged", function(self, name, value)
-        if name == "unit" and type(value) == "string" then
-            if not b.indicators.nameText.highlight then
-                b.indicators.nameText.highlight = b.indicators.nameText:CreateTexture(nil, "BACKGROUND")
-                b.indicators.nameText.highlight:SetTexture(1, 0, 0, 0.5)
-                b.indicators.nameText.highlight:SetAllPoints(b.indicators.nameText)
-                b.indicators.nameText.highlight:Hide()
-            end
+    local nameText = b.indicators.nameText
+    if not nameText.highlight then
+        nameText.highlight = nameText:CreateTexture(nil, "BACKGROUND")
+        nameText.highlight:SetTexture(1, 0, 0, 0.5)
+        nameText.highlight:SetAllPoints(nameText)
+    end
 
-            if UnitIsUnit(value, "player") then
-                b.indicators.nameText.highlight:Show()
-            else
-                b.indicators.nameText.highlight:Hide()
-            end
+    local function UpdateHighlight(unit)
+        if type(unit) == "string" and UnitIsUnit(unit, "player") then
+            nameText.highlight:Show()
+        else
+            nameText.highlight:Hide()
         end
+    end
+
+    b:HookScript("OnAttributeChanged", function(_, name, value)
+        if name == "unit" then UpdateHighlight(value) end
     end)
+    UpdateHighlight(b:GetAttribute("unit"))
 end)

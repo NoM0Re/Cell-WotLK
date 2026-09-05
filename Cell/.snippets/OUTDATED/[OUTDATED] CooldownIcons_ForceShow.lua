@@ -1,43 +1,49 @@
+-------------------------------------------------
 -- force show icon cooldown animation
--- 强制显示图标冷却动画
-local function ShowCooldownAnimation(frame, start, duration)
-    if frame.cooldown:GetObjectType() == "StatusBar" then
-        frame.cooldown:SetMinMaxValues(0, duration)
-        frame.cooldown:SetValue(GetTime()-start)
-    else
-        frame.cooldown:SetCooldown(start, duration)
-    end
-        frame.cooldown:Show()
+-------------------------------------------------
+local F = Cell.funcs
+local I = Cell.iFuncs
+
+local function ShowCooldownAnimation(frame, start, duration, debuffType, texture)
+    if not (frame.cooldown and duration and duration > 0) then return end
+
+    F.ShowCooldown(frame.cooldown, start, duration, nil, texture, debuffType)
+    frame.cooldown:Show()
 end
 
--- hook built-in
-Cell.funcs.IterateAllUnitButtons(function(b)
-    for name, indicator in pairs(b.indicators) do
+local function HookIcon(icon)
+    if not (icon and icon.cooldown and icon.SetCooldown) or icon.forceCooldownHooked then return end
+
+    icon.forceCooldownHooked = true
+    hooksecurefunc(icon, "SetCooldown", ShowCooldownAnimation)
+end
+
+local function HookIndicator(indicator)
+    HookIcon(indicator)
+    if indicator and indicator.maxNum then
+        for i = 1, indicator.maxNum do
+            HookIcon(indicator[i])
+        end
+    end
+end
+
+F.IterateAllUnitButtons(function(button)
+    for name, indicator in pairs(button.indicators) do
         if name ~= "raidDebuffs" and indicator[1] then
-            for i, icon in ipairs(indicator) do
-                if icon.cooldown then
-                    hooksecurefunc(icon, "SetCooldown", ShowCooldownAnimation)
-                end
+            for _, icon in ipairs(indicator) do
+                HookIcon(icon)
             end
-        elseif name ~= "targetedSpells" and indicator.cooldown then
-            -- no such indicator currently
-            hooksecurefunc(indicator, "SetCooldown", ShowCooldownAnimation)
+        elseif name ~= "targetedSpells" then
+            HookIcon(indicator)
         end
     end
 end)
 
--- hook user created
-hooksecurefunc(Cell.iFuncs, "CreateIndicator", function(self, parent, indicatorTable)
-    if parent ~= CellIndicatorsPreviewButton then
-        if indicatorTable["auraType"] == "buff" then
-            local indicator = parent.indicators[indicatorTable["indicatorName"]]
-            if indicatorTable["type"] == "icon" then
-                hooksecurefunc(indicator, "SetCooldown", ShowCooldownAnimation)
-            elseif indicatorTable["type"] == "icons" then
-                for _, icon in ipairs(indicator) do
-                    hooksecurefunc(icon, "SetCooldown", ShowCooldownAnimation)
-                end
-            end
+hooksecurefunc(I, "CreateIndicator", function(parent, indicatorTable)
+    if parent ~= CellIndicatorsPreviewButton and indicatorTable["auraType"] == "buff" then
+        local indicatorType = indicatorTable["type"]
+        if indicatorType == "icon" or indicatorType == "icons" then
+            HookIndicator(parent.indicators[indicatorTable["indicatorName"]])
         end
     end
 end)

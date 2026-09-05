@@ -5,7 +5,7 @@
 local F = Cell.funcs
 local P = Cell.pixelPerfectFuncs
 
-local icon = CreateFrame("Frame", nil, CellMainFrame, "BackdropTemplate")
+local icon = CreateFrame("Frame", nil, CellMainFrame)
 icon:SetBackdrop({bgFile = Cell.vars.whiteTexture})
 icon:SetBackdropColor(0, 0, 0, 1)
 icon:SetSize(13, 13) -- 尺寸
@@ -20,21 +20,19 @@ icon.tex:SetTexture("Interface\\AddOns\\Cell\\Media\\Icons\\Ability_Priest_Words
 
 local frame = CreateFrame("Frame")
 frame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
-frame:SetScript("OnEvent", function(self, event)
-    local _, subEvent, _, sourceGUID, sourceName, sourceFlags, sourceRaidFlags, destGUID, destName, destFlags, destRaidFlags, spellId, spellName = CombatLogGetCurrentEventInfo()
+frame:SetScript("OnEvent", function(_, _, ...)
+    local _, subEvent, _, _, _, destGUID, _, _, spellId = ...
 
-    if subEvent == "SPELL_HEAL" then
-        if spellId == 234946 then
-            local b = F.GetUnitButtonByGUID(destGUID)
-            if b then
-                icon:SetParent(b.widgets.indicatorFrame)
-                icon:SetFrameLevel(5) -- 层级
-                icon:ClearAllPoints()
-                icon:SetPoint("TOP") -- 位置
-                icon:Show()
-            else
-                icon:Hide()
-            end
+    if subEvent == "SPELL_HEAL" and spellId == 234946 then
+        local b = F.GetUnitButtonByGUID(destGUID)
+        if b then
+            icon:SetParent(b.widgets.indicatorFrame)
+            icon:SetFrameLevel(b.widgets.indicatorFrame:GetFrameLevel()+5) -- 层级
+            icon:ClearAllPoints()
+            icon:SetPoint("TOP") -- 位置
+            icon:Show()
+        else
+            icon:Hide()
         end
     end
 end)

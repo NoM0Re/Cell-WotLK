@@ -1,75 +1,83 @@
 -------------------------------------------------
 -- 2023-07-15 08:30:57 GMT+8
--- PARTY ONLY, RETAIL ONLY
+-- PARTY ONLY
 -- sort units by SPEC_PRIORITY ↓↓↓
 -- slash command (not in combat): /csort
--- new party members won't be shown, unless a re-sort is called
+-- re-sort after roster or layout changes
 -- reload to restore
 
--- 仅小队，仅正式服
+-- 仅小队
 -- 将单位按专精优先级排序 ↓↓↓
 -- 斜杠命令（非战斗中）：/csort, /px
--- 必须重新执行排序，否则新成员不会显示
+-- 队伍或布局变化后重新执行排序
 -- 重载界面以恢复
 -------------------------------------------------
 
 local SPEC_PRIORITY = {
+    -- role:class:dominant talent tree (1-3)
     -- Tank
-    250, -- Death Knight - Blood 鲜血
-    581, -- Demon Hunter - Vengeance 复仇
-    104, -- Druid - Guardian 守护
-    268, -- Monk - Brewmaster 酒仙
-    66, -- Paladin - Protection 防护
-    73, -- Warrior - Protection 防护
+    "TANK:DEATHKNIGHT:1", -- Blood
+    "TANK:DEATHKNIGHT:2", -- Frost
+    "TANK:DEATHKNIGHT:3", -- Unholy
+    "TANK:DRUID:2",       -- Feral
+    "TANK:PALADIN:2",     -- Protection
+    "TANK:WARRIOR:3",     -- Protection
 
     -- Healer
-    105, -- Druid - Restoration 恢复
-    1468, -- Evoker - Preservation 恩护
-    270, -- Monk - Mistweaver 织雾
-    65, -- Paladin - Holy 神圣
-    256, -- Priest - Discipline 戒律
-    257, -- Priest - Holy 神圣
-    264, -- Shaman - Restoration 恢复
-
-    -- Support
-    1473, -- Evoker - Augmentation 增辉
+    "HEALER:DRUID:3",     -- Restoration
+    "HEALER:PALADIN:1",   -- Holy
+    "HEALER:PRIEST:1",    -- Discipline
+    "HEALER:PRIEST:2",    -- Holy
+    "HEALER:SHAMAN:3",    -- Restoration
 
     -- Melee
-    251, -- Death Knight - Frost 冰霜
-    252, -- Death Knight - Unholy 邪恶
-    577, -- Demon Hunter - Havoc 浩劫
-    103, -- Druid - Feral 野性
-    255, -- Hunter - Survival 生存
-    269, -- Monk - Windwalker 踏风
-    70, -- Paladin - Retribution 惩戒
-    259, -- Rogue - Assassination 奇袭
-    260, -- Rogue - Combat 狂徒
-    261, -- Rogue - Subtlety 敏锐
-    263, -- Shaman - Enhancement 增强
-    71, -- Warrior - Arms 武器
-    72, -- Warrior - Fury 狂怒
+    "MELEE:DEATHKNIGHT:2", -- Frost
+    "MELEE:DEATHKNIGHT:3", -- Unholy
+    "MELEE:DEATHKNIGHT:1", -- Blood
+    "MELEE:DRUID:2",       -- Feral
+    "MELEE:PALADIN:3",     -- Retribution
+    "MELEE:ROGUE:1",       -- Assassination
+    "MELEE:ROGUE:2",       -- Combat
+    "MELEE:ROGUE:3",       -- Subtlety
+    "MELEE:SHAMAN:2",      -- Enhancement
+    "MELEE:WARRIOR:1",     -- Arms
+    "MELEE:WARRIOR:2",     -- Fury
 
     -- Ranged
-    253, -- Hunter - Beast Mastery 野兽控制
-    254, -- Hunter - Marksmanship 射击
-    102, -- Druid - Balance 平衡
-    1467, -- Evoker - Devastation 湮灭
-    62, -- Mage - Arcane 奥术
-    63, -- Mage - Fire 火焰
-    64, -- Mage - Frost 冰霜
-    258, -- Priest - Shadow 暗影
-    262, -- Shaman - Elemental 元素
-    265, -- Warlock - Affliction 痛苦
-    266, -- Warlock - Demonology 恶魔
-    267, -- Warlock - Destruction 毁灭
+    "MELEE:HUNTER:1",      -- Beast Mastery
+    "MELEE:HUNTER:2",      -- Marksmanship
+    "MELEE:HUNTER:3",      -- Survival
+    "CASTER:DRUID:1",      -- Balance
+    "CASTER:MAGE:1",       -- Arcane
+    "CASTER:MAGE:2",       -- Fire
+    "CASTER:MAGE:3",       -- Frost
+    "CASTER:PRIEST:3",     -- Shadow
+    "CASTER:SHAMAN:1",     -- Elemental
+    "CASTER:WARLOCK:1",    -- Affliction
+    "CASTER:WARLOCK:2",    -- Demonology
+    "CASTER:WARLOCK:3",    -- Destruction
 }
 
 -------------------------------------------------
-local function GetPriority(specId)
-    if not specId then return 999 end
+local LGT = LibStub:GetLibrary("LibGroupTalents-1.0")
 
-    for i, s in pairs(SPEC_PRIORITY) do
-        if specId == s then
+local function GetPriority(unit)
+    local _, class = UnitClass(unit)
+    local specName, tree1, tree2, tree3 = LGT:GetUnitTalentSpec(unit)
+    local role = LGT:GetUnitRole(unit)
+    if not (class and specName and role and tree1 and tree2 and tree3) then return 999 end
+
+    local spec = 1
+    if tree2 > tree1 and tree2 > tree3 then
+        spec = 2
+    elseif tree3 > tree1 and tree3 > tree2 then
+        spec = 3
+    end
+
+    local specKey = strupper(role)..":"..class..":"..spec
+
+    for i, s in ipairs(SPEC_PRIORITY) do
+        if specKey == s then
             return i
         end
     end
@@ -78,7 +86,6 @@ local function GetPriority(specId)
 end
 
 local F = Cell.funcs
-local LGI = LibStub:GetLibrary("LibGroupInfo")
 
 local nameList = {}
 local nameToPriority = {}
@@ -86,22 +93,17 @@ local nameToPriority = {}
 SLASH_CELLSORT1 = "/csort"
 SLASH_CELLSORT2 = "/px"
 function SlashCmdList.CELLSORT()
-    if InCombatLockdown() then return end
+    if InCombatLockdown() or F.IsInRaid() then return end
 
     wipe(nameList)
     wipe(nameToPriority)
 
     for unit in F.IterateGroupMembers() do
         local name = UnitName(unit)
+        if not UnitExists(unit) or not UnitGUID(unit) or not name or name == UNKNOWNOBJECT then return end
         tinsert(nameList, name)
 
-        local guid = UnitGUID(unit)
-        local info = LGI:GetCachedInfo(guid)
-        if info then
-            nameToPriority[name] = GetPriority(info.specId)
-        else
-            nameToPriority[name] = 999
-        end
+        nameToPriority[name] = GetPriority(unit)
     end
 
     sort(nameList, function(a, b)
@@ -112,10 +114,13 @@ function SlashCmdList.CELLSORT()
         end
     end)
 
+    local wasShown = CellPartyFrameHeader:IsShown()
+    if wasShown then CellPartyFrameHeader:Hide() end
+    CellPartyFrameHeader:SetAttribute("groupFilter", nil)
     CellPartyFrameHeader:SetAttribute("groupingOrder", "")
     CellPartyFrameHeader:SetAttribute("groupBy", nil)
     CellPartyFrameHeader:SetAttribute("nameList", F.TableToString(nameList, ","))
-    CellPartyFrameHeader:SetAttribute("sortMethod", "NAMELIST")
-    --texplore(nameList)
+    CellPartyFrameHeader:SetAttribute("sortMethod", "INDEX")
+    if wasShown then CellPartyFrameHeader:Show() end
     F.Print("re-sorted.")
 end

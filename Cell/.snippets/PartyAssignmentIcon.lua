@@ -10,9 +10,9 @@ local size = 11
 
 local function UpdateAssignmentIcon(b, event)
     local unit = b.states.unit
-    if not unit then return end
-
-    if InCombatLockdown() or event == "PLAYER_REGEN_DISABLED" then
+    if not unit or not UnitExists(unit) or not UnitIsPlayer(unit)
+    or not (UnitInParty(unit) or UnitInRaid(unit))
+    or InCombatLockdown() or event == "PLAYER_REGEN_DISABLED" then
         b.widgets.assignmentIcon:Hide()
     else
         if GetPartyAssignment("MAINTANK", unit) then
@@ -35,10 +35,14 @@ Cell.funcs.IterateAllUnitButtons(function(b)
     assignmentIcon:Hide()
 
     b:HookScript("OnEvent", function(self, event)
-        if event == "GROUP_ROSTER_UPDATE" or event == "PLAYER_REGEN_ENABLED" or event == "PLAYER_REGEN_DISABLED" then
+        if event == "RAID_ROSTER_UPDATE" or event == "PARTY_MEMBERS_CHANGED" or event == "PLAYER_REGEN_ENABLED" or event == "PLAYER_REGEN_DISABLED" then
             UpdateAssignmentIcon(self, event)
         end
     end)
 
+    b:HookScript("OnShow", UpdateAssignmentIcon)
+    b:HookScript("OnAttributeChanged", function(self, name)
+        if name == "unit" then UpdateAssignmentIcon(self) end
+    end)
     if b:IsShown() then UpdateAssignmentIcon(b) end
 end)

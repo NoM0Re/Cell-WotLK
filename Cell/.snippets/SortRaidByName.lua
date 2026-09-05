@@ -22,11 +22,14 @@ function SlashCmdList.CELLSORT()
 
     for i = 1, 8 do
         local header = _G["CellRaidFrameHeader"..i]
+        local wasShown = header:IsShown()
+        if wasShown then header:Hide() end
         header:SetAttribute("groupingOrder", "")
         header:SetAttribute("groupFilter", nil)
         header:SetAttribute("groupBy", nil)
-        header:SetAttribute("sortMethod", "NAMELIST")
+        header:SetAttribute("sortMethod", "INDEX")
         header:SetAttribute("nameList", nameList[i])
+        if wasShown then header:Show() end
     end
 
     F.Print("re-sorted.")

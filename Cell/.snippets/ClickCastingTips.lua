@@ -17,7 +17,7 @@ local L = Cell.L
 local F = Cell.funcs
 local P = Cell.pixelPerfectFuncs
 
-local tooltip = CreateFrame("GameTooltip", "CellClickCastingTips", CellMainFrame, "CellTooltipTemplate,BackdropTemplate")
+local tooltip = CreateFrame("GameTooltip", "CellClickCastingTips", CellMainFrame, "CellTooltipTemplate")
 tooltip:SetBackdrop({bgFile = Cell.vars.whiteTexture, edgeFile = Cell.vars.whiteTexture, edgeSize = P.Scale(1)})
 tooltip:SetBackdropColor(0.1, 0.1, 0.1, 0.9)
 tooltip:SetBackdropBorderColor(Cell.GetAccentColorRGB())
@@ -121,11 +121,13 @@ end
 local function ShowTips()
     tooltip.isShown = true
     tooltip:SetOwner(CellMainFrame, "ANCHOR_NONE")
+    tooltip:ClearLines()
+    tooltip:ClearAllPoints()
     tooltip:SetPoint(point, relativeTo, relativePoint, offsetX, offsetY)
     P.Reborder(tooltip)
 
     local clickCastingTable = Cell.vars.clickCastings["useCommon"] and Cell.vars.clickCastings["common"] or Cell.vars.clickCastings[Cell.vars.playerSpecID]
-    for i, t in pairs(clickCastingTable) do
+    for i, t in ipairs(clickCastingTable or {}) do
         local modifier, bindKey, bindType, bindAction = DecodeDB(t)
 
         local show
@@ -140,9 +142,6 @@ local function ShowTips()
                 if IsAltKeyDown() then
                     show = show or modifier:find("alt")
                 end
-                if IsMetaKeyDown() then
-                    show = show or modifier:find("meta")
-                end
             else
                 show = modifier == ""
             end
@@ -154,7 +153,7 @@ local function ShowTips()
             local bindActionDisplay, icon
             bindAction, icon = F.GetSpellInfo(bindAction)
             if bindAction then
-                bindActionDisplay = bindAction.." |T"..icon..":0|t"
+                bindActionDisplay = bindAction.." |T"..(icon or "Interface\\Icons\\INV_Misc_QuestionMark")..":0|t"
             else
                 bindActionDisplay = "|cFFFF3030"..L["Invalid"]
             end

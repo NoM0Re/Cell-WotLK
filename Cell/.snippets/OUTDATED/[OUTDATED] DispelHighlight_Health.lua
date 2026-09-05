@@ -1,52 +1,50 @@
--- show dispel highlight with solid color (current health)
--- 使用纯色材质（而非血条材质）
+-- show a solid dispel highlight over the current-health portion
 local USE_SOLID_COLOR_TEXTURE = false
+local DISPEL_ORDER = {"Magic", "Curse", "Disease", "Poison", "Bleed"}
+
+local debuffTypeColor = {
+    [""] = {0.8, 0, 0},
+    ["Curse"] = {0.6, 0, 1},
+    ["Disease"] = {0.6, 0.4, 0},
+    ["Magic"] = {0.2, 0.6, 1},
+    ["Poison"] = {0, 0.6, 0},
+    ["Bleed"] = {0.8, 0, 0},
+    ["none"] = {0.8, 0, 0},
+}
 
 local F = Cell.funcs
 
--- custom dispel type color
--- 自定义颜色
-local debuffTypeColor = {
-    [""] = {r = 0.8, g = 0, b = 0},
-    ["Curse"] = {r = 0.6, g = 0, b = 1},
-    ["Disease"] = {r = 0.6, g = 0.4, b = 0},
-    ["Magic"] = {r = 0.2, g = 0.6, b = 1},
-    ["Poison"] = {r = 0, g = 0.6, b = 0},
-    ["none"] = {r = 0.8, g = 0, b = 0},
-}
-
-F.IterateAllUnitButtons(function(b)
-    local dispels = b.indicators.dispels
+F.IterateAllUnitButtons(function(button)
+    local dispels = button.indicators.dispels
 
     dispels.highlight:ClearAllPoints()
-    dispels.highlight:SetAllPoints(b.widgets.healthBar:GetStatusBarTexture())
-    if USE_SOLID_COLOR_TEXTURE then
-        dispels.highlight:SetTexture(Cell.vars.whiteTexture)
-    else
-        dispels.highlight:SetTexture(Cell.vars.texture)
-    end
+    dispels.highlight:SetAllPoints(button.widgets.healthBar:GetStatusBarTexture())
+    dispels.highlight:SetTexture(USE_SOLID_COLOR_TEXTURE and Cell.vars.whiteTexture or Cell.vars.texture)
 
     function dispels:SetDispels(dispelTypes)
-        local r, g, b, a = 0, 0, 0, 0
+        self.highlight:Hide()
+        local iconsShown = 0
+        local found
 
-        local i = 1
-        for dispelType, _ in pairs(dispelTypes) do
-            if a == 0 and dispelType then
-                r, g, b, a = debuffTypeColor[dispelType].r, debuffTypeColor[dispelType].g, debuffTypeColor[dispelType].b, 1
+        for _, dispelType in ipairs(DISPEL_ORDER) do
+            local showHighlight = dispelTypes[dispelType]
+            if type(showHighlight) == "boolean" then
+                if not found and showHighlight then
+                    found = true
+                    local color = debuffTypeColor[dispelType] or debuffTypeColor["none"]
+                    self.highlight:SetVertexColor(color[1], color[2], color[3], 1)
+                    self.highlight:Show()
+                end
+                if self.showIcons then
+                    iconsShown = iconsShown + 1
+                    self[iconsShown]:SetDispel(dispelType)
+                end
             end
-            dispels[i]:SetDispel(dispelType)
-            i = i + 1
         end
 
-        -- hide unused
-        for j = i, 4 do
-            dispels[j]:Hide()
+        self:UpdateSize(iconsShown)
+        for i = iconsShown + 1, 5 do
+            self[i]:Hide()
         end
-
-        -- highlight
-        dispels.highlight:SetVertexColor(r, g, b, a)
     end
-
-    -- 修改护盾材质
-    -- b.widgets.shieldBar:SetTexture(Cell.vars.texture)
 end)

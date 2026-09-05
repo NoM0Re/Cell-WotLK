@@ -4,12 +4,14 @@
 -- 隐藏 Cell 的团队框体（不太好使）
 -------------------------------------------------
 local function Hide()
-    if Cell.vars.groupType == "raid" then
+    if Cell.vars.groupType == "raid" and not InCombatLockdown() then
         for i = 0, 8 do
             local header = _G["CellRaidFrameHeader"..i]
-            header:SetAttribute("showRaid", false)
+            if header then
+                header:SetAttribute("showRaid", false)
+            end
         end
-        C_Timer.After(0.2, function()
+        Cell.funcs.C_Timer.After(0.2, function()
             CellMenuFrame:Hide()
         end)
     end
@@ -17,3 +19,9 @@ end
 
 Cell.RegisterCallback("GroupTypeChanged", "MainFrame_GroupTypeChanged2", Hide)
 Cell.RegisterCallback("UpdateLayout", "RaidFrame_UpdateLayout", Hide)
+
+local eventFrame = CreateFrame("Frame")
+eventFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
+eventFrame:SetScript("OnEvent", Hide)
+
+Hide()

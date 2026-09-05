@@ -1,132 +1,80 @@
 -------------------------------------------------
--- 2024-05-18 02:11:07 GMT+8
--- fade icon out over time
--- 自定义图标指示器随时间减少变得透明
+-- fade custom buff icons out over their duration
 -------------------------------------------------
 local END_ALPHA = 0.2
 
-local function SetCooldown(frame, start, duration, debuffType, texture, count, refreshing)
-    if duration == 0 then
-        frame.cooldown:Hide()
-        frame:SetScript("OnUpdate", nil)
-    else
-        if frame.showAnimation then
-            -- init bar values
-            frame.cooldown.elapsed = 0.1 -- update immediately
-            frame.cooldown:SetMinMaxValues(0, duration)
-            frame.cooldown:SetValue(GetTime()-start)
-            frame.cooldown:Show()
+local F = Cell.funcs
+local I = Cell.iFuncs
+local activeIcons = {}
+local driver = CreateFrame("Frame")
+local elapsed = 0
+
+driver:SetScript("OnUpdate", function(_, tick)
+    elapsed = elapsed + tick
+    if elapsed < 0.05 then return end
+    elapsed = 0
+
+    local now = GetTime()
+    for icon in pairs(activeIcons) do
+        if not icon:IsShown() or not icon.fadeStart or not icon.fadeDuration then
+            activeIcons[icon] = nil
         else
-            frame.cooldown:Hide()
-        end
-
-        local threshold
-        if not frame.showDuration then
-            frame.duration:Hide()
-        else
-            if frame.showDuration == true then
-                threshold = duration
-            elseif frame.showDuration >= 1 then
-                threshold = frame.showDuration
-            else -- < 1
-                threshold = frame.showDuration * duration
-            end
-            frame.duration:Show()
-        end
-
-        if frame.showDuration then
-            local fmt
-            frame:SetScript("OnUpdate", function()
-                local remain = duration-(GetTime()-start)
-                if remain < 0 then remain = 0 end
-                if remain > duration then remain = duration end
-
-                if remain > threshold then
-                    frame.duration:SetText("")
-                    return
-                end
-
-                -- color
-                if Cell.vars.iconDurationColors then
-                    if remain < Cell.vars.iconDurationColors[3][4] then
-                        frame.duration:SetTextColor(Cell.vars.iconDurationColors[3][1], Cell.vars.iconDurationColors[3][2], Cell.vars.iconDurationColors[3][3])
-                    elseif remain < (Cell.vars.iconDurationColors[2][4] * duration) then
-                        frame.duration:SetTextColor(Cell.vars.iconDurationColors[2][1], Cell.vars.iconDurationColors[2][2], Cell.vars.iconDurationColors[2][3])
-                    else
-                        frame.duration:SetTextColor(Cell.vars.iconDurationColors[1][1], Cell.vars.iconDurationColors[1][2], Cell.vars.iconDurationColors[1][3])
-                    end
-                else
-                    frame.duration:SetTextColor(frame.duration.r, frame.duration.g, frame.duration.b)
-                end
-
-                -- modify buff alpha
-                if not debuffType then
-                    frame:SetAlpha((remain/duration)*(1-END_ALPHA)+END_ALPHA)
-                end
-
-                -- format
-                if remain > 60 then
-                    fmt, remain = "%dm", remain/60
-                else
-                    if Cell.vars.iconDurationRoundUp then
-                        fmt, remain = "%d", ceil(remain)
-                    else
-                        if remain < Cell.vars.iconDurationDecimal then
-                            fmt = "%.1f"
-                        else
-                            fmt = "%d"
-                        end
-                    end
-                end
-
-                frame.duration:SetFormattedText(fmt, remain)
-            end)
-        else
-            -- modify buff alpha
-            if not debuffType then
-                frame.cooldown:SetScript("OnUpdate", function(self, elapsed)
-                    self.elapsed = (self.elapsed or 0) + elapsed
-                    if self.elapsed >= 0.1 then
-                        self:SetValue(self:GetValue() + self.elapsed)
-                        frame:SetAlpha((1-self:GetValue()/duration)*(1-END_ALPHA)+END_ALPHA)
-                        self.elapsed = 0
-                    end
-                end)
+            local remaining = icon.fadeDuration - (now - icon.fadeStart)
+            if remaining <= 0 then
+                icon:SetAlpha(END_ALPHA)
+                activeIcons[icon] = nil
+            else
+                local progress = remaining / icon.fadeDuration
+                icon:SetAlpha(progress * (1 - END_ALPHA) + END_ALPHA)
             end
         end
     end
+end)
 
-    local r, g, b
-    if debuffType then
-        r, g, b = DebuffTypeColor[debuffType].r, DebuffTypeColor[debuffType].g, DebuffTypeColor[debuffType].b
-        frame.spark:SetTexture(r, g, b, 1)
+local function StartFade(icon, start, duration, debuffType)
+    if duration and duration > 0 and not debuffType then
+        icon.fadeStart = start
+        icon.fadeDuration = duration
+        activeIcons[icon] = true
     else
-        r, g, b = 0, 0, 0
-        frame.spark:SetTexture(0.5, 0.5, 0.5, 1)
-    end
-
-    frame:SetBackdropColor(r, g, b, 1)
-    frame.icon:SetTexture(texture)
-    frame.maskIcon:SetTexture(texture)
-    frame.stack:SetText((count == 0 or count == 1) and "" or count)
-    frame:Show()
-
-    if refreshing then
-        frame.ag:Play()
+        icon.fadeStart = nil
+        icon.fadeDuration = nil
+        activeIcons[icon] = nil
+        icon:SetAlpha(1)
     end
 end
 
-hooksecurefunc(Cell.iFuncs, "CreateIndicator", function(self, parent, indicatorTable)
-    if parent ~= CellIndicatorsPreviewButton then
-        if indicatorTable["auraType"] == "buff" then
-            local indicator = parent.indicators[indicatorTable["indicatorName"]]
-            if indicatorTable["type"] == "icon" then
-                indicator.SetCooldown = SetCooldown
-            elseif indicatorTable["type"] == "icons" then
-                for _, i in ipairs(indicator) do
-                    i.SetCooldown = SetCooldown
-                end
-            end
+local function HookIcon(icon)
+    if not (icon and icon.SetCooldown) or icon.fadeOutHooked then return end
+
+    icon.fadeOutHooked = true
+    hooksecurefunc(icon, "SetCooldown", StartFade)
+    icon:HookScript("OnHide", function(frame)
+        frame.fadeStart = nil
+        frame.fadeDuration = nil
+        activeIcons[frame] = nil
+        frame:SetAlpha(1)
+    end)
+end
+
+local function HookIndicator(indicator, indicatorType)
+    if indicatorType == "icon" then
+        HookIcon(indicator)
+    elseif indicatorType == "icons" and indicator then
+        for i = 1, indicator.maxNum do
+            HookIcon(indicator[i])
         end
+    end
+end
+
+F.IterateAllUnitButtons(function(button)
+    for indicatorName, indicatorTable in pairs(Cell.snippetVars.customIndicators.buff) do
+        HookIndicator(button.indicators[indicatorName], indicatorTable.type)
+    end
+end)
+
+hooksecurefunc(I, "CreateIndicator", function(parent, indicatorTable)
+    if parent ~= CellIndicatorsPreviewButton and indicatorTable["auraType"] == "buff" then
+        HookIndicator(parent.indicators[indicatorTable["indicatorName"]], indicatorTable["type"])
     end
 end)

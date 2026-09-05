@@ -5,10 +5,12 @@ Cell.funcs.IterateAllUnitButtons(function(b)
 
     -- shield texture / 护盾材质
     -- default/默认: "Interface\\AddOns\\Cell\\Media\\shield.tga"
-    b.widgets.shieldBar:SetTexture("Interface\\AddOns\\Cell\\Media\\shield.tga", "REPEAT", "REPEAT")
-    b.widgets.shieldBarR:SetTexture("Interface\\AddOns\\Cell\\Media\\shield.tga", "REPEAT", "REPEAT")
+    b.widgets.shieldBar:SetTexture("Interface\\AddOns\\Cell\\Media\\shield.tga")
+    b.widgets.shieldBarR:SetTexture("Interface\\AddOns\\Cell\\Media\\shield.tga")
 
     -- absorb texture (retail) / 治疗吸收材质（正式服）
     -- default/默认: "Interface\\AddOns\\Cell\\Media\\shield.tga"
-    b.widgets.absorbsBar:SetTexture("Interface\\AddOns\\Cell\\Media\\shield.tga", "REPEAT", "REPEAT")
+    if b.widgets.absorbsBar then
+        b.widgets.absorbsBar:SetTexture("Interface\\AddOns\\Cell\\Media\\shield.tga")
+    end
 end)

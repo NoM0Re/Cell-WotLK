@@ -3,14 +3,17 @@
 -- 光明尾迹（单位按钮高亮）
 -------------------------------------------------
 local F = Cell.funcs
+local flashHeal = F.GetSpellInfo(2061)
+local greaterHeal = F.GetSpellInfo(2060)
 local LCG = LibStub("LibCustomGlow-1.0")
 local frame = CreateFrame("Frame")
 frame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
-frame:SetScript("OnEvent", function(self, event)
-    local _, subEvent, _, sourceGUID, sourceName, sourceFlags, sourceRaidFlags, destGUID, destName, destFlags, destRaidFlags, spellId, spellName = CombatLogGetCurrentEventInfo()
+frame:SetScript("OnEvent", function(self, event, ...)
+    local _, subEvent, sourceGUID, sourceName, sourceFlags, destGUID, destName, destFlags, spellId, spellName = ...
 
     if subEvent == "SPELL_HEAL" then
-        if spellId == 2061 or spellId == 2060 then
+        if spellId == 2061 or spellId == 2060
+        or (flashHeal and spellName == flashHeal) or (greaterHeal and spellName == greaterHeal) then
             F.IterateAllUnitButtons(function(b)
                 if b.states.guid == destGUID then
                     LCG.PixelGlow_Start(b)

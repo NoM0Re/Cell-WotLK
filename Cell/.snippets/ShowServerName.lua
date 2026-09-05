@@ -6,11 +6,13 @@
 local F = Cell.funcs
 
 local function GetServerName(unit)
-    if not UnitIsPlayer(unit) then return "" end
+    if not unit or not UnitIsPlayer(unit) then return "" end
 
-    local _, serverName = UnitNameUnmodified(unit)
-    if not serverName then
-        serverName = GetNormalizedRealmName()
+    local _, serverName = UnitName(unit)
+    if not serverName or serverName == "" then
+        serverName = F.GetNormalizedRealmName()
+    else
+        serverName = F.GetNormalizedRealmName(serverName)
     end
     return serverName
 end
@@ -27,6 +29,7 @@ local function CreateServerName(parent)
     hooksecurefunc(parent.indicators.nameText, "UpdateName", function()
         serverName:SetText(GetServerName(parent.states.unit))
     end)
+    serverName:SetText(GetServerName(parent.states.unit))
 end
 
 F.IterateAllUnitButtons(function(b)
