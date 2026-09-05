@@ -86,7 +86,7 @@ strictFiltering = [BOOLEAN]
 point = [STRING] -- a valid XML anchoring point (Default: "TOP")
 xOffset = [NUMBER] -- the x-Offset to use when anchoring the unit buttons (Default: 0)
 yOffset = [NUMBER] -- the y-Offset to use when anchoring the unit buttons (Default: 0)
-sortMethod = ["INDEX", "NAME", "NAMELIST"] -- defines how the group is sorted (Default: "INDEX")
+sortMethod = ["INDEX", "NAME"] -- defines how the group is sorted (Default: "INDEX")
 sortDir = ["ASC", "DESC"] -- defines the sort order (Default: "ASC")
 template = [STRING] -- the XML template to use for the unit buttons
 templateType = [STRING] - specifies the frame type of the managed subframes (Default: "Button")
@@ -106,6 +106,8 @@ local combinedHeader
 do
     local headerName = "CellRaidFrameHeader0"
     combinedHeader = CreateFrame("Frame", headerName, raidFrame, "SecureGroupHeaderTemplate")
+    -- F.SetHeaderRoleSort handles name resolution for both combined and separated headers.
+    combinedHeader:UnregisterEvent("UNIT_NAME_UPDATE")
     Cell.unitButtons.raid[headerName] = combinedHeader
 
     combinedHeader:SetAttribute("template", "CellUnitButtonTemplate")
@@ -139,6 +141,7 @@ local separatedHeaders = {}
 local function CreateGroupHeader(group)
     local headerName = "CellRaidFrameHeader"..group
     local header = CreateFrame("Frame", headerName, raidFrame, "SecureGroupHeaderTemplate")
+    header:UnregisterEvent("UNIT_NAME_UPDATE")
     separatedHeaders[group] = header
     Cell.unitButtons.raid[headerName] = header
 
@@ -332,119 +335,6 @@ end
 --     ]])
 -- end
 
-local function SetHeaderAttribute(header, name, value)
-    if header:GetAttribute(name) ~= value then
-        header:SetAttribute(name, value)
-    end
-end
-
-local roleSortFrame = CreateFrame("Frame")
-
-local function SortRoleMembers(a, b)
-    if a.priority ~= b.priority then
-        return a.priority < b.priority
-    end
-    return a.name < b.name
-end
-
-local function SortAndJoinRoleMembers(members)
-    table.sort(members, SortRoleMembers)
-
-    local names = {}
-    for _, member in ipairs(members) do
-        tinsert(names, member.name)
-    end
-    return table.concat(names, ",")
-end
-
-local function GetRoleSortedNameLists(layout)
-    local rolePriority = {}
-    for i, role in ipairs(layout["main"]["roleOrder"]) do
-        rolePriority[role] = i
-    end
-
-    local combinedMembers = {}
-    local groupMembers = {}
-    for i = 1, 8 do
-        groupMembers[i] = {}
-    end
-
-    for i = 1, GetNumRaidMembers() do
-        local unit = "raid"..i
-        local name, _, subgroup = GetRaidRosterInfo(i)
-        if not UnitExists(unit) or not name or name == UNKNOWNOBJECT or not UnitGUID(unit)
-        or not subgroup or not groupMembers[subgroup]
-        then
-            return
-        end
-
-        local member = {
-            name = name,
-            priority = rolePriority[F.UnitGroupRolesAssigned(unit)] or 4,
-        }
-        tinsert(groupMembers[subgroup], member)
-        if layout["groupFilter"][subgroup] then
-            tinsert(combinedMembers, member)
-        end
-    end
-
-    local groupNameLists = {}
-    for i = 1, 8 do
-        groupNameLists[i] = SortAndJoinRoleMembers(groupMembers[i])
-    end
-    return SortAndJoinRoleMembers(combinedMembers), groupNameLists
-end
-
-local function UpdateCombinedRoleSort(layout, shownGroups)
-    SetHeaderAttribute(combinedHeader, "groupBy", nil)
-    SetHeaderAttribute(combinedHeader, "groupingOrder", "")
-    SetHeaderAttribute(combinedHeader, "sortMethod", "INDEX")
-
-    if layout["main"]["sortByRole"] then
-        local nameList = GetRoleSortedNameLists(layout)
-        if nameList then
-            roleSortFrame:UnregisterEvent("UNIT_NAME_UPDATE")
-            SetHeaderAttribute(combinedHeader, "groupFilter", nil)
-            SetHeaderAttribute(combinedHeader, "nameList", nameList)
-        else
-            roleSortFrame:RegisterEvent("UNIT_NAME_UPDATE")
-        end
-    else
-        roleSortFrame:UnregisterEvent("UNIT_NAME_UPDATE")
-        SetHeaderAttribute(combinedHeader, "nameList", nil)
-        SetHeaderAttribute(combinedHeader, "groupFilter", F.TableToString(shownGroups, ","))
-    end
-end
-
-local function UpdateSeparatedRoleSort(layout)
-    local groupNameLists
-    if layout["main"]["sortByRole"] then
-        _, groupNameLists = GetRoleSortedNameLists(layout)
-        if groupNameLists then
-            roleSortFrame:UnregisterEvent("UNIT_NAME_UPDATE")
-        else
-            roleSortFrame:RegisterEvent("UNIT_NAME_UPDATE")
-        end
-    else
-        roleSortFrame:UnregisterEvent("UNIT_NAME_UPDATE")
-    end
-
-    for i = 1, 8 do
-        local header = separatedHeaders[i]
-        SetHeaderAttribute(header, "groupBy", nil)
-        SetHeaderAttribute(header, "groupingOrder", "")
-        SetHeaderAttribute(header, "sortMethod", "INDEX")
-
-        if groupNameLists then
-            SetHeaderAttribute(header, "groupFilter", nil)
-            SetHeaderAttribute(header, "nameList", groupNameLists[i])
-        elseif not layout["main"]["sortByRole"] then
-            SetHeaderAttribute(header, "nameList", nil)
-            SetHeaderAttribute(header, "groupFilter", tostring(i))
-        end
-    end
-end
-
 local function RaidFrame_UpdateLayout(layout, which)
     -- visibility
     if Cell.vars.groupType ~= "raid" or Cell.vars.isHidden then
@@ -509,7 +399,7 @@ local function RaidFrame_UpdateLayout(layout, which)
         end
 
         if not which or which == "header" or which == "sort" or which == "groupFilter" then
-            UpdateCombinedRoleSort(layout, shownGroups)
+            F.SetHeaderRoleSort(combinedHeader, layout["main"]["sortByRole"] and layout["main"]["roleOrder"] or nil, F.TableToString(shownGroups, ","))
         end
 
     else
@@ -578,7 +468,9 @@ local function RaidFrame_UpdateLayout(layout, which)
         end
 
         if not which or which == "header" or which == "sort" or which == "groupFilter" then
-            UpdateSeparatedRoleSort(layout)
+            for i = 1, 8 do
+                F.SetHeaderRoleSort(separatedHeaders[i], layout["main"]["sortByRole"] and layout["main"]["roleOrder"] or nil, tostring(i))
+            end
         end
 
         -- show/hide groups
@@ -595,49 +487,6 @@ local function RaidFrame_UpdateLayout(layout, which)
 
 end
 Cell.RegisterCallback("UpdateLayout", "RaidFrame_UpdateLayout", RaidFrame_UpdateLayout)
-
-local roleSortUpdatePending
-roleSortFrame:RegisterEvent("RAID_ROSTER_UPDATE")
-
-local function RefreshRoleSort()
-    local layout = Cell.vars.currentLayoutTable
-    if Cell.vars.groupType ~= "raid" or Cell.vars.isHidden
-    or not layout or not layout["main"]["sortByRole"]
-    then
-        roleSortFrame:UnregisterEvent("UNIT_NAME_UPDATE")
-        return
-    end
-
-    if InCombatLockdown() then
-        roleSortFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
-        return
-    end
-
-    if roleSortUpdatePending then return end
-
-    roleSortUpdatePending = true
-    F.C_Timer.After(0, function()
-        roleSortUpdatePending = nil
-        local currentLayout = Cell.vars.currentLayoutTable
-        if InCombatLockdown() then
-            roleSortFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
-        elseif Cell.vars.groupType == "raid" and not Cell.vars.isHidden
-        and currentLayout and currentLayout["main"]["sortByRole"]
-        then
-            RaidFrame_UpdateLayout(Cell.vars.currentLayout, "sort")
-        end
-    end)
-end
-
-roleSortFrame:SetScript("OnEvent", function(self, event, unit)
-    if event == "PLAYER_REGEN_ENABLED" then
-        self:UnregisterEvent("PLAYER_REGEN_ENABLED")
-    elseif event == "UNIT_NAME_UPDATE" and not strfind(unit or "", "^raid%d+$") then
-        return
-    end
-    RefreshRoleSort()
-end)
-Cell.RegisterCallback("GroupRoleChanged", "RaidFrame_GroupRoleChanged", RefreshRoleSort)
 
 -- local function RaidFrame_UpdateVisibility(which)
 --     if not which or which == "raid" then

@@ -794,6 +794,178 @@ end
 
 LibGroupTalents.RegisterCallback(GroupTalentsCallback, "LibGroupTalents_RoleChange", "RoleChanged")
 
+-------------------------------------------------
+-- Wrath group header sorting
+-------------------------------------------------
+do
+    local headers = {}
+    local roleSortFrame = CreateFrame("Frame")
+    local updatePending
+
+    local function GetGroupRoster(isRaid)
+        local roster = {}
+        local first = isRaid and 1 or 0
+        local last = isRaid and GetNumRaidMembers() or GetNumPartyMembers()
+        for i = first, last do
+            local unit, name, subgroup, _
+            if isRaid then
+                unit = "raid"..i
+                name, _, subgroup = GetRaidRosterInfo(i)
+            else
+                unit = i == 0 and "player" or "party"..i
+                name = UnitName(unit)
+            end
+            local guid = UnitGUID(unit)
+            local member = {unit = unit, name = name, subgroup = subgroup}
+            if UnitExists(unit) and name and name ~= UNKNOWNOBJECT and guid and (not isRaid or subgroup) then
+                member.key = unit..":"..guid..":"..name
+            end
+            tinsert(roster, member)
+        end
+        return roster
+    end
+
+    local function GetHeaderRoster(header, settings, rosters)
+        local groupType = settings.groups and "raid" or "party"
+        if not rosters[groupType] then
+            rosters[groupType] = GetGroupRoster(groupType == "raid")
+        end
+
+        local members, roster = {}, {}
+        for _, member in ipairs(rosters[groupType]) do
+            if member.unit ~= "player" or header:GetAttribute("showPlayer") then
+                if not member.key then return end
+                if not settings.groups or settings.groups[member.subgroup] then
+                    tinsert(roster, member.key)
+                    if settings.sort then
+                        if not member.role then
+                            member.role = F.UnitGroupRolesAssigned(member.unit)
+                        end
+                        tinsert(members, member)
+                    end
+                end
+            end
+        end
+
+        local rosterKey = table.concat(roster, "\n")
+        if not settings.sort then return nil, rosterKey end
+
+        table.sort(members, settings.sort)
+        local names = {}
+        for _, member in ipairs(members) do
+            tinsert(names, member.name)
+        end
+        return table.concat(names, ","), rosterKey
+    end
+
+    local function UpdateHeader(header, settings, rosters)
+        local nameList, roster = GetHeaderRoster(header, settings, rosters)
+        if not roster then
+            settings.roster = nil
+            return
+        end
+        local rosterChanged = settings.roster ~= roster
+        settings.roster = roster
+
+        local groupFilter = nameList == nil and settings.groupFilter or nil
+        if header:GetAttribute("groupBy") == nil
+        and header:GetAttribute("groupingOrder") == ""
+        and header:GetAttribute("sortMethod") == "INDEX"
+        and header:GetAttribute("groupFilter") == groupFilter
+        and header:GetAttribute("nameList") == nameList
+        then
+            if rosterChanged then
+                header:SetAttribute("maxColumns", header:GetAttribute("maxColumns"))
+            end
+            return
+        end
+
+        local wasShown = header:IsShown()
+        if wasShown then header:Hide() end
+        header:SetAttribute("groupBy", nil)
+        header:SetAttribute("groupingOrder", "")
+        header:SetAttribute("sortMethod", "INDEX")
+        header:SetAttribute("groupFilter", groupFilter)
+        header:SetAttribute("nameList", nameList)
+        if wasShown then header:Show() end
+    end
+
+    local function RefreshRoleSort()
+        if InCombatLockdown() then
+            roleSortFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
+            return
+        end
+        if updatePending then return end
+
+        updatePending = true
+        F.C_Timer.After(0, function()
+            updatePending = nil
+            if InCombatLockdown() then
+                roleSortFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
+                return
+            end
+
+            local rosters = {}
+            for header, settings in pairs(headers) do
+                UpdateHeader(header, settings, rosters)
+            end
+        end)
+    end
+
+    function F.SetHeaderRoleSort(header, roleOrder, groupFilter)
+        local settings = headers[header] or {}
+        local order = roleOrder and table.concat(roleOrder, ",")
+        if settings.order ~= order then
+            settings.order = order
+            settings.sort = nil
+            if roleOrder then
+                local priority = {}
+                for i, role in ipairs(roleOrder) do
+                    priority[role] = i
+                end
+                local last = #roleOrder + 1
+                settings.sort = function(a, b)
+                    local pa, pb = priority[a.role] or last, priority[b.role] or last
+                    if pa ~= pb then return pa < pb end
+                    return a.name < b.name
+                end
+            end
+        end
+        if settings.groupFilter ~= groupFilter then
+            settings.groupFilter = groupFilter
+            settings.groups = nil
+            if groupFilter then
+                settings.groups = {}
+                for group in string.gmatch(groupFilter, "%d+") do
+                    settings.groups[tonumber(group)] = true
+                end
+            end
+        end
+        headers[header] = settings
+        if InCombatLockdown() then
+            roleSortFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
+            return
+        end
+        UpdateHeader(header, settings, {})
+    end
+
+    roleSortFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
+    roleSortFrame:RegisterEvent("PARTY_MEMBERS_CHANGED")
+    roleSortFrame:RegisterEvent("RAID_ROSTER_UPDATE")
+    roleSortFrame:RegisterEvent("UNIT_NAME_UPDATE")
+    roleSortFrame:SetScript("OnEvent", function(self, event, unit)
+        if event == "PLAYER_REGEN_ENABLED" then
+            self:UnregisterEvent("PLAYER_REGEN_ENABLED")
+        elseif event == "UNIT_NAME_UPDATE" and unit ~= "player"
+        and not strfind(unit or "", "^party%d$") and not strfind(unit or "", "^raid%d+$")
+        then
+            return
+        end
+        RefreshRoleSort()
+    end)
+    Cell.RegisterCallback("GroupRoleChanged", "RoleSort_GroupRoleChanged", RefreshRoleSort)
+end
+
 local LibResComm = LibStub("LibResComm-1.0", true)
 local incomingResurrectionCallbacks = {}
 local incomingResurrectionEndTimes = {}

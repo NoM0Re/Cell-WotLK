@@ -8,6 +8,8 @@ Cell.frames.partyFrame = partyFrame
 partyFrame:SetAllPoints(Cell.frames.mainFrame)
 
 local header = CreateFrame("Frame", "CellPartyFrameHeader", partyFrame, "SecureGroupHeaderTemplate")
+-- F.SetHeaderRoleSort handles name resolution without scanning the header on every name event.
+header:UnregisterEvent("UNIT_NAME_UPDATE")
 header:SetAttribute("template", "CellPartyUnitButtonTemplate")
 
 function header:UpdateButtonUnit(bName, unit)
@@ -79,12 +81,6 @@ end
 
 partyFrame:Hide()
 
-local function SetHeaderAttribute(name, value)
-    if header:GetAttribute(name) ~= value then
-        header:SetAttribute(name, value)
-    end
-end
-
 local configuredPartyLayout
 local partyVisibilityRegistered
 
@@ -106,66 +102,6 @@ local function UpdatePartyVisibility()
     elseif not partyVisibilityRegistered then
         RegisterStateDriver(partyFrame, "visibility", "[@raid1,exists][nogroup] hide;show")
         partyVisibilityRegistered = true
-    end
-end
-
-local function SortRoleMembers(a, b)
-    if a.priority ~= b.priority then
-        return a.priority < b.priority
-    end
-    return a.name < b.name
-end
-
-local function GetRoleSortedNameList(layout)
-    local rolePriority = {}
-    for i, role in ipairs(layout["main"]["roleOrder"]) do
-        rolePriority[role] = i
-    end
-
-    local members = {}
-    for i = 0, GetNumPartyMembers() do
-        local unit = i == 0 and "player" or "party"..i
-        if i ~= 0 or not layout["main"]["hideSelf"] then
-            local name = UnitName(unit)
-            if not UnitExists(unit) or not name or name == UNKNOWNOBJECT or not UnitGUID(unit) then
-                return
-            end
-            tinsert(members, {
-                name = name,
-                priority = rolePriority[F.UnitGroupRolesAssigned(unit)] or 4,
-            })
-        end
-    end
-
-    table.sort(members, SortRoleMembers)
-
-    local names = {}
-    for _, member in ipairs(members) do
-        tinsert(names, member.name)
-    end
-    return table.concat(names, ",")
-end
-
-local roleSortFrame = CreateFrame("Frame")
-
-local function UpdateRoleSort(layout)
-    SetHeaderAttribute("groupBy", nil)
-    SetHeaderAttribute("groupingOrder", "")
-    SetHeaderAttribute("sortMethod", "INDEX")
-
-    if layout["main"]["sortByRole"] then
-        local nameList = GetRoleSortedNameList(layout)
-        SetHeaderAttribute("groupFilter", nil)
-        if nameList then
-            roleSortFrame:UnregisterEvent("UNIT_NAME_UPDATE")
-            SetHeaderAttribute("nameList", nameList)
-        else
-            roleSortFrame:RegisterEvent("UNIT_NAME_UPDATE")
-        end
-    else
-        roleSortFrame:UnregisterEvent("UNIT_NAME_UPDATE")
-        SetHeaderAttribute("nameList", nil)
-        SetHeaderAttribute("groupFilter", nil)
     end
 end
 
@@ -323,12 +259,12 @@ local function PartyFrame_UpdateLayout(layout, which)
         end
     end
 
-    if not which or which == "sort" or which == "hideSelf" then
-        UpdateRoleSort(layout)
-    end
-
     if not which or which == "hideSelf" then
         header:SetAttribute("showPlayer", not layout["main"]["hideSelf"])
+    end
+
+    if not which or which == "sort" or which == "hideSelf" then
+        F.SetHeaderRoleSort(header, layout["main"]["sortByRole"] and layout["main"]["roleOrder"] or nil)
     end
 
     if headerWasShown then
@@ -350,60 +286,6 @@ local function ConfigureAssignedPartyLayout()
 end
 Cell.RegisterCallback("AddonLoaded", "PartyFrame_AddonLoaded", ConfigureAssignedPartyLayout)
 Cell.RegisterCallback("ActiveTalentGroupChanged", "PartyFrame_ActiveTalentGroupChanged", ConfigureAssignedPartyLayout)
-
-local roleSortUpdatePending
-roleSortFrame:RegisterEvent("PARTY_MEMBERS_CHANGED")
-
-local function ApplyRoleSortedNameList(layout)
-    local nameList = GetRoleSortedNameList(layout)
-    if not nameList then
-        roleSortFrame:RegisterEvent("UNIT_NAME_UPDATE")
-        return
-    end
-
-    roleSortFrame:UnregisterEvent("UNIT_NAME_UPDATE")
-    SetHeaderAttribute("nameList", nameList)
-end
-
-local function RefreshRoleSort()
-    local layout = Cell.vars.currentLayoutTable
-    if Cell.vars.groupType ~= "party" or Cell.vars.isHidden
-    or not layout or not layout["main"]["sortByRole"]
-    then
-        roleSortFrame:UnregisterEvent("UNIT_NAME_UPDATE")
-        return
-    end
-
-    if InCombatLockdown() then
-        roleSortFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
-        return
-    end
-
-    if roleSortUpdatePending then return end
-
-    roleSortUpdatePending = true
-    F.C_Timer.After(0, function()
-        roleSortUpdatePending = nil
-        local currentLayout = Cell.vars.currentLayoutTable
-        if InCombatLockdown() then
-            roleSortFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
-        elseif Cell.vars.groupType == "party" and not Cell.vars.isHidden
-        and currentLayout and currentLayout["main"]["sortByRole"]
-        then
-            ApplyRoleSortedNameList(currentLayout)
-        end
-    end)
-end
-
-roleSortFrame:SetScript("OnEvent", function(self, event, unit)
-    if event == "PLAYER_REGEN_ENABLED" then
-        self:UnregisterEvent("PLAYER_REGEN_ENABLED")
-    elseif event == "UNIT_NAME_UPDATE" and unit ~= "player" and not strfind(unit or "", "^party%d$") then
-        return
-    end
-    RefreshRoleSort()
-end)
-Cell.RegisterCallback("GroupRoleChanged", "PartyFrame_GroupRoleChanged", RefreshRoleSort)
 
 -- local function PartyFrame_UpdateVisibility(which)
 --     if not which or which == "party" then
