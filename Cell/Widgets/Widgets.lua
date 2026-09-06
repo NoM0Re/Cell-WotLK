@@ -200,7 +200,7 @@ function Cell.SetEnabled(isEnabled, ...)
             else
                 w:SetDesaturated(true)
             end
-        elseif w.Enable and w.Disable then
+        elseif w.SetEnabled or w:IsObjectType("EditBox") or (w.Enable and w.Disable) then
             F.SetEnabled(w, isEnabled)
         elseif isEnabled then
             w:Show()
@@ -2972,10 +2972,9 @@ function Cell.CreateDropdown(parent, width, dropdownType, isMini, isHorizontal)
         menu.button:SetNormalTexture([[Interface\AddOns\Cell\Media\Icons\dropdown-normal]])
         menu.button:SetPushedTexture([[Interface\AddOns\Cell\Media\Icons\dropdown-pushed]])
 
-        local disabledTexture = menu.button:CreateTexture(nil, "OVERLAY")
-        disabledTexture:SetTexture([[Interface\AddOns\Cell\Media\Icons\dropdown-normal]])
+        menu.button:SetDisabledTexture([[Interface\AddOns\Cell\Media\Icons\dropdown-normal]])
+        local disabledTexture = menu.button:GetDisabledTexture()
         disabledTexture:SetVertexColor(0.4, 0.4, 0.4, 1)
-        menu.button:SetDisabledTexture(disabledTexture)
         -- selected item
         menu.text = menu:CreateFontString(nil, "OVERLAY", font_name)
         menu.text:SetPoint("TOPLEFT", P.Scale(5), P.Scale(-1))

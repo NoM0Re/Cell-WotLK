@@ -279,7 +279,15 @@ UNIT_NAME_FONT_ROMAN = "Interface\\Addons\\Cell\\Media\\Fonts\\FRIZQT__.TTF"
 
 ---@return nil
 function F.SetEnabled(frame, enabled)
-	if frame.Enable and frame.Disable then
+	if frame:IsObjectType("EditBox") then
+		frame:EnableMouse(enabled)
+		if not enabled then frame:ClearFocus() end
+		local onChanged = frame:GetScript(enabled and "OnEnable" or "OnDisable")
+		if onChanged then onChanged(frame) end
+	elseif frame.SetEnabled then
+		-- Cell widgets provide their own SetEnabled method.
+		frame:SetEnabled(enabled)
+	elseif frame.Enable and frame.Disable then
 		if enabled then
 			frame:Enable()
 		else
