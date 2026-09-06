@@ -13,6 +13,8 @@ local debuffs = {
         ["general"] = {
             19366, -- 灼烧之焰
             15732, -- 献祭
+            19695, -- Inferno
+            19714, -- Magic Grounding
         },
         [1519] = { -- 鲁西弗隆
             19702, -- 末日迫近
@@ -70,6 +72,12 @@ local debuffs = {
 
     [742] = { -- 黑翼之巢
         ["general"] = {
+            23023, -- Conflagration
+            18173, -- Burning Adrenaline
+            24573, -- Mortal Strike
+            23340, -- Shadow of Ebonroc
+            23170, -- Brood Affliction: Bronze
+            22687, -- Veil of Shadow
         },
         [1529] = { -- 狂野的拉佐格尔
         },
@@ -91,6 +99,11 @@ local debuffs = {
 
     [743] = { -- 安其拉废墟
         ["general"] = {
+            25646, -- Mortal Wound
+            25471, -- Attack Order
+            96, -- Dismember
+            25725, -- Paralyze
+            25189, -- Enveloping Winds
         },
         [1537] = { -- 库林纳克斯
         },
@@ -108,6 +121,12 @@ local debuffs = {
 
     [744] = { -- 安其拉神殿
         ["general"] = {
+            785, -- True Fulfillment
+            26580, -- Fear
+            26050, -- Acid Spit
+            26180, -- Wyvern Sting
+            26053, -- Noxious Poison
+            26613, -- Unbalancing Strike
         },
         [1543] = { -- 预言者斯克拉姆
         },
@@ -131,6 +150,14 @@ local debuffs = {
 
     [745] = { -- 纳克萨玛斯
         ["general"] = {
+            28732, -- Widow's Embrace
+            28622, -- Web Wrap
+            28169, -- Mutating Injection
+            29213, -- Curse of the Plaguebringer
+            28835, -- Mark of Zeliek
+            27808, -- Frost Blast
+            28410, -- Chains of Kel'Thuzad
+            27819, -- Detonate Mana
         },
         [1552] = { -- 阿努布雷坎
         },
@@ -269,6 +296,7 @@ local debuffs = {
 
     [234] = { -- 剃刀沼泽
         ["general"] = {
+            14515, -- Dominate Mind
         },
         [896] = { -- 猎手布塔斯克
         },
@@ -284,6 +312,10 @@ local debuffs = {
 
     [233] = { -- 剃刀高地
         ["general"] = {
+            12255, -- Curse of Tuten'kash
+            12252, -- Web Spray
+            7645, -- Dominate Mind
+            12946, -- Putrid Stench
         },
         [1142] = { -- 阿鲁克斯
         },
@@ -336,6 +368,10 @@ local debuffs = {
 
     [240] = { -- 哀嚎洞穴
         ["general"] = {
+            8040, -- Druid's Slumber
+            8142, -- Grasping Vines
+            7967, -- Naralex's Nightmare
+            8150, -- Thundercrack
         },
         [474] = { -- 安娜科德拉
         },
@@ -357,6 +393,8 @@ local debuffs = {
 
     [239] = { -- 奥达曼
         ["general"] = {
+            3356, -- Flame Lash
+            6524, -- Ground Tremor
         },
         [467] = { -- 鲁维罗什
         },
@@ -378,6 +416,9 @@ local debuffs = {
 
     [64] = { -- 影牙城堡
         ["general"] = {
+            7068, -- Veil of Shadow
+            7125, -- Toxic Saliva
+            7621, -- Arugal's Curse
         },
         [96] = { -- 灰葬男爵
         },
@@ -406,6 +447,14 @@ local debuffs = {
 
     [236] = { -- 斯坦索姆
         ["general"] = {
+            16798, -- Enchanting Lullaby
+            12734, -- Ground Smash
+            17293, -- Burning Winds
+            17405, -- Domination
+            16867, -- Banshee Curse
+            6016, -- Pierce Armor
+            16869, -- Ice Tomb
+            17307, -- Knockout
         },
         [443] = { -- 弗雷斯特恩
         },
@@ -437,6 +486,12 @@ local debuffs = {
 
     [63] = { -- 死亡矿井
         ["general"] = {
+            6304, -- Rhahk'Zor Slam
+            12097, -- Pierce Armor
+            7399, -- Terrify
+            6713, -- Disarm
+            5213, -- Molten Metal
+            5208, -- Poisoned Harpoon
         },
         [89] = { -- 格拉布托克
         },
@@ -452,6 +507,8 @@ local debuffs = {
 
     [232] = { -- 玛拉顿
         ["general"] = {
+            7964, -- Smoke Bomb
+            21869, -- Repulsive Gaze
         },
         [423] = { -- 诺克赛恩
         },
@@ -484,6 +541,7 @@ local debuffs = {
 
     [241] = { -- 祖尔法拉克
         ["general"] = {
+            11836, -- Freeze Solid
         },
         [483] = { -- 加兹瑞拉
         },
@@ -501,6 +559,11 @@ local debuffs = {
 
     [316] = { -- 血色修道院
         ["general"] = {
+            9034, -- Immolate
+            8814, -- Flame Spike
+            8988, -- Silence
+            9256, -- Deep Sleep
+            8282, -- Curse of Blood
         },
         [688] = { -- 裂魂者萨尔诺斯
         },
@@ -553,6 +616,12 @@ local debuffs = {
 
     [237] = { -- 阿塔哈卡神庙
         ["general"] = {
+            12889, -- Curse of Tongues
+            12888, -- Cause Insanity
+            12479, -- Hex of Jammal'an
+            12493, -- Curse of Weakness
+            12890, -- Deep Slumber
+            24375, -- War Stomp
         },
         [457] = { -- 哈卡的化身
         },
@@ -610,6 +679,7 @@ local debuffs = {
 
     [228] = { -- 黑石深渊
         ["general"] = {
+            13704, -- Psychic Scream
         },
         [369] = { -- 审讯官格斯塔恩
         },
