@@ -840,7 +840,13 @@ do
                     tinsert(roster, member.key)
                     if settings.sort then
                         if not member.role then
-                            member.role = F.UnitGroupRolesAssigned(member.unit)
+                            if groupType == "raid" and GetPartyAssignment("MAINTANK", member.unit) then
+                                member.role, member.assignmentOrder = "TANK", 1
+                            elseif groupType == "raid" and GetPartyAssignment("MAINASSIST", member.unit) then
+                                member.role, member.assignmentOrder = "TANK", 2
+                            else
+                                member.role = F.UnitGroupRolesAssigned(member.unit)
+                            end
                         end
                         tinsert(members, member)
                     end
@@ -937,6 +943,10 @@ do
                 settings.sort = function(a, b)
                     local pa, pb = priority[a.role] or last, priority[b.role] or last
                     if pa ~= pb then return pa < pb end
+                    if a.role == "TANK" and b.role == "TANK" then
+                        local aa, ba = a.assignmentOrder or 3, b.assignmentOrder or 3
+                        if aa ~= ba then return aa < ba end
+                    end
                     return a.name < b.name
                 end
             end
