@@ -801,6 +801,7 @@ do
     local headers = {}
     local roleSortFrame = CreateFrame("Frame")
     local updatePending
+    local updateElapsed, updateDelay = 0, 0
 
     local function GetGroupRoster(isRaid)
         local roster = {}
@@ -890,26 +891,35 @@ do
         if wasShown then header:Show() end
     end
 
-    local function RefreshRoleSort()
+    local function OnRoleSortUpdate(self, elapsed)
+        updateElapsed = updateElapsed + elapsed
+        if updateElapsed < updateDelay then return end
+        updatePending = nil
+        self:SetScript("OnUpdate", nil)
+
         if InCombatLockdown() then
+            self:RegisterEvent("PLAYER_REGEN_ENABLED")
+            return
+        end
+
+        local rosters = {}
+        for header, settings in pairs(headers) do
+            UpdateHeader(header, settings, rosters)
+        end
+    end
+
+    local function RefreshRoleSort(delay)
+        if InCombatLockdown() then
+            updatePending = nil
+            roleSortFrame:SetScript("OnUpdate", nil)
             roleSortFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
             return
         end
-        if updatePending then return end
+        if updatePending and updateDelay == 0 then return end
 
         updatePending = true
-        F.C_Timer.After(0, function()
-            updatePending = nil
-            if InCombatLockdown() then
-                roleSortFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
-                return
-            end
-
-            local rosters = {}
-            for header, settings in pairs(headers) do
-                UpdateHeader(header, settings, rosters)
-            end
-        end)
+        updateElapsed, updateDelay = 0, delay or 0
+        roleSortFrame:SetScript("OnUpdate", OnRoleSortUpdate)
     end
 
     function F.SetHeaderRoleSort(header, roleOrder, groupFilter)
@@ -963,7 +973,9 @@ do
         end
         RefreshRoleSort()
     end)
-    Cell.RegisterCallback("GroupRoleChanged", "RoleSort_GroupRoleChanged", RefreshRoleSort)
+    Cell.RegisterCallback("GroupRoleChanged", "RoleSort_GroupRoleChanged", function()
+        RefreshRoleSort(0.1)
+    end)
 end
 
 local LibResComm = LibStub("LibResComm-1.0", true)

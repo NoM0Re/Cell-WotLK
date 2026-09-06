@@ -30,6 +30,7 @@ function I.UpdateIndicatorTable(indicatorTable)
         customIndicators[auraType][indicatorName] = {
             ["auras"] = F.ConvertSpellTable(indicatorTable["auras"], indicatorTable["trackByName"]), -- auras to match
             ["found"] = {},
+            ["pool"] = {},
             ["num"] = indicatorTable["num"],
         }
     elseif indicatorTable["type"] == "bars" or indicatorTable["type"] == "blocks" then
@@ -37,6 +38,7 @@ function I.UpdateIndicatorTable(indicatorTable)
             ["auras"] = F.ConvertSpellTable_WithColor(indicatorTable["auras"], indicatorTable["trackByName"]), -- auras to match
             ["hasColor"] = true,
             ["found"] = {},
+            ["pool"] = {},
             ["num"] = indicatorTable["num"],
         }
     elseif indicatorTable["type"] == "border" then
@@ -206,7 +208,16 @@ function I.ResetCustomIndicators(unitButton, auraType)
                 if not indicatorTable["found"][unit] then
                     indicatorTable["found"][unit] = {}
                 else
-                    wipe(indicatorTable["found"][unit])
+                    local found = indicatorTable["found"][unit]
+                    local pool = indicatorTable["pool"]
+                    for i = #found, 1, -1 do
+                        local data = found[i]
+                        found[i] = nil
+                        if #pool < 40 then
+                            wipe(data)
+                            pool[#pool + 1] = data
+                        end
+                    end
                 end
             else
                 indicatorTable["topOrder"][unit] = 999
@@ -226,11 +237,15 @@ end
 local function Update(indicator, indicatorTable, unit, spell, start, duration, debuffType, icon, count, refreshing)
     local auraData = indicatorTable["auras"][spell] or indicatorTable["auras"][0]
     if indicatorTable["num"] then
+        local data = tremove(indicatorTable["pool"]) or {}
         if indicatorTable["hasColor"] then
-            tinsert(indicatorTable["found"][unit], {auraData[1], start, duration, debuffType, icon, count, refreshing, auraData[2]})
+            data[1], data[8] = auraData[1], auraData[2]
         else
-            tinsert(indicatorTable["found"][unit], {auraData, start, duration, debuffType, icon, count, refreshing})
+            data[1], data[8] = auraData, nil
         end
+        data[2], data[3], data[4] = start, duration, debuffType
+        data[5], data[6], data[7] = icon, count, refreshing
+        tinsert(indicatorTable["found"][unit], data)
     else
         if indicatorTable["hasColor"] then
             if auraData[1] < indicatorTable["topOrder"][unit] then

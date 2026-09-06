@@ -1486,7 +1486,7 @@ local function UnitButton_UpdateHealthStates(self, diff)
         -- 3.3.5 returns 1/1 for players who are already offline at login.
         health, healthMax = 0, 0
     end
-    health = min(health, healthMax) --! diff
+    health = max(0, min(health, healthMax)) --! diff
 
     self.states.health = health
     self.states.healthMax = healthMax
@@ -2043,10 +2043,29 @@ local function UnitButton_UpdateHealPrediction(self, skipStateUpdates, incomingH
         UnitButton_UpdateHealthStates(self)
     end
 
+    if self.states.healthMax == 0 then
+        self.widgets.incomingHeal:Hide()
+        return
+    end
+
     self.widgets.incomingHeal:SetValue(value / self.states.healthMax, self.states.healthPercent)
 end
 
+local pendingAuraUpdates = {}
+local auraUpdateFrame = CreateFrame("Frame")
+auraUpdateFrame:Hide()
+auraUpdateFrame:SetScript("OnUpdate", function(self)
+    self:Hide()
+    for button in pairs(pendingAuraUpdates) do
+        pendingAuraUpdates[button] = nil
+        if button:IsVisible() then
+            UnitButton_UpdateAuras(button)
+        end
+    end
+end)
+
 UnitButton_UpdateAuras = function(self)
+    pendingAuraUpdates[self] = nil
     if not self._indicatorsReady then return end
 
     local unit = self.states.displayedUnit
@@ -2141,6 +2160,7 @@ end
 local unitEventButtons = {}
 local unitEventsRegistered = false
 local unitEvents = {
+    "UNIT_AURA",
     "UNIT_HEALTH",
     "UNIT_MAXHEALTH",
     "UNIT_ENTERED_VEHICLE",
@@ -2176,6 +2196,7 @@ local function AddUnitEventButton(unit, button)
 end
 
 local function UnregisterUnitEventButton(button)
+    pendingAuraUpdates[button] = nil
     RemoveUnitEventButton(button.__unitEventUnit, button)
     if button.__unitEventDisplayedUnit ~= button.__unitEventUnit then
         RemoveUnitEventButton(button.__unitEventDisplayedUnit, button)
@@ -2403,7 +2424,7 @@ UnitButton_UpdateShieldAbsorbs = function(self, skipStateUpdates)
         UnitButton_UpdateHealthStates(self)
     end
 
-    if self.states.totalAbsorbs > 0 then
+    if self.states.totalAbsorbs > 0 and self.states.healthMax > 0 then
         local shieldPercent = self.states.totalAbsorbs / self.states.healthMax
 
         if enabledIndicators["shieldBar"] then
@@ -2689,7 +2710,6 @@ local function UnitButton_RegisterEvents(self)
     self:RegisterEvent("RAID_ROSTER_UPDATE")
     self:RegisterEvent("PARTY_MEMBERS_CHANGED")
     self:RegisterEvent("PARTY_LEADER_CHANGED")
-    self:RegisterEvent("UNIT_AURA")
     self:RegisterEvent("PARTY_MEMBER_ENABLE")
     self:RegisterEvent("PARTY_MEMBER_DISABLE")
     self:RegisterEvent("ZONE_CHANGED_NEW_AREA")
@@ -2795,7 +2815,8 @@ local function UnitButton_OnEvent(self, event, unit)
             UnitButton_UpdatePowerText(self)
 
         elseif event == "UNIT_AURA" then
-            UnitButton_UpdateAuras(self)
+            pendingAuraUpdates[self] = true
+            auraUpdateFrame:Show()
 
         elseif event == "UNIT_TARGET" then
             UnitButton_UpdateTargetRaidIcon(self)

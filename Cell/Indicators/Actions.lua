@@ -68,7 +68,18 @@ end)
 local animationPool = {}
 
 local function ResetterFunc(_, canvas)
+    canvas:SetScript("OnUpdate", nil)
+    canvas.elapsed = nil
+    canvas.duration = nil
     canvas:Hide()
+end
+
+local function OnAnimationHide(canvas)
+    local pool = animationPool[canvas.animationType]
+    -- Release removes the active entry before the resetter hides the canvas.
+    if pool:IsActive(canvas) then
+        pool:Release(canvas)
+    end
 end
 
 -------------------------------------------------
@@ -126,12 +137,12 @@ local function CreateStopMotionAnimation(animationType)
     local canvas = CreateFrame("Frame")
     canvas:Hide()
     canvas.animationType = animationType
+    canvas:SetScript("OnHide", OnAnimationHide)
 
     local texture = canvas:CreateTexture(nil, "ARTWORK")
     texture:SetAllPoints(canvas)
     canvas.texture = texture
     canvas.ag = canvas
-    canvas:SetScript("OnUpdate", StopMotionOnUpdate)
 
     function canvas:Display(parent, r, g, b)
         canvas:SetParent(parent)
@@ -148,6 +159,7 @@ local function CreateStopMotionAnimation(animationType)
         end
         texture:SetVertexColor(r, g, b, 1)
         SetActionAtlasFrame(texture, 0)
+        canvas:SetScript("OnUpdate", StopMotionOnUpdate)
         canvas:Show()
     end
 
@@ -186,6 +198,8 @@ end
 local function CreateAnimation_TypeC()
     local canvas = CreateFrame("Frame")
     canvas:Hide()
+    canvas.animationType = "C"
+    canvas:SetScript("OnHide", OnAnimationHide)
     canvas.ag = canvas
 
     -- frame
@@ -240,6 +254,8 @@ animationPool.D = CreateObjectPool(function() return CreateStopMotionAnimation("
 local function CreateAnimation_TypeE()
     local canvas = CreateFrame("Frame")
     canvas:Hide()
+    canvas.animationType = "E"
+    canvas:SetScript("OnHide", OnAnimationHide)
     canvas.ag = canvas
 
     local texture = canvas:CreateTexture(nil, "ARTWORK")
@@ -308,6 +324,8 @@ local function Actions_SetSpeed(self, speed)
 end
 
 local function Actions_Display(self, animationType, color)
+    if not self:IsVisible() then return end
+
     -- animations[animationType]:Display(unpack(color))
     if strfind(animationType, "^C") then
         local subType = strmatch(animationType, "%d")
