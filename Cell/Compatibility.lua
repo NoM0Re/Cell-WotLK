@@ -206,13 +206,22 @@ local function PixelUtilRound(num)
     end
 end
 
+local pixelToUIUnitFactor
+local pixelScaleFrame = CreateFrame("Frame")
+pixelScaleFrame:RegisterEvent("DISPLAY_SIZE_CHANGED")
+pixelScaleFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
+pixelScaleFrame:SetScript("OnEvent", function()
+    pixelToUIUnitFactor = nil
+end)
+
 function PixelUtil.GetPixelToUIUnitFactor()
-    local resolution = ({GetScreenResolutions()})[GetCurrentResolution()]
-    local physicalHeight = resolution and tonumber((select(2, strsplit("x", resolution))))
-    if physicalHeight then
-        return 768 / physicalHeight
+    if not pixelToUIUnitFactor then
+        -- Reuse the resolution-derived factor across size and position updates.
+        local resolution = ({GetScreenResolutions()})[GetCurrentResolution()]
+        local physicalHeight = resolution and tonumber((select(2, strsplit("x", resolution))))
+        pixelToUIUnitFactor = physicalHeight and 768 / physicalHeight or 1
     end
-    return 1
+    return pixelToUIUnitFactor
 end
 
 function PixelUtil.GetNearestPixelSize(uiUnitSize, layoutScale, minPixels)
