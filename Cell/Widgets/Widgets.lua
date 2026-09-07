@@ -6,9 +6,6 @@ local L = Cell.L
 local F = Cell.funcs
 ---@type PixelPerfectFuncs
 local P = Cell.pixelPerfectFuncs
----@type ColorFuncs
-local ColorMixin = Cell.ColorMixin
-local CreateColor = F.CreateColor
 
 local function RaiseAboveParent(frame, parent, offset)
     if parent and parent.GetFrameLevel and frame and frame.SetFrameLevel then
@@ -179,7 +176,7 @@ function Cell.ColorFontStringWithAccentColor(fs)
 end
 
 function Cell.WrapTextInAccentColor(text)
-    return F.WrapTextInColorCode(text, accentColor.s) -- FIXME: ("|c%s%s|r"):format(colorHexString, text)
+    return ("|c%s%s|r"):format(accentColor.s, text)
 end
 
 -----------------------------------------
@@ -226,7 +223,6 @@ function Cell.StartRainbowText(fs, reverse)
 
     local pos = 0
     local step = 360 / (#fs.text-1)
-    local col = CreateColor(1, 1, 1)
     local str
     local elapsedTime = 0
 
@@ -245,9 +241,9 @@ function Cell.StartRainbowText(fs, reverse)
         -- NOTE: lua 正则匹配中文，不知道会不会有问题
         str = fs.text:gsub("[%z\1-\127\194-\244][\128-\191]*", function(char)
             colorSelect:SetColorHSV(hue,1,1)
-            col:SetRGB(colorSelect:GetColorRGB())
+            local r, g, b = colorSelect:GetColorRGB()
             hue = (hue+step) > 360 and (hue+step)-360 or hue+step
-            return col:WrapTextInColorCode(char)
+            return ("|cff%.2x%.2x%.2x%s|r"):format(F.Round(r * 255), F.Round(g * 255), F.Round(b * 255), char)
         end)
 
         fs:SetText(str)
@@ -1629,7 +1625,7 @@ end
 -----------------------------------------
 function Cell.CreateStatusBar(name, parent, width, height, maxValue, smooth, func, showText, texture, color)
     local bar = CreateFrame("StatusBar", name, parent)
-    F.FixStatusBarZeroValue(bar)
+    F.FixStatusBar(bar)
     RaiseAboveParent(bar, parent)
 
     if not color then color = {accentColor.t[1], accentColor.t[2], accentColor.t[3], 1} end
@@ -1640,9 +1636,28 @@ function Cell.CreateStatusBar(name, parent, width, height, maxValue, smooth, fun
 
     P.Width(bar, width)
     P.Height(bar, height)
-    bar:SetBackdrop({bgFile=Cell.vars.whiteTexture, edgeFile=Cell.vars.whiteTexture, edgeSize=P.Scale(1)})
+    bar:SetBackdrop({bgFile=Cell.vars.whiteTexture})
     bar:SetBackdropColor(0.07, 0.07, 0.07, 0.9)
-    bar:SetBackdropBorderColor(0, 0, 0, 1)
+
+    local border = CreateFrame("Frame", nil, bar)
+    border:SetAllPoints(bar)
+    border:SetFrameLevel(bar:GetFrameLevel() + 1)
+    border:SetBackdrop({edgeFile=Cell.vars.whiteTexture, edgeSize=P.Scale(1)})
+    border:SetBackdropBorderColor(0, 0, 0, 1)
+
+    local setFrameLevel = bar.SetFrameLevel
+    function bar:SetFrameLevel(level)
+        setFrameLevel(self, level)
+        border:SetFrameLevel(self:GetFrameLevel() + 1)
+    end
+
+    function bar:SetBackdropBorderColor(...)
+        border:SetBackdropBorderColor(...)
+    end
+
+    function bar:GetBackdropBorderColor()
+        return border:GetBackdropBorderColor()
+    end
 
     if showText then
         bar.text = bar:CreateFontString(nil, "OVERLAY", font_name)
@@ -1689,7 +1704,9 @@ function Cell.CreateStatusBar(name, parent, width, height, maxValue, smooth, fun
     function bar:UpdatePixelPerfect()
         P.Resize(bar)
         P.Repoint(bar)
-        P.Reborder(bar)
+        local r, g, b, a = border:GetBackdropBorderColor()
+        border:SetBackdrop({edgeFile=Cell.vars.whiteTexture, edgeSize=P.Scale(1)})
+        border:SetBackdropBorderColor(r, g, b, a)
     end
 
     return bar
@@ -1707,7 +1724,7 @@ function Cell.CreateStatusBarButton(parent, text, size, maxValue, template)
     end)
 
     local bar = CreateFrame("StatusBar", nil, b)
-    F.FixStatusBarZeroValue(bar)
+    F.FixStatusBar(bar)
     b.bar = bar
     bar:SetPoint("TOPLEFT", b)
     bar:SetPoint("BOTTOMRIGHT", b)

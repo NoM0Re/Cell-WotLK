@@ -181,7 +181,7 @@ tools:SetAttribute("_onmousedown", [=[
 -- LoadingBar
 -------------------------------------------------
 local loadingBar = CreateFrame("StatusBar", "CellLoadingBar", options)
-F.FixStatusBarZeroValue(loadingBar)
+F.FixStatusBar(loadingBar)
 loadingBar:Hide()
 loadingBar:SetStatusBarTexture(Cell.vars.whiteTexture)
 loadingBar:SetStatusBarColor(0.5, 1, 0)

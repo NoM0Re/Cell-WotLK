@@ -3165,7 +3165,30 @@ local function IncomingHeal_SetValue_Horizontal(self, incomingPercent, healthPer
     end
 end
 
+local function ShieldBar_SetWidth(self, width)
+    if self._shieldWidth ~= width then
+        self:SetWidth(width)
+        self._shieldWidth = width
+    end
+end
+
+local function ShieldBar_SetHeight(self, height)
+    if self._shieldHeight ~= height then
+        self:SetHeight(height)
+        self._shieldHeight = height
+    end
+end
+
+local function ResetShieldGeometry(self)
+    self._shieldOffset = nil
+    self._shieldWidth = nil
+    self._shieldHeight = nil
+end
+
 local function ShieldBar_SetHorizontalPoint(self, barWidth, healthPercent)
+    local offset = barWidth * healthPercent
+    if self._shieldOffset == offset then return end
+    self._shieldOffset = offset
     local healthBar = self.healthBar
     self:ClearAllPoints()
     self:SetPoint("TOPLEFT", healthBar, "TOPLEFT", barWidth * healthPercent, 0)
@@ -3173,6 +3196,9 @@ local function ShieldBar_SetHorizontalPoint(self, barWidth, healthPercent)
 end
 
 local function ShieldBarR_SetHorizontalPoint(self, barWidth, healthPercent)
+    local offset = barWidth * healthPercent
+    if self._shieldOffset == offset then return end
+    self._shieldOffset = offset
     local healthBar = self.healthBar
     self:ClearAllPoints()
     self:SetPoint("TOPRIGHT", healthBar, "TOPLEFT", barWidth * healthPercent, 0)
@@ -3180,6 +3206,9 @@ local function ShieldBarR_SetHorizontalPoint(self, barWidth, healthPercent)
 end
 
 local function ShieldBar_SetVerticalPoint(self, barHeight, healthPercent)
+    local offset = barHeight * healthPercent
+    if self._shieldOffset == offset then return end
+    self._shieldOffset = offset
     local healthBar = self.healthBar
     self:ClearAllPoints()
     self:SetPoint("BOTTOMLEFT", healthBar, "BOTTOMLEFT", 0, barHeight * healthPercent)
@@ -3187,6 +3216,9 @@ local function ShieldBar_SetVerticalPoint(self, barHeight, healthPercent)
 end
 
 local function ShieldBarR_SetVerticalPoint(self, barHeight, healthPercent)
+    local offset = barHeight * healthPercent
+    if self._shieldOffset == offset then return end
+    self._shieldOffset = offset
     local healthBar = self.healthBar
     self:ClearAllPoints()
     self:SetPoint("TOPLEFT", healthBar, "BOTTOMLEFT", 0, barHeight * healthPercent)
@@ -3200,7 +3232,7 @@ local function ShieldBar_SetValue_Horizontal(self, shieldPercent, healthPercent)
         if p ~= 0 then
             if shieldEnabled then
                 ShieldBar_SetHorizontalPoint(self, barWidth, healthPercent)
-                self:SetWidth(p * barWidth)
+                ShieldBar_SetWidth(self, p * barWidth)
                 self:Show()
             else
                 self:Hide()
@@ -3213,7 +3245,7 @@ local function ShieldBar_SetValue_Horizontal(self, shieldPercent, healthPercent)
             p = shieldPercent + healthPercent - 1
             if p > healthPercent then p = healthPercent end
             ShieldBarR_SetHorizontalPoint(self.shieldBarR, barWidth, healthPercent)
-            self.shieldBarR:SetWidth(p * barWidth)
+            ShieldBar_SetWidth(self.shieldBarR, p * barWidth)
             self.shieldBarR:Show()
             if overshieldEnabled then
                 self.overShieldGlowR:Show()
@@ -3233,7 +3265,7 @@ local function ShieldBar_SetValue_Horizontal(self, shieldPercent, healthPercent)
     else
         if shieldEnabled then
             ShieldBar_SetHorizontalPoint(self, barWidth, healthPercent)
-            self:SetWidth(shieldPercent * barWidth)
+            ShieldBar_SetWidth(self, shieldPercent * barWidth)
             self:Show()
         else
             self:Hide()
@@ -3273,7 +3305,7 @@ local function ShieldBar_SetValue_Vertical(self, shieldPercent, healthPercent)
         if p ~= 0 then
             if shieldEnabled then
                 ShieldBar_SetVerticalPoint(self, barHeight, healthPercent)
-                self:SetHeight(p * barHeight)
+                ShieldBar_SetHeight(self, p * barHeight)
                 self:Show()
             else
                 self:Hide()
@@ -3286,7 +3318,7 @@ local function ShieldBar_SetValue_Vertical(self, shieldPercent, healthPercent)
             p = shieldPercent + healthPercent - 1
             if p > healthPercent then p = healthPercent end
             ShieldBarR_SetVerticalPoint(self.shieldBarR, barHeight, healthPercent)
-            self.shieldBarR:SetHeight(p * barHeight)
+            ShieldBar_SetHeight(self.shieldBarR, p * barHeight)
             self.shieldBarR:Show()
             if overshieldEnabled then
                 self.overShieldGlowR:Show()
@@ -3306,7 +3338,7 @@ local function ShieldBar_SetValue_Vertical(self, shieldPercent, healthPercent)
     else
         if shieldEnabled then
             ShieldBar_SetVerticalPoint(self, barHeight, healthPercent)
-            self:SetHeight(shieldPercent * barHeight)
+            ShieldBar_SetHeight(self, shieldPercent * barHeight)
             self:Show()
         else
             self:Hide()
@@ -3334,6 +3366,10 @@ function B.SetOrientation(button, orientation, rotateTexture)
     local shieldBarR = button.widgets.shieldBarR
     local overShieldGlow = button.widgets.overShieldGlow
     local overShieldGlowR = button.widgets.overShieldGlowR
+
+    -- Layout changes replace the dynamic shield anchors.
+    ResetShieldGeometry(shieldBar)
+    ResetShieldGeometry(shieldBarR)
 
     gapTexture:SetTexture(unpack(CELL_BORDER_COLOR))
 
@@ -3655,6 +3691,8 @@ function B.UpdatePixelPerfect(button, updateIndicators)
 
     P.Repoint(button.widgets.incomingHeal)
     P.Repoint(button.widgets.shieldBar)
+    ResetShieldGeometry(button.widgets.shieldBar)
+    ResetShieldGeometry(button.widgets.shieldBarR)
     P.Repoint(button.widgets.damageFlashTex)
 
     P.Resize(button.widgets.overShieldGlow)
@@ -3728,7 +3766,7 @@ function CellUnitButton_OnLoad(button)
 
     -- healthbar
     local healthBar = CreateFrame("StatusBar", name.."HealthBar", button)
-    F.FixStatusBarZeroValue(healthBar)
+    F.FixStatusBar(healthBar)
     button.widgets.healthBar = healthBar
     healthBar.SetBarValue = healthBar.SetValue
     healthBar:SetStatusBarTexture(Cell.vars.texture)
@@ -3744,7 +3782,7 @@ function CellUnitButton_OnLoad(button)
 
     -- powerbar
     local powerBar = CreateFrame("StatusBar", name.."PowerBar", button)
-    F.FixStatusBarZeroValue(powerBar)
+    F.FixStatusBar(powerBar)
     button.widgets.powerBar = powerBar
     powerBar.SetBarValue = powerBar.SetValue
     powerBar:SetStatusBarTexture(Cell.vars.texture)

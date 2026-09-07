@@ -391,8 +391,12 @@ function F.CreateFromMixins(...)
 	return F.Mixin({}, ...)
 end
 
-function F.FixStatusBarZeroValue(statusBar)
+function F.FixStatusBar(statusBar)
     local setValue, getValue = statusBar.SetValue, statusBar.GetValue
+    local setMinMaxValues = statusBar.SetMinMaxValues
+    local setStatusBarColor = statusBar.SetStatusBarColor
+    local lastValue
+    local lastR, lastG, lastB, lastA
     local empty = false
 
     function statusBar:SetValue(value)
@@ -401,12 +405,31 @@ function F.FixStatusBarZeroValue(statusBar)
         if empty and maxValue > 0 then
             value = math.min(0.0001, maxValue * 0.0001)
         end
-        setValue(self, value)
+        if lastValue ~= value then
+            setValue(self, value)
+            lastValue = value
+        end
     end
 
     function statusBar:GetValue()
         if empty and self:GetMinMaxValues() == 0 then return 0 end
         return getValue(self)
+    end
+
+    function statusBar:SetMinMaxValues(minValue, maxValue)
+        local currentMin, currentMax = self:GetMinMaxValues()
+        if currentMin ~= minValue or currentMax ~= maxValue then
+            setMinMaxValues(self, minValue, maxValue)
+            lastValue = nil
+        end
+    end
+
+    function statusBar:SetStatusBarColor(r, g, b, a)
+        a = a or 1
+        if lastR ~= r or lastG ~= g or lastB ~= b or lastA ~= a then
+            setStatusBarColor(self, r, g, b, a)
+            lastR, lastG, lastB, lastA = r, g, b, a
+        end
     end
 end
 
@@ -481,6 +504,14 @@ do
     end
 
     function F.SmoothStatusBarMixin:SetSmoothedValue(value)
+        if self:GetValue() == Clamp(value, self:GetMinMaxValues()) then
+            activeBars[self] = nil
+            -- Apply the Wrath zero-value workaround even on a newly created empty bar.
+            self:SetValue(value)
+            return
+        end
+
+        if activeBars[self] == value then return end
         activeBars[self] = value
 
         if not barsActive then
