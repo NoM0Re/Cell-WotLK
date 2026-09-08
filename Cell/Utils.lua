@@ -761,13 +761,15 @@ function F.UnitGroupRolesAssigned(unit, talentRole)
         return "NONE"
     end
 
-    local tank, healer, damage = UnitGroupRolesAssigned(unit)
-    if tank then
-        return "TANK"
-    elseif healer then
-        return "HEALER"
-    elseif damage then
-        return "DAMAGER"
+    if GetNumRaidMembers() == 0 then
+        local tank, healer, damage = UnitGroupRolesAssigned(unit)
+        if tank then
+            return "TANK"
+        elseif healer then
+            return "HEALER"
+        elseif damage then
+            return "DAMAGER"
+        end
     end
 
     talentRole = talentRole or LibGroupTalents:GetUnitRole(unit) or ""
@@ -808,16 +810,16 @@ do
         local first = isRaid and 1 or 0
         local last = isRaid and GetNumRaidMembers() or GetNumPartyMembers()
         for i = first, last do
-            local unit, name, subgroup, _
+            local unit, name, subgroup, assignment, _
             if isRaid then
                 unit = "raid"..i
-                name, _, subgroup = GetRaidRosterInfo(i)
+                name, _, subgroup, _, _, _, _, _, _, assignment = GetRaidRosterInfo(i)
             else
                 unit = i == 0 and "player" or "party"..i
                 name = UnitName(unit)
             end
             local guid = UnitGUID(unit)
-            local member = {unit = unit, name = name, subgroup = subgroup}
+            local member = {unit = unit, name = name, subgroup = subgroup, assignment = assignment}
             if UnitExists(unit) and name and name ~= UNKNOWNOBJECT and guid and (not isRaid or subgroup) then
                 member.key = unit..":"..guid..":"..name
             end
@@ -832,7 +834,10 @@ do
             rosters[groupType] = GetGroupRoster(groupType == "raid")
         end
 
-        local members, roster = {}, {}
+        local members, roster, roles = settings.members, settings.rosterKeys, settings.roles
+        wipe(members)
+        wipe(roster)
+        wipe(roles)
         for _, member in ipairs(rosters[groupType]) do
             if member.unit ~= "player" or header:GetAttribute("showPlayer") then
                 if not member.key then return end
@@ -840,15 +845,17 @@ do
                     tinsert(roster, member.key)
                     if settings.sort then
                         if not member.role then
-                            if groupType == "raid" and GetPartyAssignment("MAINTANK", member.unit) then
-                                member.role, member.assignmentOrder = "TANK", 1
-                            elseif groupType == "raid" and GetPartyAssignment("MAINASSIST", member.unit) then
-                                member.role, member.assignmentOrder = "TANK", 2
-                            else
-                                member.role = F.UnitGroupRolesAssigned(member.unit)
+                            member.role = F.UnitGroupRolesAssigned(member.unit)
+                            if groupType == "raid" and member.role == "TANK" then
+                                if member.assignment == "MAINTANK" then
+                                    member.assignmentOrder = 1
+                                elseif member.assignment == "MAINASSIST" then
+                                    member.assignmentOrder = 2
+                                end
                             end
                         end
                         tinsert(members, member)
+                        tinsert(roles, (member.role or "NONE")..":"..(member.assignmentOrder or 3))
                     end
                 end
             end
@@ -857,12 +864,20 @@ do
         local rosterKey = table.concat(roster, "\n")
         if not settings.sort then return nil, rosterKey end
 
+        local sortKey = settings.order.."\n"..rosterKey.."\n"..table.concat(roles, ",")
+        if settings.sortKey == sortKey then
+            return settings.nameList, rosterKey
+        end
+
         table.sort(members, settings.sort)
-        local names = {}
+        local names = settings.names
+        wipe(names)
         for _, member in ipairs(members) do
             tinsert(names, member.name)
         end
-        return table.concat(names, ","), rosterKey
+        settings.sortKey = sortKey
+        settings.nameList = table.concat(names, ",")
+        return settings.nameList, rosterKey
     end
 
     local function UpdateHeader(header, settings, rosters)
@@ -921,7 +936,10 @@ do
             roleSortFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
             return
         end
-        if updatePending and updateDelay == 0 then return end
+        if updatePending then
+            if not delay or delay == 0 then updateDelay = 0 end
+            return
+        end
 
         updatePending = true
         updateElapsed, updateDelay = 0, delay or 0
@@ -929,7 +947,7 @@ do
     end
 
     function F.SetHeaderRoleSort(header, roleOrder, groupFilter)
-        local settings = headers[header] or {}
+        local settings = headers[header] or {members = {}, rosterKeys = {}, roles = {}, names = {}}
         local order = roleOrder and table.concat(roleOrder, ",")
         if settings.order ~= order then
             settings.order = order
@@ -981,7 +999,11 @@ do
         then
             return
         end
-        RefreshRoleSort()
+        if event == "PARTY_MEMBERS_CHANGED" or event == "RAID_ROSTER_UPDATE" then
+            RefreshRoleSort(0.1)
+        else
+            RefreshRoleSort()
+        end
     end)
     Cell.RegisterCallback("GroupRoleChanged", "RoleSort_GroupRoleChanged", function()
         RefreshRoleSort(0.1)

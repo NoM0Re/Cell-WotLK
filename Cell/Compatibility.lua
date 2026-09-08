@@ -217,7 +217,8 @@ end)
 function PixelUtil.GetPixelToUIUnitFactor()
     if not pixelToUIUnitFactor then
         -- Reuse the resolution-derived factor across size and position updates.
-        local resolution = ({GetScreenResolutions()})[GetCurrentResolution()]
+        local index = GetCurrentResolution()
+        local resolution = index > 0 and select(index, GetScreenResolutions())
         local physicalHeight = resolution and tonumber((select(2, strsplit("x", resolution))))
         pixelToUIUnitFactor = physicalHeight and 768 / physicalHeight or 1
     end
