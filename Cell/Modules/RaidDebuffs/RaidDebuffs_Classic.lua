@@ -1967,7 +1967,8 @@ ShowDetails = function(spell)
 
     -- local name, icon, desc = F.GetSpellTooltipInfo(spellId)
     local name, icon = F.GetSpellInfo(spellId)
-    if not name then return end
+    name = name or tostring(spellId)
+    icon = icon or "Interface\\Icons\\INV_Misc_QuestionMark"
 
     detailsFrame.scrollFrame:ResetScroll()
     detailsFrame.scrollFrame:Show()

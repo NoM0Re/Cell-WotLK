@@ -17,6 +17,9 @@ local debuffs = {
         },
         [1597] = { -- 岩石看守者阿尔卡冯
             60880, -- 践踏
+            58965, -- Choking Cloud
+            58974, -- Crushing Leap
+            58672, -- Impale
         },
         [1598] = { -- 风暴看守者埃玛尔隆
         },
@@ -27,6 +30,7 @@ local debuffs = {
             72090, -- 大地冰封
             "72004", -- 冰霜撕咬
             -72034, -- 霜至
+            "72098", -- Frostbite
         },
     },
 
@@ -51,6 +55,17 @@ local debuffs = {
             -54714, -- 酸性箭雨
             -28440, -- 暗影迷雾
             -28801, -- 软泥
+            56729, -- Frenzied Leap
+            29848, -- Polymorph
+            30092, -- Blast Wave
+            30091, -- Flamestrike
+            30095, -- Cone of Cold
+            55317, -- Charge
+            27891, -- Acidic Sludge
+            27807, -- Bile Vomit
+            27758, -- War Stomp
+            54093, -- Silence
+            28434, -- Spider Web
         },
         [1601] = { -- 阿努布雷坎
             56098, -- 酸液喷射
@@ -127,6 +142,7 @@ local debuffs = {
             28410, -- 克尔苏加德锁链
             "-55802", -- 寒冰箭
             "-55807", -- 寒冰箭
+            28478, -- Frostbolt
         },
     },
 
@@ -137,6 +153,7 @@ local debuffs = {
             58947, -- 震荡波
             58940, -- 烈焰震击
             57759, -- 落锤
+            57757, -- Rain of Fire
         },
         [1616] = { -- 萨塔里奥
             57491, -- 烈焰之啸
@@ -147,6 +164,7 @@ local debuffs = {
             56910, -- Tail Lash
             57874, -- Twilight Shift
             57634, -- Magma
+            57935, -- Twilight Torment
         },
     },
 
@@ -204,6 +222,7 @@ local debuffs = {
             63775, -- 烈焰风暴
             -63757, -- 雷霆一击
             -38064, -- 冲击波
+            64851, -- Flaming Rune
         },
         [1637] = { -- 烈焰巨兽
             62374, -- 被追踪
@@ -249,6 +268,7 @@ local debuffs = {
             -64679, -- 警戒冲击
             -64386, -- 惊骇尖啸
             64396, -- Guardian Swarm
+            65029, -- Guardian Swarm Focus
         },
         [1644] = { -- 霍迪尔
             62469, -- 冰冻
@@ -317,6 +337,7 @@ local debuffs = {
             -64189, -- 震耳咆哮
             -64145, -- 能量衰减
             -63050, -- 理智
+            63147, -- Sara's Anger
         },
         [1650] = { -- 观察者奥尔加隆
             62169, -- 黑洞
@@ -346,6 +367,9 @@ local debuffs = {
             66237, -- 血肉成灰
             66532, -- 魔能火球
             66334, -- 女王之吻
+            "68126", -- Legion Flame
+            "68127", -- Legion Flame
+            "68128", -- Legion Flame
         },
         [1620] = { -- 联盟的冠军
             65542, -- 沉默
@@ -353,6 +377,38 @@ local debuffs = {
             65930, -- 破胆怒吼
             65960, -- 致盲
             66613, -- 制裁之锤
+            65857, -- Entangling Roots
+            66054, -- Hex
+            65543, -- Psychic Scream
+            65490, -- Vampiric Touch
+            65541, -- Shadow Word: Pain
+            65488, -- Mind Flay
+            64058, -- Psychic Horror
+            65810, -- Corruption
+            65814, -- Curse of Agony
+            65815, -- Curse of Exhaustion
+            65809, -- Fear
+            65812, -- Unstable Affliction
+            65792, -- Frost Nova
+            65807, -- Frostbolt
+            65801, -- Polymorph
+            65883, -- Aimed Shot
+            65866, -- Explosive Shot
+            66207, -- Wing Clip
+            65877, -- Wyvern Sting
+            65859, -- Cyclone
+            65855, -- Insect Swarm
+            65856, -- Moonfire
+            65926, -- Mortal Strike
+            65929, -- Charge Stun
+            65935, -- Disarm
+            66020, -- Chains of Ice
+            67767, -- Frost Fever
+            65954, -- Hemorrhage
+            65962, -- Wound Poison
+            65970, -- Stormstrike
+            66008, -- Repentance
+            24259, -- Spell Lock
         },
         [1621] = { -- 部落的冠军
             65542, -- 沉默
@@ -360,12 +416,50 @@ local debuffs = {
             65930, -- 破胆怒吼
             65960, -- 致盲
             66613, -- 制裁之锤
+            65857, -- Entangling Roots
+            66054, -- Hex
+            65543, -- Psychic Scream
+            65490, -- Vampiric Touch
+            65541, -- Shadow Word: Pain
+            65488, -- Mind Flay
+            64058, -- Psychic Horror
+            65810, -- Corruption
+            65814, -- Curse of Agony
+            65815, -- Curse of Exhaustion
+            65809, -- Fear
+            65812, -- Unstable Affliction
+            65792, -- Frost Nova
+            65807, -- Frostbolt
+            65801, -- Polymorph
+            65883, -- Aimed Shot
+            65866, -- Explosive Shot
+            66207, -- Wing Clip
+            65877, -- Wyvern Sting
+            65859, -- Cyclone
+            65855, -- Insect Swarm
+            65856, -- Moonfire
+            65926, -- Mortal Strike
+            65929, -- Charge Stun
+            65935, -- Disarm
+            66020, -- Chains of Ice
+            67767, -- Frost Fever
+            65954, -- Hemorrhage
+            65962, -- Wound Poison
+            65970, -- Stormstrike
+            66008, -- Repentance
+            24259, -- Spell Lock
         },
         [1622] = { -- 瓦格里双子
             "66069", -- 双生之刺
             "66075", -- 双生之刺
             65950, -- 光明之触
             66001, -- 黑暗之触
+            "67309", -- Twin Spike
+            "67310", -- Twin Spike
+            "67311", -- Twin Spike
+            "67312", -- Twin Spike
+            "67313", -- Twin Spike
+            "67314", -- Twin Spike
         },
         [1623] = { -- 阿努巴拉克
             67574, -- 被阿努巴拉克追逐
@@ -418,7 +512,7 @@ local debuffs = {
             71257, -- 野蛮打击
             -------
             71316, -- 冰川打击
-            "71330", -- 寒冰坟墓
+            71331, -- Ice Tomb
             71320, -- 冰霜新星
             71327, -- 蛛网
             "71318", -- 寒冰箭
@@ -429,6 +523,30 @@ local debuffs = {
             -- 71387, -- 冰霜光环
             70633, -- Gut Spray
             69651, -- Wounding Strike
+            69405, -- Consuming Shadows
+            69404, -- Curse of Agony
+            71163, -- Devour Humanoid
+            70432, -- Blood Sap
+            70671, -- Leeching Rot
+            69869, -- Frostfire Bolt
+            69927, -- Avenger's Shield
+            69969, -- Curse of Doom
+            70407, -- Blast Wave
+            70410, -- Polymorph: Spider
+            70645, -- Chains of Shadow
+            71103, -- Combobulating Spray
+            71298, -- Banish
+            72865, -- Death Plague
+            72848, -- Arctic Breath
+            71443, -- Impaling Spear
+            71784, -- Hammer of Betrayal
+            71785, -- Conflagration
+            "71787", -- Fel Iron Bomb
+            "71786", -- Rocket Launch
+            "57807", -- Sunder Armor
+            "71554", -- Sunder Armor
+            "71552", -- Mortal Strike
+            71350, -- Focus Fire
         },
         [1624] = { -- 玛洛加尔领主
             69065, -- 穿刺
@@ -442,8 +560,10 @@ local debuffs = {
             71001, -- 死亡凋零
             -71420, -- 寒冰箭
             -72905, -- 寒冰箭雨
+            "65936", -- Sunder Armor
         },
         [1627] = { -- 冰冠冰川炮舰战
+            70309, -- Rending Throw
         },
         [1628] = { -- 死亡使者萨鲁法尔
             72385, -- 沸腾之血
@@ -464,6 +584,7 @@ local debuffs = {
             69674, -- 畸变感染
             72272, -- 邪恶毒气
             69789, -- 软泥洪流
+            69778, -- Sticky Ooze
         },
         [1631] = { -- 普崔塞德教授
             70911, -- 肆虐毒疫
@@ -472,8 +593,10 @@ local debuffs = {
             71278, -- 窒息毒气
             70853, -- 可延展黏液
             72451, -- 畸变瘟疫
-            -70353, -- 异变毒气
+            -70353, -- Gas Variable
             -70308, -- 畸变
+            -70352, -- Ooze Variable
+            71279, -- Choking Gas Explosion
         },
         [1632] = { -- 鲜血王子议会
             71807, -- 闪耀火花
@@ -487,12 +610,16 @@ local debuffs = {
             "71265", -- 蜂拥之影
             70838, -- 鲜血镜像
             70923, -- 失心疯
+            71340, -- Pact of the Darkfallen
+            -71623, -- Delirious Slash
+            73070, -- Incite Terror
         },
         [1634] = { -- 踏梦者瓦莉瑟瑞娅
             70744, -- 酸性爆炸
             70751, -- 腐蚀
             72963, -- 血肉腐烂
             -70759, -- 寒冰箭雨
+            71157, -- Infected Wound
         },
         [1635] = { -- 辛达苟萨
             69766, -- 动荡
@@ -501,7 +628,9 @@ local debuffs = {
             70106, -- 寒霜刺骨
             69649, -- 冰霜吐息
             "70157", -- 寒冰坟墓
-            "-70084", -- 冰霜光环
+            -70084, -- 冰霜光环
+            70126, -- Frost Beacon
+            71665, -- Asphyxiation
         },
         [1636] = { -- 巫妖王
             70338, -- 死疽
@@ -529,6 +658,8 @@ local debuffs = {
             13737, -- 致死打击
             15621, -- 颅骨爆裂
             75417, -- 震荡波
+            75413, -- Flame Wave
+            74502, -- Enervating Brand
         },
         [1652] = { -- 海里昂
             74567, -- 燃烧印记
@@ -536,6 +667,8 @@ local debuffs = {
             74795, -- 吞噬印记
             74792, -- 灵魂吞噬
             74531, -- 尾击
+            75883, -- Combustion
+            75875, -- Consumption
         },
     },
 
@@ -550,11 +683,13 @@ local debuffs = {
             49106, -- 恐吓
             61549, -- 撕碎
             -------
+            48871, -- Aimed Shot
         },
         [641] = { -- 席瓦拉·索格蕾
             -- 48267, -- 准备仪式
             48278, -- 麻痹
             48277, -- 仪祭打击
+            48267, -- Ritual Preparation
         },
         [642] = { -- 戈托克·苍蹄
             59263, -- 重伤
@@ -610,6 +745,9 @@ local debuffs = {
             -59599, -- 裂颅
             -------
             59686, -- 定时炸弹
+            51588, -- Flame Shock
+            32908, -- Wing Clip
+            6713, -- Disarm
         },
         [638] = { -- 凯雷塞斯王子
             48400, -- 冰霜之墓
@@ -658,6 +796,7 @@ local debuffs = {
             -67808, -- 死亡撕咬
             -67719, -- 冰霜疫病
             -67722, -- 血之疫病
+            67745, -- Death's Respite
         },
     },
 
@@ -672,6 +811,8 @@ local debuffs = {
             -20812, -- 残废术
             -------
             58816, -- 时间漩涡
+            52527, -- Wretching Bile
+            58770, -- Drain Mana
         },
         [611] = { -- 肉钩
             58823, -- 束缚之链
@@ -706,6 +847,7 @@ local debuffs = {
             55643, -- 回吐
             58967, -- 淬毒长矛
             58992, -- 震耳咆哮
+            6713, -- Disarm
         },
         [592] = { -- 斯拉德兰
             55126, -- 毒蛇裹体
@@ -718,6 +860,7 @@ local debuffs = {
             59455, -- 致死打击
             54819, -- 被魔精浸湿
             "59451", -- 魔精泥浆
+            55627, -- Mojo Puddle
         },
         [594] = { -- 莫拉比
             59444, -- 决断突刺
@@ -750,6 +893,8 @@ local debuffs = {
             -61460, -- 失落希望光环
             -61461, -- 寒冰箭
             -59116, -- 毒云
+            56581, -- Fatal Sting
+            56858, -- Flamestrike
         },
         [580] = { -- 纳多克斯长老
             59467, -- 蜘蛛疫病
@@ -759,6 +904,7 @@ local debuffs = {
             59513, -- 吸血鬼的拥抱
         },
         [582] = { -- 耶戈达·觅影者
+            56926, -- Thundershock
         },
         [583] = { -- 埃曼尼塔
             57095, -- 纠缠根须
@@ -769,6 +915,15 @@ local debuffs = {
         [584] = { -- 传令官沃拉兹
             59978, -- 碎裂
             59974, -- 精神鞭笞
+            57601, -- Blood Plague
+            57647, -- Moonfire
+            57661, -- Rip
+            57799, -- Avenger's Shield
+            57778, -- Shadow Word: Pain
+            57832, -- Thunder Clap
+            57789, -- Mortal Strike
+            61491, -- Intercept
+            9080, -- Hamstring
         },
     },
 
@@ -779,15 +934,19 @@ local debuffs = {
             59034, -- 凿击辐射
             43104, -- 重伤
             46202, -- 穿刺护甲
+            50895, -- Lightning Tether
+            51503, -- Domination
         },
         [604] = { -- 克莱斯塔卢斯
             50812, -- 石化之握
             50836, -- 石化之握
             -50833, -- 砸击地面
+            48131, -- Stomp
         },
         [605] = { -- 悲伤圣女
             59726, -- 悲伤震荡
             59727, -- 哀伤之柱
+            50752, -- Storm of Grief
         },
         [606] = { -- 远古法庭
             59868, -- 黑暗物质
@@ -809,6 +968,12 @@ local debuffs = {
             72329, -- 致命毒药
             72171, -- 寒冰锁链
             69222, -- 投掷盾牌
+            72321, -- Cower in Fear
+            72169, -- Flamestrike
+            72166, -- Frostbolt
+            72120, -- Frostbite
+            72333, -- Envenomed Dagger Throw
+            72268, -- Ice Shot
         },
         [601] = { -- 法瑞克
             72426, -- 绝望降临
@@ -838,6 +1003,8 @@ local debuffs = {
             69133, -- 昏睡
             69633, -- 暗影之幕
             -- 69130, -- 灵魂虹吸
+            69128, -- Soul Siphon
+            69066, -- Drain Life
         },
         [615] = { -- 布隆亚姆
             68950, -- 恐惧
@@ -856,6 +1023,12 @@ local debuffs = {
             60204, -- 奥术之流
             32736, -- 致死打击
             59258, -- 冰锥术
+            25603, -- Slow
+            58464, -- Chains of Ice
+            15043, -- Frostbolt
+            30849, -- Spell Lock
+            58532, -- Frostbolt Volley
+            58534, -- Deep Freeze
         },
         [626] = { -- 埃雷克姆
             39215, -- 龟裂创伤
@@ -935,10 +1108,17 @@ local debuffs = {
             69603, -- 凋零
             69579, -- 弧光切割
             34779, -- 冰冻之环
+            69583, -- Fireball
+            69527, -- Frost Breath
+            69503, -- Devour Humanoid
+            70302, -- Blinding Dirt
+            69572, -- Shovelled!
+            69573, -- Frostbolt
         },
         [608] = { -- 熔炉之主加弗斯特
             -68786, -- 永冻
             -68771, -- 雷霆践踏
+            70381, -- Deep Freeze
         },
         [609] = { -- 伊克和科瑞克
             68987, -- 扑杀
@@ -977,6 +1157,8 @@ local debuffs = {
             59011, -- 冰冷触摸
             59010, -- 震耳咆哮
             -9080, -- 断筋
+            16001, -- Impale
+            55847, -- Shadow Void
         },
         [588] = { -- 托尔戈
             49637, -- 感染之伤
@@ -986,6 +1168,7 @@ local debuffs = {
             47346, -- 奥术力场
             59854, -- 暴风雪
             8147, -- REVIEW: 雷霆一击
+            49037, -- Frostbolt
         },
         [590] = { -- 暴龙之王爵德
             48920, -- 凶残撕咬
@@ -1027,6 +1210,9 @@ local debuffs = {
             -59151, -- 符文冲击
             -------
             32315, -- 灵魂打击
+            61579, -- Runic Focus
+            52740, -- Hurl Weapon
+            60236, -- Cyclone
         },
         [597] = { -- 比亚格里将军
             58747, -- 拦截
@@ -1056,6 +1242,12 @@ local debuffs = {
             -38384, -- 冰锥术
             -48053, -- 诱捕
             -30633, -- 雷霆一击
+            47698, -- Crystal Chains
+            39171, -- Mortal Strike
+            30849, -- Spell Lock
+            17682, -- Drain Mana
+            36808, -- Rain of Fire
+            13323, -- Polymorph
         },
         [617] = { -- 指挥官斯托比德
             19134, -- 破胆怒吼
@@ -1095,6 +1287,10 @@ local debuffs = {
             59211, -- 寒冰之光
             -50535, -- 吸取能量
             -59278, -- 暴风雪
+            15588, -- Thunderclap
+            32323, -- Charge
+            16102, -- Flamestrike
+            50732, -- Water Tomb
         },
         [622] = { -- 审讯者达库斯
         },
