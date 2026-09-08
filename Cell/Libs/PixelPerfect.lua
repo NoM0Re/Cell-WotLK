@@ -39,7 +39,8 @@ local P = addon.pixelPerfectFuncs
 local PixelUtil = addon.funcs.PixelUtil
 
 function P.GetResolution()
-    local resolution = ({GetScreenResolutions()})[GetCurrentResolution()] or ""
+    local index = GetCurrentResolution()
+    local resolution = (index > 0 and select(index, GetScreenResolutions())) or ""
     return string.match(resolution, "(%d+).-(%d+)")
 end
 

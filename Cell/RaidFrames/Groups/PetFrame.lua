@@ -93,17 +93,6 @@ end
 local header = CreateFrame("Frame", "CellPetFrameHeader", petFrame, "SecureGroupPetHeaderTemplate")
 header:SetAllPoints(petFrame)
 
-header.initialConfigFunction = function(child)
-    --! button for pet/vehicle only, toggleForVehicle MUST be false
-    child:SetAttribute("toggleForVehicle", false)
-
-    -- RegisterUnitWatch(child)
-
-    -- local header = child:GetParent()
-    -- child:SetWidth(header:GetAttribute("buttonWidth") or 66)
-    -- child:SetHeight(header:GetAttribute("buttonHeight") or 46)
-end
-
 function header:UpdateButtonUnit(bName, unit)
     local button = _G[bName]
     local oldUnit = button.groupPetUnit
@@ -119,32 +108,33 @@ function header:UpdateButtonUnit(bName, unit)
     end
 end
 
+local function OnPetUnitChanged(self, name, value)
+    if name == "unit" then
+        header:UpdateButtonUnit(self:GetName(), value)
+    end
+end
+
+header.initialConfigFunction = function(child)
+    child:SetAttribute("toggleForVehicle", false)
+    local index = #header + 1
+    header[index] = child
+    Cell.unitButtons.pet[index] = child
+    child:HookScript("OnAttributeChanged", OnPetUnitChanged)
+    header:UpdateButtonUnit(child:GetName(), child:GetAttribute("unit"))
+end
+
 header:SetAttribute("template", "CellUnitButtonTemplate")
 header:SetAttribute("point", "TOP")
 header:SetAttribute("columnAnchorPoint", "LEFT")
 header:SetAttribute("unitsPerColumn", 5)
 header:SetAttribute("showPlayer", true) -- show player pet while not in a raid
 
-header:SetAttribute("maxColumns", 8)
---! make needButtons == 40
-header:SetAttribute("startingIndex", -39)
+wipe(Cell.unitButtons.pet.units)
+header:SetAttribute("maxColumns", 5)
+--! make needButtons == 25
+header:SetAttribute("startingIndex", -24)
 header:Show()
 header:SetAttribute("startingIndex", 1)
-
-wipe(Cell.unitButtons.pet.units)
-for i = 1, 40 do
-    local button = header:GetAttribute("child"..i)
-    header[i] = button
-    Cell.unitButtons.pet[i] = button
-    -- button.type = "pet" -- layout setup
-
-    button:HookScript("OnAttributeChanged", function(self, name, value)
-        if name == "unit" then
-            header:UpdateButtonUnit(self:GetName(), value)
-        end
-    end)
-    header:UpdateButtonUnit(button:GetName(), button:GetAttribute("unit"))
-end
 
 -- update mover
 header[1]:HookScript("OnShow", function()
