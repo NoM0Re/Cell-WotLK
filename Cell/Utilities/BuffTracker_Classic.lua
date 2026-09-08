@@ -296,7 +296,7 @@ local function CreateBuffButton(parent, size, spell1, spell2, icon, index)
     b:SetAttribute("shift-type1", "spell")
     b:SetAttribute("shift-spell1", spell2)
     b:HookScript("OnClick", function(self, button, down)
-        if button == "RightButton" and (down == GetCVarBool("ActionButtonUseKeyDown")) then
+        if button == "RightButton" then
             local msg = F.GetUnaffectedString(index)
             if msg then
                 UpdateSendChannel()

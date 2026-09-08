@@ -38,10 +38,22 @@ end
 local P = addon.pixelPerfectFuncs
 local PixelUtil = addon.funcs.PixelUtil
 
+local resolutionCached, resolutionWidth, resolutionHeight
+local resolutionFrame = CreateFrame("Frame")
+resolutionFrame:RegisterEvent("DISPLAY_SIZE_CHANGED")
+resolutionFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
+resolutionFrame:SetScript("OnEvent", function()
+    resolutionCached = nil
+end)
+
 function P.GetResolution()
-    local index = GetCurrentResolution()
-    local resolution = (index > 0 and select(index, GetScreenResolutions())) or ""
-    return string.match(resolution, "(%d+).-(%d+)")
+    if not resolutionCached then
+        local index = GetCurrentResolution()
+        local resolution = (index > 0 and select(index, GetScreenResolutions())) or ""
+        resolutionWidth, resolutionHeight = string.match(resolution, "(%d+).-(%d+)")
+        resolutionCached = true
+    end
+    return resolutionWidth, resolutionHeight
 end
 
 -- The UI P.Scale goes from 1 to 0.64.
