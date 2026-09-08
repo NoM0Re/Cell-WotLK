@@ -465,16 +465,22 @@ local function SetClockCooldown(self, start, duration)
         return
     end
 
-    if GetTime() - start >= duration then
+    local elapsed = GetTime() - start
+    if elapsed >= duration and not (self.paused and self.startTime == start and self.duration == duration) then
         ClearCooldown(self)
         self:Hide()
+        return
+    end
+
+    if self.startTime == start and self.duration == duration then
+        if not self:IsShown() then self:Show() end
         return
     end
 
     self.startTime = start
     self.duration = duration
     self.paused = nil
-    SetCooldownProgress(self, GetCooldownProgress(self, GetTime() - start))
+    SetCooldownProgress(self, GetCooldownProgress(self, elapsed))
     self:Show()
 end
 
@@ -492,6 +498,7 @@ local function GetClockCooldownTimes(self)
 end
 
 local function PauseClockCooldown(self)
+    if self.paused then return end
     if self.startTime and self.duration then
         SetCooldownProgress(self, GetCooldownProgress(self, GetTime() - self.startTime))
     end
@@ -499,7 +506,8 @@ local function PauseClockCooldown(self)
 end
 
 local function ResumeClockCooldown(self)
-    if self.paused and self.startTime and self.duration and self.progress then
+    if not self.paused then return end
+    if self.startTime and self.duration and self.progress then
         local elapsed
         if self.reverse then
             elapsed = self.progress * self.duration
@@ -516,10 +524,12 @@ local function IsClockCooldownPaused(self)
 end
 
 local function SetClockCooldownReverse(self, reverse)
-    self.reverse = reverse and true or nil
+    reverse = reverse and true or nil
+    if self.reverse == reverse then return end
+    self.reverse = reverse
     if self.startTime and self.duration then
         if self.paused then
-            SetCooldownProgress(self, self.progress)
+            SetCooldownProgress(self, self.progress and 1 - self.progress)
         else
             SetCooldownProgress(self, GetCooldownProgress(self, GetTime() - self.startTime))
         end
