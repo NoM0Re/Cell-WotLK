@@ -3718,6 +3718,7 @@ end
 B.UpdateAll = UnitButton_UpdateAll
 B.UpdateEffectiveUnit = function(button)
     local unit = SecureButton_GetUnit(button)
+    if unit == "playerpet" then unit = "pet" end
     UnitButton_OnAttributeChanged(button, "unit", unit)
     UnitButton_UpdateAll(button)
     return unit
