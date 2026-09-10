@@ -1592,8 +1592,7 @@ ShouldShowPowerBar = function(b)
     if not (b:IsVisible() or b.isPreview) then return end
     if not b.powerSize or b.powerSize == 0 then return end
 
-    -- NOTE: no role while solo, so always show power bar
-    if not b.states.guid or Cell.vars.groupType == "solo" then
+    if not b.states.guid then
         return true
     end
 
