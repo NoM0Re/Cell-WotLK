@@ -36,9 +36,9 @@ Cell.MIN_LAYOUTS_VERSION = 246
 Cell.MIN_INDICATORS_VERSION = 246
 Cell.MIN_DEBUFFS_VERSION = 246
 
---@debug@
+--[==[@debug@
 local debugMode = false
---@end-debug@
+--@end-debug@]==]
 function F.Debug(arg, ...)
     if debugMode then
         if type(arg) == "string" or type(arg) == "number" then
@@ -86,9 +86,16 @@ function F.UpdateLayout(layoutGroupType)
     else
         F.Debug("|cFF7CFC00F.UpdateLayout(\""..layoutGroupType.."\")")
 
-        Cell.vars.layoutAutoSwitch = CellCharacterDB["layoutAutoSwitch"][Cell.vars.activeTalentGroup]
+        local talentGroup = Cell.vars.activeTalentGroup or GetActiveTalentGroup() or 1
+        Cell.vars.layoutAutoSwitch = CellCharacterDB["layoutAutoSwitch"][talentGroup]
+        if type(Cell.vars.layoutAutoSwitch) ~= "table" then
+            Cell.vars.layoutAutoSwitch = F.Copy(Cell.defaults.layoutAutoSwitch)
+        end
 
-        local layout = Cell.vars.layoutAutoSwitch[layoutGroupType]
+        local layout = Cell.vars.layoutAutoSwitch[layoutGroupType] or "default"
+        if layout ~= "hide" and not CellDB["layouts"][layout] then
+            layout = "default"
+        end
         Cell.vars.layoutGroupType = layoutGroupType
 
         if layout == "hide" then
@@ -405,6 +412,12 @@ function eventFrame:ADDON_LOADED(arg1)
                 [1] = F.Copy(Cell.defaults.layoutAutoSwitch),
                 [2] = F.Copy(Cell.defaults.layoutAutoSwitch),
             }
+        else
+            for talentGroup = 1, 2 do
+                if type(CellCharacterDB["layoutAutoSwitch"][talentGroup]) ~= "table" then
+                    CellCharacterDB["layoutAutoSwitch"][talentGroup] = F.Copy(Cell.defaults.layoutAutoSwitch)
+                end
+            end
         end
 
         -- dispelBlacklist ------------------------------------------------------------------------

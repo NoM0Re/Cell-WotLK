@@ -1437,7 +1437,7 @@ local function getName(spellID)
 	if( not name ) then
 		print(string.format("%s-r%s: Failed to find spellID %d", major, minor, spellID))
 	end
-	--@end-debug@]===]
+	--@end-debug@]==]]===]
 	return name or ""
 end
 
