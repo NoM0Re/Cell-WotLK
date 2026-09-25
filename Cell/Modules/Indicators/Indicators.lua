@@ -1425,13 +1425,8 @@ local function CreateListPane()
             local name = strtrim(self.editBox:GetText())
             local indicatorType, indicatorAuraType = self.dropdown1:GetSelected(), self.dropdown2:GetSelected()
 
-            local last = #currentLayoutTable["indicators"]
-            local index = currentLayoutTable["indicators"][last]["indicatorName"]:match("%d+")
-            index = index and tonumber(index) or 0
-            index = index + 1
-
-            local indicatorName = "indicator" .. index
-            last = last + 1
+            local indicatorName = F.GetNextCustomIndicatorName(currentLayoutTable["indicators"])
+            local last = #currentLayoutTable["indicators"] + 1
 
             tinsert(currentLayoutTable["indicators"], I.GetDefaultCustomIndicatorTable(name, indicatorName, indicatorType, indicatorAuraType))
             Cell.Fire("UpdateIndicators", F.GetNotifiedLayoutName(currentLayout), indicatorName, "create", currentLayoutTable["indicators"][last])

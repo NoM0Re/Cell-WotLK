@@ -8,6 +8,22 @@ local I = Cell.iFuncs
 
 Cell.vars.playerFaction = UnitFactionGroup("player")
 
+function F.GetNextCustomIndicatorName(indicators)
+    local used = {}
+    for _, indicator in pairs(indicators) do
+        local index = indicator.indicatorName and indicator.indicatorName:match("^indicator(%d+)$")
+        if index then
+            used[tonumber(index)] = true
+        end
+    end
+
+    local index = 1
+    while used[index] do
+        index = index + 1
+    end
+    return "indicator" .. index
+end
+
 -------------------------------------------------
 -- game version
 -------------------------------------------------

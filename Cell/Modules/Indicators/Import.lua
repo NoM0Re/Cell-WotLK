@@ -54,11 +54,6 @@ local function CreateIndicatorsImportFrame()
 
         local popup = Cell.CreateConfirmPopup(Cell.frames.indicatorsTab, 250, text, function(self)
             local toLayoutTable = CellDB["layouts"][toLayout]
-            -- last custom index
-            local lastIndex
-            local last = #toLayoutTable["indicators"]
-            lastIndex = last - Cell.defaults.builtIns
-
             -- local toLayoutTable = { ["indicators"] = {} }
 
             -- indicators
@@ -71,8 +66,7 @@ local function CreateIndicatorsImportFrame()
                     end
                 else
                     -- NOTE: add customs
-                    lastIndex = lastIndex + 1
-                    t["indicatorName"] = "indicator"..lastIndex
+                    t["indicatorName"] = F.GetNextCustomIndicatorName(toLayoutTable["indicators"])
                     -- NOTE: remove invalid spells from custom indicators
                     F.FilterInvalidSpells(t["auras"])
                     tinsert(toLayoutTable["indicators"], t)

@@ -63,16 +63,12 @@ local function CreateIndicatorsCopyFrame()
     copyBtn:SetPoint("BOTTOMLEFT", 5, 5)
     F.SetEnabled(copyBtn, false)
     copyBtn:SetScript("OnClick", function()
-        local last = #CellDB["layouts"][to]["indicators"]
-        last = tonumber(string.match(CellDB["layouts"][to]["indicators"][last]["indicatorName"], "%d+")) or last
-
         for i in pairs(selectedIndicators) do
             if i <= Cell.defaults.builtIns then -- built-in
                 CellDB["layouts"][to]["indicators"][i] = F.Copy(CellDB["layouts"][from]["indicators"][i])
             else -- user-created
-                last = last + 1
                 local indicator = F.Copy(CellDB["layouts"][from]["indicators"][i])
-                indicator["indicatorName"] = "indicator"..last
+                indicator["indicatorName"] = F.GetNextCustomIndicatorName(CellDB["layouts"][to]["indicators"])
                 tinsert(CellDB["layouts"][to]["indicators"], indicator)
             end
         end
