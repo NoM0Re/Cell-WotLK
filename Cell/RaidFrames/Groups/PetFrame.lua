@@ -44,7 +44,7 @@ dumb:Hide()
 dumb:SetFrameStrata("MEDIUM")
 dumb:SetAllPoints(anchorFrame)
 dumb:SetScript("OnDragStart", function()
-    if InCombatLockdown() then return end
+    if InCombatLockdown() or CellDB["general"]["locked"] then return end
     movingAnchor = true
     anchorFrame:RegisterEvent("PLAYER_REGEN_DISABLED")
     anchorFrame:StartMoving()
@@ -197,6 +197,7 @@ end
 local function UpdateMenu(which)
     if not which or which == "lock" then
         if CellDB["general"]["locked"] then
+            anchorFrame:StopMovingOrSizing()
             dumb:RegisterForDrag()
         else
             dumb:RegisterForDrag("LeftButton")

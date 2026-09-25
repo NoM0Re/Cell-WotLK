@@ -700,6 +700,8 @@ function eventFrame:PLAYER_ENTERING_WORLD()
     if CellDB["firstRun"] then
         F.FirstRun()
     end
+
+    Cell.Fire("UpdateMenu")
 end
 
 local function UpdateSpecVars()
