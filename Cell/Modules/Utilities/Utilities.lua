@@ -14,12 +14,6 @@ utilitiesTab:Hide()
 local buttons = {}
 local listFrame, lastShown
 
-local function HideUtilitySettings()
-    for _, child in ipairs({utilitiesTab:GetChildren()}) do
-        child:Hide()
-    end
-end
-
 local function UpdateFontString(b)
     local fs = b:GetFontString()
     fs:ClearAllPoints()
@@ -64,7 +58,6 @@ function F.CreateUtilityList(anchor)
     local highlight = Cell.CreateButtonGroup(buttons, function(id)
         lastShown = id
         anchor:Click()
-        HideUtilitySettings()
         Cell.Fire("ShowUtilitySettings", id)
         listFrame:Hide()
     end)
@@ -102,9 +95,8 @@ local function ShowTab(tab)
             init = true
             lastShown = lastShown or "raidTools"
         end
-        utilitiesTab:Show()
-        HideUtilitySettings()
         Cell.Fire("ShowUtilitySettings", lastShown)
+        utilitiesTab:Show()
     else
         utilitiesTab:Hide()
     end
