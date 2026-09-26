@@ -86,16 +86,9 @@ function F.UpdateLayout(layoutGroupType)
     else
         F.Debug("|cFF7CFC00F.UpdateLayout(\""..layoutGroupType.."\")")
 
-        local talentGroup = Cell.vars.activeTalentGroup or GetActiveTalentGroup() or 1
-        Cell.vars.layoutAutoSwitch = CellCharacterDB["layoutAutoSwitch"][talentGroup]
-        if type(Cell.vars.layoutAutoSwitch) ~= "table" then
-            Cell.vars.layoutAutoSwitch = F.Copy(Cell.defaults.layoutAutoSwitch)
-        end
+        Cell.vars.layoutAutoSwitch = CellCharacterDB["layoutAutoSwitch"][Cell.vars.activeTalentGroup]
 
-        local layout = Cell.vars.layoutAutoSwitch[layoutGroupType] or "default"
-        if layout ~= "hide" and not CellDB["layouts"][layout] then
-            layout = "default"
-        end
+        local layout = Cell.vars.layoutAutoSwitch[layoutGroupType]
         Cell.vars.layoutGroupType = layoutGroupType
 
         if layout == "hide" then
@@ -401,22 +394,19 @@ function eventFrame:ADDON_LOADED(arg1)
 
         -- layouts --------------------------------------------------------------------------------
         if type(CellDB["layouts"]) ~= "table" then
-            CellDB["layouts"] = {
-                ["default"] = F.Copy(Cell.defaults.layout)
-            }
+            CellDB["layouts"] = {}
+        end
+        if type(CellDB["layouts"]["default"]) ~= "table" then
+            CellDB["layouts"]["default"] = F.Copy(Cell.defaults.layout)
         end
 
         -- layoutAutoSwitch -----------------------------------------------------------------------
         if type(CellCharacterDB["layoutAutoSwitch"]) ~= "table" then
-            CellCharacterDB["layoutAutoSwitch"] = {
-                [1] = F.Copy(Cell.defaults.layoutAutoSwitch),
-                [2] = F.Copy(Cell.defaults.layoutAutoSwitch),
-            }
-        else
-            for talentGroup = 1, 2 do
-                if type(CellCharacterDB["layoutAutoSwitch"][talentGroup]) ~= "table" then
-                    CellCharacterDB["layoutAutoSwitch"][talentGroup] = F.Copy(Cell.defaults.layoutAutoSwitch)
-                end
+            CellCharacterDB["layoutAutoSwitch"] = {}
+        end
+        for talentGroup = 1, 2 do
+            if type(CellCharacterDB["layoutAutoSwitch"][talentGroup]) ~= "table" then
+                CellCharacterDB["layoutAutoSwitch"][talentGroup] = F.Copy(Cell.defaults.layoutAutoSwitch)
             end
         end
 
@@ -490,10 +480,12 @@ function eventFrame:ADDON_LOADED(arg1)
 
         -- validation -----------------------------------------------------------------------------
         -- validate layout
-        for talent, t in pairs(CellCharacterDB["layoutAutoSwitch"]) do
-            for groupType, layout in pairs(t) do
-                if layout ~= "hide" and not CellDB["layouts"][layout] then
-                    t[groupType] = "default"
+        for talentGroup = 1, 2 do
+            local t = CellCharacterDB["layoutAutoSwitch"][talentGroup]
+            for groupType, defaultLayout in pairs(Cell.defaults.layoutAutoSwitch) do
+                local layout = t[groupType]
+                if layout ~= "hide" and (type(layout) ~= "string" or type(CellDB["layouts"][layout]) ~= "table") then
+                    t[groupType] = defaultLayout
                 end
             end
         end
@@ -700,8 +692,6 @@ function eventFrame:PLAYER_ENTERING_WORLD()
     if CellDB["firstRun"] then
         F.FirstRun()
     end
-
-    Cell.Fire("UpdateMenu")
 end
 
 local function UpdateSpecVars()

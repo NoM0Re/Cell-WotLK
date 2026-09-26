@@ -9,19 +9,14 @@ local I = Cell.iFuncs
 Cell.vars.playerFaction = UnitFactionGroup("player")
 
 function F.GetNextCustomIndicatorName(indicators)
-    local used = {}
+    local lastIndex = 0
     for _, indicator in pairs(indicators) do
         local index = indicator.indicatorName and indicator.indicatorName:match("^indicator(%d+)$")
         if index then
-            used[tonumber(index)] = true
+            lastIndex = max(lastIndex, tonumber(index))
         end
     end
-
-    local index = 1
-    while used[index] do
-        index = index + 1
-    end
-    return "indicator" .. index
+    return "indicator" .. (lastIndex + 1)
 end
 
 -------------------------------------------------

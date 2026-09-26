@@ -368,12 +368,7 @@ function F.FirstRun()
         local currentLayoutTable = Cell.vars.currentLayoutTable
 
         local last = #currentLayoutTable["indicators"]
-        local indicatorName
-        if currentLayoutTable["indicators"][last]["type"] == "built-in" then
-            indicatorName = "indicator1"
-        else
-            indicatorName = "indicator"..(tonumber(strmatch(currentLayoutTable["indicators"][last]["indicatorName"], "%d+"))+1)
-        end
+        local indicatorName = F.GetNextCustomIndicatorName(currentLayoutTable["indicators"])
 
         tinsert(currentLayoutTable["indicators"], {
             ["name"] = "Healers",

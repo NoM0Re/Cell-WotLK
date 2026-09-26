@@ -56,7 +56,7 @@ config:SetFrameStrata("MEDIUM")
 config:SetAllPoints(anchorFrame)
 config:RegisterForDrag("LeftButton")
 config:SetScript("OnDragStart", function()
-    if InCombatLockdown() or CellDB["general"]["locked"] then return end
+    if InCombatLockdown() then return end
     movingAnchor = true
     anchorFrame:RegisterEvent("PLAYER_REGEN_DISABLED")
     anchorFrame:StartMoving()
@@ -877,7 +877,6 @@ end
 local function UpdateMenu(which)
     if not which or which == "lock" then
         if CellDB["general"]["locked"] then
-            anchorFrame:StopMovingOrSizing()
             config:RegisterForDrag()
         else
             config:RegisterForDrag("LeftButton")

@@ -273,7 +273,7 @@ local function SetBindingClicks(b)
 
         --! update click-casting unit
         local clickCastingUnit = vehicle or unit
-        if not clickCastingUnit or not UnitExists(clickCastingUnit) then
+        if not clickCastingUnit then
             self:ClearBindings()
             return
         end

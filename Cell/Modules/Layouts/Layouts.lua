@@ -1457,29 +1457,16 @@ local function CreateLayoutPane()
                 F.Print(L["Layout renamed: %s to %s."]:format(selectedLayout, name))
 
                 -- update auto switch dropdowns
-                LoadAutoSwitchDropdowns()
-                for groupType, layout in pairs(Cell.vars.layoutAutoSwitch) do
-                    if layout == selectedLayout then
-                        -- NOTE: rename
-                        Cell.vars.layoutAutoSwitch[groupType] = name
-                        -- update its dropdown selection
-                        if groupType == "party" then
-                            partyDropdown:SetSelected(name)
-                        elseif groupType == "raid_outdoor" then
-                            raidOutdoorDropdown:SetSelected(name)
-                        elseif groupType == "raid10" then
-                            raid10Dropdown:SetSelected(name)
-                        elseif groupType == "raid25" then
-                            raid25Dropdown:SetSelected(name)
-                        elseif groupType == "arena" then
-                            arenaDropdown:SetSelected(name)
-                        elseif groupType == "battleground15" then
-                            bg15Dropdown:SetSelected(name)
-                        elseif groupType == "battleground40" then
-                            bg40Dropdown:SetSelected(name)
+                for talentGroup = 1, 2 do
+                    local t = CellCharacterDB["layoutAutoSwitch"][talentGroup]
+                    for groupType, layout in pairs(t) do
+                        if layout == selectedLayout then
+                            t[groupType] = name
                         end
                     end
                 end
+                LoadAutoSwitchDropdowns()
+                LoadLayoutAutoSwitchDB()
 
                 -- update master-slave
                 for layout, t in pairs(CellDB["layouts"]) do
@@ -1529,29 +1516,16 @@ local function CreateLayoutPane()
             F.Print(L["Layout deleted: %s."]:format(selectedLayout))
 
             -- update auto switch dropdowns
-            LoadAutoSwitchDropdowns()
-            for groupType, layout in pairs(Cell.vars.layoutAutoSwitch) do
-                if layout == selectedLayout then
-                    -- NOTE: set to default
-                    Cell.vars.layoutAutoSwitch[groupType] = "default"
-                    -- update its dropdown selection
-                    if groupType == "party" then
-                        partyDropdown:SetSelectedValue("default")
-                    elseif groupType == "raid_outdoor" then
-                        raidOutdoorDropdown:SetSelectedValue("default")
-                    elseif groupType == "raid10" then
-                        raid10Dropdown:SetSelectedValue("default")
-                    elseif groupType == "raid25" then
-                        raid25Dropdown:SetSelectedValue("default")
-                    elseif groupType == "arena" then
-                        arenaDropdown:SetSelectedValue("default")
-                    elseif groupType == "battleground15" then
-                        bg15Dropdown:SetSelectedValue("default")
-                    elseif groupType == "battleground40" then
-                        bg40Dropdown:SetSelectedValue("default")
+            for talentGroup = 1, 2 do
+                local t = CellCharacterDB["layoutAutoSwitch"][talentGroup]
+                for groupType, layout in pairs(t) do
+                    if layout == selectedLayout then
+                        t[groupType] = "default"
                     end
                 end
             end
+            LoadAutoSwitchDropdowns()
+            LoadLayoutAutoSwitchDB()
 
             -- update master-slave
             for layout, t in pairs(CellDB["layouts"]) do
