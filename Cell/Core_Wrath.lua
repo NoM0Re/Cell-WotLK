@@ -239,6 +239,14 @@ function eventFrame:ADDON_LOADED(arg1)
                 ["fadeOut"] = false,
             }
         end
+        if type(CellDB["tools"]["battleResTimer"]) ~= "table" then
+            local battleResEnabled = CellDB["tools"]["showBattleRes"]
+            if type(battleResEnabled) ~= "boolean" then
+                battleResEnabled = true
+            end
+            CellDB["tools"]["battleResTimer"] = {battleResEnabled, false, {}}
+            CellDB["tools"]["showBattleRes"] = nil
+        end
 
         -- spellRequest ---------------------------------------------------------------------------
         if type(CellDB["spellRequest"]) ~= "table" then
