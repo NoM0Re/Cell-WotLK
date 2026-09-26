@@ -208,10 +208,12 @@ end
 local wrapFrame = CreateFrame("Frame", "CellWrapFrame", nil, "SecureHandlerStateTemplate")
 wrapFrame:SetAttribute("_onstate-mouseoverstate", [[
     -- print("mouseoverstate", newstate)
-    if newstate == "false" and mouseoverbutton then
-        if not mouseoverbutton:IsUnderMouse() then
+    if (newstate == "true" or newstate == "false") and mouseoverbutton then
+        if not mouseoverbutton:IsVisible() or not mouseoverbutton:IsUnderMouse() then
             mouseoverbutton:ClearBindings()
             mouseoverbutton = nil
+        elseif newstate == "true" then
+            control:RunFor(mouseoverbutton, mouseoverbutton:GetAttribute("clickcast-bindings"))
         end
     end
 ]])
@@ -235,20 +237,91 @@ wrapFrame:SetAttribute("_onstate-combatstate", [[
 ]])
 RegisterStateDriver(wrapFrame, "combatstate", "[combat] true; false")
 
-local function SetBindingClicks(b)
-    b:SetAttribute("_onenter", [[
-        -- print("_onenter")
-        self:ClearBindings()
-    ]]..(b:GetAttribute("snippet") or "")..[[
+local onEnterSnippet = [[
+    if mouseoverbutton then
+        --! NOTE: 鼠标放在过远单位上->被挡住->移走->移至可用单位再移出，会发现之前的不可用单位的按键绑定仍未取消
+        mouseoverbutton:ClearBindings()
 
-        -- self:SetBindingClick(true, "SHIFT-MOUSEWHEELUP", self, "shiftSCROLLUP")
-        -- FIXME: --! 如果游戏按键设置（比如“视角”“载具控制”）中绑定了滚轮，那么 self:SetBindingClick(true, "MOUSEWHEELUP", self, "SCROLLUP") 会失效
-        -- self:SetBindingClick(true, "MOUSEWHEELUP", self, "SCROLLUP")
-        -- self:SetBindingClick(true, "MOUSEWHEELDOWN", self, "SCROLLDOWN")
+        --! vehicle (previous button)
+        local oldUnit = mouseoverbutton:GetAttribute("oldUnit")
+        if oldUnit then
+            -- print("wrap restore unit")
+            mouseoverbutton:SetAttribute("unit", oldUnit)
+            mouseoverbutton:SetAttribute("oldUnit", nil)
+        end
+    end
+    mouseoverbutton = self
 
-        -- self:SetBindingClick(true, "SHIFT-B", self, "shiftB")
-        -- self:SetBindingClick(true, "SHIFT-C", self, "shiftC")
+    local menuKey = self:GetAttribute("menu")
+    if menuKey then
+        if combatstate == "true" then
+            self:SetAttribute(menuKey, nil)
+        else
+            self:SetAttribute(menuKey, "menu")
+        end
+    end
+]]
+wrapFrame:SetAttribute("clickcast-onenter", onEnterSnippet)
 
+local mouseoverUpdater = CreateFrame("Frame")
+local function UpdateMouseover(self)
+    self:SetScript("OnUpdate", nil)
+    if InCombatLockdown() then
+        self:RegisterEvent("PLAYER_REGEN_ENABLED")
+        return
+    end
+    self:UnregisterEvent("PLAYER_REGEN_ENABLED")
+
+    local frame = GetMouseFocus()
+    if not frame or not frame._cellOnEnterWrapped or not frame:IsVisible() then
+        frame = nil
+    end
+
+    if frame then
+        frame:SetAttribute("_entered", true)
+        frame:SetAttribute("_wrapentered", true)
+        wrapFrame:SetFrameRef("clickcast-hover", frame)
+        wrapFrame:Execute([[
+            local frame = self:GetFrameRef("clickcast-hover")
+            control:RunFor(frame, self:GetAttribute("clickcast-onenter"))
+            control:RunFor(frame, frame:GetAttribute("clickcast-bindings"))
+        ]])
+    else
+        wrapFrame:Execute([[
+            if mouseoverbutton then
+                mouseoverbutton:ClearBindings()
+                mouseoverbutton = nil
+            end
+        ]])
+    end
+end
+
+local function QueueMouseoverUpdate()
+    if InCombatLockdown() then
+        mouseoverUpdater:RegisterEvent("PLAYER_REGEN_ENABLED")
+    else
+        mouseoverUpdater:SetScript("OnUpdate", UpdateMouseover)
+    end
+end
+
+mouseoverUpdater:SetScript("OnEvent", function(self)
+    self:UnregisterEvent("PLAYER_REGEN_ENABLED")
+    QueueMouseoverUpdate()
+end)
+
+local function ClickCasting_OnAttributeChanged(self, name)
+    if name == "unit" or name == "useparent-unit" or name == "unitsuffix" then
+        QueueMouseoverUpdate()
+    end
+end
+
+local function ClickCasting_OnEnterLeave(self, motion)
+    if not motion then
+        QueueMouseoverUpdate()
+    end
+end
+
+local updateUnitSnippet = [[
         --! vehicle
         local unit = self:GetAttribute("unit")
         if not unit and self:GetAttribute("useparent-unit") then
@@ -292,47 +365,71 @@ local function SetBindingClicks(b)
                 end
 
                 if k and k ~= "" and self:GetAttribute(k) then
-                    self:SetAttribute(k, string.gsub(self:GetAttribute(k), "@%w+", "@"..clickCastingUnit))
-                    -- print(self:GetAttribute(k))
+                    local value = self:GetAttribute(k)
+                    local updated = string.gsub(value, "@%w+", "@"..clickCastingUnit)
+                    if value ~= updated then
+                        self:SetAttribute(k, updated)
+                    end
                 end
             end
         end
 
-    ]])
+        return true
+]]
+
+local function SetBindingClicks(b)
+    b:SetAttribute("clickcast-unit", updateUnitSnippet)
+    b:SetAttribute("_onenter", [[
+        -- print("_onenter")
+        self:ClearBindings()
+    ]]..(b:GetAttribute("snippet") or "")..updateUnitSnippet)
+    b:SetAttribute("clickcast-bindings", b:GetAttribute("_onenter"))
 
     if not b._cellOnEnterWrapped then
         b._cellOnEnterWrapped = true
-        wrapFrame:WrapScript(b, "OnEnter", [[
-            -- print("OnEnter")
-            if mouseoverbutton then
-                --! NOTE: 鼠标放在过远单位上->被挡住->移走->移至可用单位再移出，会发现之前的不可用单位的按键绑定仍未取消
-                mouseoverbutton:ClearBindings()
+        wrapFrame:WrapScript(b, "OnEnter", onEnterSnippet)
 
-                --! vehicle (previous button)
-                local oldUnit = mouseoverbutton:GetAttribute("oldUnit")
-                if oldUnit then
-                    -- print("wrap restore unit")
-                    mouseoverbutton:SetAttribute("unit", oldUnit)
-                    mouseoverbutton:SetAttribute("oldUnit", nil)
-                end
-            end
-            mouseoverbutton = self
-
-            local menuKey = self:GetAttribute("menu")
-            if menuKey then
-                if combatstate == "true" then
-                    self:SetAttribute(menuKey, nil)
-                else
-                    self:SetAttribute(menuKey, "menu")
-                end
-            end
-        ]])
-
-        wrapFrame:WrapScript(b, "OnHide", [[
+        wrapFrame:WrapScript(b, "OnLeave", [[
             if mouseoverbutton == self then
                 mouseoverbutton = nil
             end
         ]])
+
+        -- Group headers hide/show existing buttons even with a stationary cursor.
+        -- Keep the last entered button across that cycle, not its active bindings.
+        wrapFrame:WrapScript(b, "OnShow", [[
+            if mouseoverbutton == self and self:IsUnderMouse() then
+                if UnitExists("mouseover") then
+                    control:RunFor(self, self:GetAttribute("clickcast-bindings"))
+                end
+                owner:SetAttribute("state-mouseoverstate", nil)
+            end
+        ]])
+
+        wrapFrame:WrapScript(b, "OnAttributeChanged", [[
+            if name == "unit" or name == "useparent-unit" or name == "unitsuffix" then
+                local frame = mouseoverbutton
+                if frame and frame:IsVisible() and frame:IsUnderMouse()
+                    and (frame == self or (frame:GetAttribute("useparent-unit") and frame:GetParent() == self)) then
+                    if UnitExists("mouseover") then
+                        control:RunFor(frame, frame:GetAttribute("clickcast-bindings"))
+                    end
+                    owner:SetAttribute("state-mouseoverstate", nil)
+                end
+            end
+        ]])
+
+        wrapFrame:WrapScript(b, "OnClick", [[
+            if not control:RunFor(self, self:GetAttribute("clickcast-unit")) then
+                return false
+            end
+        ]])
+
+        b:HookScript("OnShow", QueueMouseoverUpdate)
+        b:HookScript("OnHide", QueueMouseoverUpdate)
+        b:HookScript("OnAttributeChanged", ClickCasting_OnAttributeChanged)
+        b:HookScript("OnEnter", ClickCasting_OnEnterLeave)
+        b:HookScript("OnLeave", ClickCasting_OnEnterLeave)
     end
 
     --! NOTE: if another frame shows in front of b, _onleave will NOT trigger. Use WrapScript to solve this issue.
@@ -340,11 +437,6 @@ local function SetBindingClicks(b)
         -- print("_onleave")
         self:ClearBindings()
     ]])
-
-    -- wrapFrame:WrapScript(b, "OnLeave", [[
-    --     -- print("OnLeave")
-    --     mouseoverbutton = nil
-    -- ]])
 
     b:SetAttribute("_onhide", [[
         self:ClearBindings()
@@ -608,6 +700,7 @@ function F.UpdateClickCastOnFrame(frame, snippet)
         SetBindingClicks(frame)
         -- load db and set attribute
         ApplyClickCastings(frame)
+        QueueMouseoverUpdate()
     end
 end
 
