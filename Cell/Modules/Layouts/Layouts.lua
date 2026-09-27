@@ -2199,6 +2199,7 @@ local function CreateLayoutSetupPane()
     combineGroupsCB = Cell.CreateCheckButton(pages.main, L["Combine Groups"].." ("..L["Raid"]..")", function(checked, self)
         selectedLayoutTable["main"]["combineGroups"] = checked
         Cell.Fire("UpdateLayout", selectedLayout, "header")
+        Cell.Fire("UpdateIndicators", selectedLayout)
         UpdateSliderStatus()
         -- preview
         UpdateLayoutPreview()
