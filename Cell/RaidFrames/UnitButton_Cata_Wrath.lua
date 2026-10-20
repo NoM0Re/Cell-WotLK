@@ -1057,7 +1057,7 @@ local function FilterWeakenedSoul(spellId)
     return spellId ~= 6788 or Cell.vars.playerClassID == 5
 end
 
-local function UnitButton_UpdateDebuffs(self)
+local function UnitButton_UpdateDebuffs(self, hasUnit)
     local unit = self.states.displayedUnit
 
     -- self.states.BGOrb = nil
@@ -1069,93 +1069,95 @@ local function UnitButton_UpdateDebuffs(self)
     local glowType, glowOptions
     local refreshing = false
 
-    for i = 1, 40 do
-        local name, _, icon, count, debuffType, duration, expirationTime, source, _, _, spellId = UnitAura(unit, i, "HARMFUL")
-        if not name then
-            break
-        end
-
-        local auraInstanceID = (source or "") .. ":" .. tostring(spellId or name or i)
-
-        -- check Bleed
-        debuffType = I.CheckDebuffType(debuffType, spellId)
-
-        if duration then
-            if Cell.vars.iconAnimation == "duration" then
-                local timeIncreased = self._debuffs_cache[auraInstanceID] and (expirationTime - self._debuffs_cache[auraInstanceID] >= 0.5) or false
-                local countIncreased = self._debuffs_count_cache[auraInstanceID] and (count > self._debuffs_count_cache[auraInstanceID]) or false
-                refreshing = timeIncreased or countIncreased
-            elseif Cell.vars.iconAnimation == "stack" then
-                refreshing = self._debuffs_count_cache[auraInstanceID] and (count > self._debuffs_count_cache[auraInstanceID]) or false
-            else
-                refreshing = false
+    if hasUnit then
+        for i = 1, 40 do
+            local name, _, icon, count, debuffType, duration, expirationTime, source, _, _, spellId = UnitAura(unit, i, "HARMFUL")
+            if not name then
+                break
             end
 
-            if enabledIndicators["debuffs"] and not Cell.vars.debuffBlacklist[spellId] and FilterWeakenedSoul(spellId) then
-                if not indicatorBooleans["debuffs"] or I.CanDispel(debuffType) then
-                    if Cell.vars.bigDebuffs[spellId] then  -- isBigDebuff
-                        self._debuffs_big[i] = refreshing
-                    else
-                        self._debuffs_normal[i] = refreshing
-                    end
+            local auraInstanceID = (source or "") .. ":" .. tostring(spellId or name or i)
+
+            -- check Bleed
+            debuffType = I.CheckDebuffType(debuffType, spellId)
+
+            if duration then
+                if Cell.vars.iconAnimation == "duration" then
+                    local timeIncreased = self._debuffs_cache[auraInstanceID] and (expirationTime - self._debuffs_cache[auraInstanceID] >= 0.5) or false
+                    local countIncreased = self._debuffs_count_cache[auraInstanceID] and (count > self._debuffs_count_cache[auraInstanceID]) or false
+                    refreshing = timeIncreased or countIncreased
+                elseif Cell.vars.iconAnimation == "stack" then
+                    refreshing = self._debuffs_count_cache[auraInstanceID] and (count > self._debuffs_count_cache[auraInstanceID]) or false
+                else
+                    refreshing = false
                 end
-            end
 
-            -- user created indicators
-            I.UpdateCustomIndicators(self, "debuff", spellId, name, expirationTime - duration, duration, debuffType or "", icon, count, refreshing, source == "player" or source == "pet")
-
-            -- prepare raidDebuffs
-            if enabledIndicators["raidDebuffs"] and I.GetDebuffOrder(name, spellId, count) then
-                raidDebuffsFound = true
-                tinsert(self._debuffs_raid, i)
-                self._debuffs_raid_refreshing[i] = refreshing -- store all raidDebuffs
-                self._debuffs_raid_orders[i] = I.GetDebuffOrder(name, spellId, count)
-
-                if not indicatorBooleans["raidDebuffs"] then -- glow all matching debuffs
-                    glowType, glowOptions = I.GetDebuffGlow(name, spellId, count)
-                    if glowType and glowType ~= "None" then
-                        self._debuffs_glow_current[glowType] = glowOptions
-                        self._debuffs_glow_cache[glowType] = true
-                    end
-                end
-            end
-
-            self._debuffs_cache[auraInstanceID] = expirationTime
-            self._debuffs_count_cache[auraInstanceID] = count
-            self._debuffs_current[auraInstanceID] = i
-
-            if enabledIndicators["dispels"] and debuffType and debuffType ~= "" then
-                -- all dispels / only dispellableByMe
-                if not indicatorBooleans["dispels"]["dispellableByMe"] or I.CanDispel(debuffType) or debuffType == "Bleed" then
-                    if indicatorBooleans["dispels"][debuffType] then
-                        if Cell.vars.dispelBlacklist[spellId] then
-                            -- no highlight
-                            self._debuffs_dispel[debuffType] = false
+                if enabledIndicators["debuffs"] and not Cell.vars.debuffBlacklist[spellId] and FilterWeakenedSoul(spellId) then
+                    if not indicatorBooleans["debuffs"] or I.CanDispel(debuffType) then
+                        if Cell.vars.bigDebuffs[spellId] then  -- isBigDebuff
+                            self._debuffs_big[i] = refreshing
                         else
-                            self._debuffs_dispel[debuffType] = true
+                            self._debuffs_normal[i] = refreshing
                         end
                     end
                 end
-            end
 
-            if enabledIndicators["powerWordShield"] and spellId == 6788 then
-                wsFound = true
-                self.indicators.powerWordShield:SetWeakenedSoulCooldown(expirationTime - duration, duration, source == "player")
-            end
+                -- user created indicators
+                I.UpdateCustomIndicators(self, "debuff", spellId, name, expirationTime - duration, duration, debuffType or "", icon, count, refreshing, source == "player" or source == "pet")
 
-            -- BG orbs
-            -- if spellId == 121164 then
-            --     self.states.BGOrb = "blue"
-            -- end
-            -- if spellId == 121175 then
-            --     self.states.BGOrb = "purple"
-            -- end
-            -- if spellId == 121176 then
-            --     self.states.BGOrb = "green"
-            -- end
-            -- if spellId == 121177 then
-            --     self.states.BGOrb = "orange"
-            -- end
+                -- prepare raidDebuffs
+                if enabledIndicators["raidDebuffs"] and I.GetDebuffOrder(name, spellId, count) then
+                    raidDebuffsFound = true
+                    tinsert(self._debuffs_raid, i)
+                    self._debuffs_raid_refreshing[i] = refreshing -- store all raidDebuffs
+                    self._debuffs_raid_orders[i] = I.GetDebuffOrder(name, spellId, count)
+
+                    if not indicatorBooleans["raidDebuffs"] then -- glow all matching debuffs
+                        glowType, glowOptions = I.GetDebuffGlow(name, spellId, count)
+                        if glowType and glowType ~= "None" then
+                            self._debuffs_glow_current[glowType] = glowOptions
+                            self._debuffs_glow_cache[glowType] = true
+                        end
+                    end
+                end
+
+                self._debuffs_cache[auraInstanceID] = expirationTime
+                self._debuffs_count_cache[auraInstanceID] = count
+                self._debuffs_current[auraInstanceID] = i
+
+                if enabledIndicators["dispels"] and debuffType and debuffType ~= "" then
+                    -- all dispels / only dispellableByMe
+                    if not indicatorBooleans["dispels"]["dispellableByMe"] or I.CanDispel(debuffType) or debuffType == "Bleed" then
+                        if indicatorBooleans["dispels"][debuffType] then
+                            if Cell.vars.dispelBlacklist[spellId] then
+                                -- no highlight
+                                self._debuffs_dispel[debuffType] = false
+                            else
+                                self._debuffs_dispel[debuffType] = true
+                            end
+                        end
+                    end
+                end
+
+                if enabledIndicators["powerWordShield"] and spellId == 6788 then
+                    wsFound = true
+                    self.indicators.powerWordShield:SetWeakenedSoulCooldown(expirationTime - duration, duration, source == "player")
+                end
+
+                -- BG orbs
+                -- if spellId == 121164 then
+                --     self.states.BGOrb = "blue"
+                -- end
+                -- if spellId == 121175 then
+                --     self.states.BGOrb = "purple"
+                -- end
+                -- if spellId == 121176 then
+                --     self.states.BGOrb = "green"
+                -- end
+                -- if spellId == 121177 then
+                --     self.states.BGOrb = "orange"
+                -- end
+            end
         end
     end
 
@@ -1265,7 +1267,7 @@ local function UnitButton_UpdateDebuffs(self)
     end
 
     -- update dispels
-    if F.UnitInGroup(unit) or UnitIsFriend("player", unit) then
+    if not hasUnit or F.UnitInGroup(unit) or UnitIsFriend("player", unit) then
         self.indicators.dispels:SetDispels(self._debuffs_dispel)
     end
 
@@ -1301,7 +1303,7 @@ end
 -------------------------------------------------
 -- buffs
 -------------------------------------------------
-local function UnitButton_UpdateBuffs(self)
+local function UnitButton_UpdateBuffs(self, hasUnit)
     local unit = self.states.displayedUnit
 
     self.states.BGFlag = nil
@@ -1312,78 +1314,80 @@ local function UnitButton_UpdateBuffs(self)
     local refreshing = false
     local defensiveFound, externalFound, allFound, drinkingFound, pwsFound = 1, 1, 1, false, false
 
-    for i = 1, 40 do
-        local name, _, icon, count, debuffType, duration, expirationTime, source, _, _, spellId = UnitAura(unit, i, "HELPFUL")
-        if not name then
-            break
-        end
-
-        local auraInstanceID = (source or "") .. ":" .. tostring(spellId or name or i)
-
-        if duration then
-            if Cell.vars.iconAnimation == "duration" then
-                local timeIncreased = self._buffs_cache[auraInstanceID] and (expirationTime - self._buffs_cache[auraInstanceID] >= 0.5) or false
-                local countIncreased = self._buffs_count_cache[auraInstanceID] and (count > self._buffs_count_cache[auraInstanceID]) or false
-                refreshing = timeIncreased or countIncreased
-            elseif Cell.vars.iconAnimation == "stack" then
-                refreshing = self._buffs_count_cache[auraInstanceID] and (count > self._buffs_count_cache[auraInstanceID]) or false
-            else
-                refreshing = false
+    if hasUnit then
+        for i = 1, 40 do
+            local name, _, icon, count, debuffType, duration, expirationTime, source, _, _, spellId = UnitAura(unit, i, "HELPFUL")
+            if not name then
+                break
             end
 
-            -- defensiveCooldowns
-            if enabledIndicators["defensiveCooldowns"] and I.IsDefensiveCooldown(name, spellId) and defensiveFound <= indicatorNums["defensiveCooldowns"] then
-                -- start, duration, debuffType, texture, count, refreshing
-                self.indicators.defensiveCooldowns[defensiveFound]:SetCooldown(expirationTime - duration, duration, nil, icon, count, refreshing)
-                defensiveFound = defensiveFound + 1
-            end
+            local auraInstanceID = (source or "") .. ":" .. tostring(spellId or name or i)
 
-            -- externalCooldowns
-            if enabledIndicators["externalCooldowns"] and I.IsExternalCooldown(name, spellId, source, unit) and externalFound <= indicatorNums["externalCooldowns"] then
-                -- start, duration, debuffType, texture, count, refreshing
-                self.indicators.externalCooldowns[externalFound]:SetCooldown(expirationTime - duration, duration, nil, icon, count, refreshing)
-                externalFound = externalFound + 1
-            end
-
-            -- allCooldowns
-            if enabledIndicators["allCooldowns"] and (I.IsExternalCooldown(name, spellId, source, unit) or I.IsDefensiveCooldown(name, spellId)) and allFound <= indicatorNums["allCooldowns"] then
-                -- start, duration, debuffType, texture, count, refreshing
-                self.indicators.allCooldowns[allFound]:SetCooldown(expirationTime - duration, duration, nil, icon, count, refreshing)
-                allFound = allFound + 1
-            end
-
-            -- drinking
-            if enabledIndicators["statusText"] and I.IsDrinking(name) then
-                if not self.indicators.statusText:GetStatus() then
-                    self.indicators.statusText:SetStatus("DRINKING")
-                    self.indicators.statusText:Show()
+            if duration then
+                if Cell.vars.iconAnimation == "duration" then
+                    local timeIncreased = self._buffs_cache[auraInstanceID] and (expirationTime - self._buffs_cache[auraInstanceID] >= 0.5) or false
+                    local countIncreased = self._buffs_count_cache[auraInstanceID] and (count > self._buffs_count_cache[auraInstanceID]) or false
+                    refreshing = timeIncreased or countIncreased
+                elseif Cell.vars.iconAnimation == "stack" then
+                    refreshing = self._buffs_count_cache[auraInstanceID] and (count > self._buffs_count_cache[auraInstanceID]) or false
+                else
+                    refreshing = false
                 end
-                drinkingFound = true
-            end
 
-            -- user created indicators
-            I.UpdateCustomIndicators(self, "buff", spellId, name, expirationTime - duration, duration, nil, icon, count, refreshing, source == "player" or source == "pet")
-
-            -- check BG flags for statusIcon
-            if spellId == 23333 then -- Warsong Flag
-                self.states.BGFlag = "horde_icon_and_flag-dynamicIcon"
-            elseif spellId == 23335 then -- Silverwing Flag
-                self.states.BGFlag = "alliance_icon_and_flag-dynamicIcon"
-            elseif spellId == 34976 then -- Netherstorm Flag
-                local faction = UnitFactionGroup(unit)
-                if faction then
-                    self.states.BGFlag = strlower(faction).."_icon_and_flag-dynamicIcon"
+                -- defensiveCooldowns
+                if enabledIndicators["defensiveCooldowns"] and I.IsDefensiveCooldown(name, spellId) and defensiveFound <= indicatorNums["defensiveCooldowns"] then
+                    -- start, duration, debuffType, texture, count, refreshing
+                    self.indicators.defensiveCooldowns[defensiveFound]:SetCooldown(expirationTime - duration, duration, nil, icon, count, refreshing)
+                    defensiveFound = defensiveFound + 1
                 end
-            end
 
-            if enabledIndicators["powerWordShield"] and POWER_WORD_SHIELD[spellId] and (not indicatorBooleans["powerWordShield"] or source == "player") then
-                pwsFound = true
-                self.indicators.powerWordShield:SetShieldCooldown(expirationTime - duration, duration)
-            end
+                -- externalCooldowns
+                if enabledIndicators["externalCooldowns"] and I.IsExternalCooldown(name, spellId, source, unit) and externalFound <= indicatorNums["externalCooldowns"] then
+                    -- start, duration, debuffType, texture, count, refreshing
+                    self.indicators.externalCooldowns[externalFound]:SetCooldown(expirationTime - duration, duration, nil, icon, count, refreshing)
+                    externalFound = externalFound + 1
+                end
 
-            self._buffs_current[auraInstanceID] = i
-            self._buffs_cache[auraInstanceID] = expirationTime
-            self._buffs_count_cache[auraInstanceID] = count
+                -- allCooldowns
+                if enabledIndicators["allCooldowns"] and (I.IsExternalCooldown(name, spellId, source, unit) or I.IsDefensiveCooldown(name, spellId)) and allFound <= indicatorNums["allCooldowns"] then
+                    -- start, duration, debuffType, texture, count, refreshing
+                    self.indicators.allCooldowns[allFound]:SetCooldown(expirationTime - duration, duration, nil, icon, count, refreshing)
+                    allFound = allFound + 1
+                end
+
+                -- drinking
+                if enabledIndicators["statusText"] and I.IsDrinking(name) then
+                    if not self.indicators.statusText:GetStatus() then
+                        self.indicators.statusText:SetStatus("DRINKING")
+                        self.indicators.statusText:Show()
+                    end
+                    drinkingFound = true
+                end
+
+                -- user created indicators
+                I.UpdateCustomIndicators(self, "buff", spellId, name, expirationTime - duration, duration, nil, icon, count, refreshing, source == "player" or source == "pet")
+
+                -- check BG flags for statusIcon
+                if spellId == 23333 then -- Warsong Flag
+                    self.states.BGFlag = "horde_icon_and_flag-dynamicIcon"
+                elseif spellId == 23335 then -- Silverwing Flag
+                    self.states.BGFlag = "alliance_icon_and_flag-dynamicIcon"
+                elseif spellId == 34976 then -- Netherstorm Flag
+                    local faction = UnitFactionGroup(unit)
+                    if faction then
+                        self.states.BGFlag = strlower(faction).."_icon_and_flag-dynamicIcon"
+                    end
+                end
+
+                if enabledIndicators["powerWordShield"] and POWER_WORD_SHIELD[spellId] and (not indicatorBooleans["powerWordShield"] or source == "player") then
+                    pwsFound = true
+                    self.indicators.powerWordShield:SetShieldCooldown(expirationTime - duration, duration)
+                end
+
+                self._buffs_current[auraInstanceID] = i
+                self._buffs_cache[auraInstanceID] = expirationTime
+                self._buffs_count_cache[auraInstanceID] = count
+            end
         end
     end
 
@@ -1743,7 +1747,10 @@ end
 -------------------------------------------------
 local function UnitButton_UpdateTarget(self)
     local unit = self.states.displayedUnit
-    if not unit then return end
+    if not unit then
+        self.widgets.targetHighlight:Hide()
+        return
+    end
 
     if UnitIsUnit(unit, "target") then
         if highlightEnabled then self.widgets.targetHighlight:Show() end
@@ -1771,7 +1778,11 @@ end
 
 UnitButton_UpdateRole = function(self)
     local unit = self.states.unit
-    if not unit then return end
+    if not unit or not UnitExists(unit) then
+        self.indicators.roleIcon:Hide()
+        self.states.role = nil
+        return
+    end
 
     local role = F.UnitGroupRolesAssigned(unit)
     self.states.role = role
@@ -1791,7 +1802,12 @@ end
 
 UnitButton_UpdateLeader = function(self, event)
     local unit = self.states.unit
-    if not unit then return end
+    if not unit or not UnitExists(unit) then
+        self.indicators.leaderIcon:Hide()
+        self.states.isLeader = nil
+        self.states.isAssistant = nil
+        return
+    end
 
     local leaderIcon = self.indicators.leaderIcon
 
@@ -1801,9 +1817,16 @@ UnitButton_UpdateLeader = function(self, event)
             return
         end
 
-        local isLeader = UnitIsPartyLeader(unit)
+        local isLeader, isAssistant
+        if F.IsInRaid() then
+            isLeader = UnitIsPartyLeader(unit)
+            isAssistant = UnitIsRaidOfficer(unit)
+        elseif GetNumPartyMembers() > 0 then
+            local leaderIndex = GetPartyLeaderIndex()
+            local leaderUnit = leaderIndex == 0 and "player" or "party"..leaderIndex
+            isLeader = UnitIsUnit(unit, leaderUnit)
+        end
         self.states.isLeader = isLeader
-        local isAssistant = UnitIsRaidOfficer(unit) and F.IsInRaid()
         self.states.isAssistant = isAssistant
 
         leaderIcon:SetIcon(isLeader, isAssistant)
@@ -1814,7 +1837,10 @@ end
 
 local function UnitButton_UpdatePlayerRaidIcon(self)
     local unit = self.states.displayedUnit
-    if not unit then return end
+    if not unit then
+        self.indicators.playerRaidIcon:Hide()
+        return
+    end
 
     local playerRaidIcon = self.indicators.playerRaidIcon
 
@@ -1834,7 +1860,10 @@ end
 
 local function UnitButton_UpdateTargetRaidIcon(self)
     local unit = self.states.displayedUnit
-    if not unit then return end
+    if not unit then
+        self.indicators.targetRaidIcon:Hide()
+        return
+    end
 
     local targetRaidIcon = self.indicators.targetRaidIcon
 
@@ -1854,7 +1883,11 @@ end
 
 local function UnitButton_UpdateReadyCheck(self)
     local unit = self.states.unit
-    if not unit then return end
+    if not unit or not UnitExists(unit) then
+        self.indicators.readyCheckIcon:Hide()
+        self.states.readyCheckStatus = nil
+        return
+    end
 
     local status = GetReadyCheckStatus(unit)
     self.states.readyCheckStatus = status
@@ -1871,6 +1904,13 @@ end
 
 local function UnitButton_FinishReadyCheck(self)
     if not enabledIndicators["readyCheckIcon"] then return end
+
+    local unit = self.states.unit
+    if not unit or not UnitExists(unit) then
+        self.indicators.readyCheckIcon:Hide()
+        self.states.readyCheckStatus = nil
+        return
+    end
 
     if self.states.readyCheckStatus == "waiting" then
         -- self.widgets.readyCheckHighlight:SetVertexColor(unpack(READYCHECK_STATUS.notready.c))
@@ -2068,16 +2108,19 @@ UnitButton_UpdateAuras = function(self)
     if not self._indicatorsReady then return end
 
     local unit = self.states.displayedUnit
-    if not unit then return end
-
-    UnitButton_UpdateDebuffs(self)
-    UnitButton_UpdateBuffs(self)
+    local hasUnit = unit and UnitExists(unit)
+    UnitButton_UpdateDebuffs(self, hasUnit)
+    UnitButton_UpdateBuffs(self, hasUnit)
     I.UpdateStatusIcon(self)
 end
 
 local function UnitButton_UpdateThreat(self)
     local unit = self.states.displayedUnit
-    if not unit or not UnitExists(unit) then return end
+    if not unit or not UnitExists(unit) then
+        self.indicators.aggroBlink:Hide()
+        self.indicators.aggroBorder:Hide()
+        return
+    end
 
     local status = UnitThreatSituation(unit)
     if status and status >= 1 then
@@ -2100,7 +2143,10 @@ local function UnitButton_UpdateThreatBar(self)
     end
 
     local unit = self.states.displayedUnit
-    if not unit or not UnitExists(unit) then return end
+    if not unit or not UnitExists(unit) then
+        self.indicators.aggroBar:Hide()
+        return
+    end
 
     -- isTanking, status, scaledPercentage, rawPercentage, threatValue = UnitDetailedThreatSituation(unit, mobUnit)
     local _, status, scaledPercentage, rawPercentage = UnitDetailedThreatSituation(unit, "target")
@@ -2117,7 +2163,10 @@ local function UnitButton_UpdateCombatIcon(self)
     if not enabledIndicators["combatIcon"] then return end
 
     local unit = self.states.displayedUnit
-    if not unit then return end
+    if not unit then
+        self.indicators.combatIcon:Hide()
+        return
+    end
 
     if not (indicatorBooleans["combatIcon"] and InCombatLockdown()) and UnitAffectingCombat(unit) then
         self.indicators.combatIcon:Show()

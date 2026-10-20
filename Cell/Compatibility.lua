@@ -15,6 +15,26 @@ local GetNumRaidMembers = _G.GetNumRaidMembers
 local GetNumPartyMembers = _G.GetNumPartyMembers
 local UnitClass = _G.UnitClass
 
+-- supress stupid "partyX is not in your group" messages when zoning from blizzard secure handler
+do
+    local suppressUntil = 0
+    local messages = {}
+    for i = 1, 4 do
+        messages[format(ERR_TARGET_NOT_IN_GROUP_S, "party"..i)] = true
+    end
+
+    local zoningFrame = CreateFrame("Frame")
+    zoningFrame:RegisterEvent("PLAYER_LEAVING_WORLD")
+    zoningFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
+    zoningFrame:SetScript("OnEvent", function()
+        suppressUntil = GetTime() + 10
+    end)
+
+    ChatFrame_AddMessageEventFilter("CHAT_MSG_SYSTEM", function(_, _, message)
+        return GetTime() < suppressUntil and messages[message]
+    end)
+end
+
 local CLASS_IDS = {
     WARRIOR = 1,
     PALADIN = 2,

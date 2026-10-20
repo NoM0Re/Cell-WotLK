@@ -204,7 +204,7 @@ function I.ResetCustomIndicators(unitButton, auraType)
     for indicatorName, indicatorTable in pairs(customIndicators[auraType]) do
         if enabledIndicators[indicatorName] and unitButton.indicators[indicatorName] then
             unitButton.indicators[indicatorName]:Hide(true)
-            if indicatorTable["num"] then
+            if unit and indicatorTable["num"] then
                 if not indicatorTable["found"][unit] then
                     indicatorTable["found"][unit] = {}
                 else
@@ -219,7 +219,7 @@ function I.ResetCustomIndicators(unitButton, auraType)
                         end
                     end
                 end
-            else
+            elseif unit then
                 indicatorTable["topOrder"][unit] = 999
                 if not indicatorTable["top"][unit] then
                     indicatorTable["top"][unit] = {}
@@ -314,6 +314,7 @@ function I.ShowCustomIndicators(unitButton, auraType)
     if not unitButton._indicatorsReady then return end
 
     local unit = unitButton.states.displayedUnit
+    if not unit then return end
     for indicatorName, indicatorTable in pairs(customIndicators[auraType]) do
         local indicator = unitButton.indicators[indicatorName]
         if indicator and enabledIndicators[indicatorName] then

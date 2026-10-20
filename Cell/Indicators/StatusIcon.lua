@@ -8,6 +8,7 @@ local P = Cell.pixelPerfectFuncs
 
 local ResurrectionTexture = "Interface\\AddOns\\Cell\\Media\\Icons\\Raid-Icon-Rez.blp"
 local GetNumRaidMembers = GetNumRaidMembers
+local UnitExists = UnitExists
 
 -------------------------------------------------
 -- event
@@ -302,7 +303,10 @@ end
 -------------------------------------------------
 function I.UpdateStatusIcon(button)
     local unit = button.states.unit
-    if not unit then return end
+    if not unit or not UnitExists(unit) then
+        button.indicators.statusIcon:Hide()
+        return
+    end
 
     local icon = button.indicators.statusIcon
 

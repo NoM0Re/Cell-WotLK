@@ -19602,7 +19602,7 @@ globals = {
 	"ZOOM_OUT",
 	"ZOOM_OUT_BUTTON_TEXT",
 	"_RECORDING_WARNING_CORRUPTED",
-	"GetNumPartyMembers", "GetNumRaidMembers", "noop", "tInvert", "DeltaLerp",
+	"GetNumPartyMembers", "GetNumRaidMembers", "GetPartyLeaderIndex", "noop", "tInvert", "DeltaLerp",
 	"GetNumEquipmentSets", "GetEquipmentSetInfo", "CR_HASTE_MELEE", "CR_HASTE_RANGED",
 	"CR_CRIT_TAKEN_MELEE", "CR_CRIT_TAKEN_RANGED", "CR_CRIT_TAKEN_SPELL",
 	"BNGetNumFriendToons", "BNGetFriendToonInfo", "KuiNameplates", "TidyPlatesThreat",

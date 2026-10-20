@@ -18,6 +18,18 @@ local LoadPageDB
 
 local PREVIEW_FRAME_LEVEL = 30
 
+local previewMenuRefreshPending
+local function RefreshMenusAfterPreview()
+    if previewMenuRefreshPending then return end
+    previewMenuRefreshPending = true
+    -- Wrath may not deliver OnLeave to the real mover covered by a preview.
+    -- Recheck after the preview is hidden and mouse focus has settled.
+    F.C_Timer.After(0, function()
+        previewMenuRefreshPending = nil
+        Cell.Fire("UpdateMenu", "fadeOut")
+    end)
+end
+
 local function SetFrameStrataAndLevel(frame, strata, frameLevel)
     frame:SetFrameStrata(strata)
     frame:SetFrameLevel(frameLevel)
@@ -166,6 +178,7 @@ local function CreateLayoutPreview()
     layoutPreview:SetFrameStrata("HIGH")
     layoutPreview:SetToplevel(true)
     layoutPreview:Hide()
+    layoutPreview:HookScript("OnHide", RefreshMenusAfterPreview)
 
     layoutPreviewAnchor = CreateFrame("Frame", "CellLayoutPreviewAnchorFrame", layoutPreview)
     -- layoutPreviewAnchor:SetPoint("TOPLEFT", CellParent, "CENTER")
@@ -523,6 +536,7 @@ local function CreateNPCPreview()
     npcPreview:SetFrameStrata("HIGH")
     npcPreview:SetToplevel(true)
     npcPreview:Hide()
+    npcPreview:HookScript("OnHide", RefreshMenusAfterPreview)
 
     npcPreviewAnchor = CreateFrame("Frame", "CellNPCPreviewAnchorFrame", npcPreview)
     P.Size(npcPreviewAnchor, 20, 10)
@@ -769,6 +783,7 @@ local function CreatePetPreview()
     petPreview:SetFrameStrata("HIGH")
     petPreview:SetToplevel(true)
     petPreview:Hide()
+    petPreview:HookScript("OnHide", RefreshMenusAfterPreview)
 
     petPreviewAnchor = CreateFrame("Frame", "CellPetPreviewAnchorFrame", petPreview)
     P.Size(petPreviewAnchor, 20, 10)
@@ -1047,6 +1062,7 @@ local function CreateSpotlightPreview()
     spotlightPreview:SetFrameStrata("HIGH")
     spotlightPreview:SetToplevel(true)
     spotlightPreview:Hide()
+    spotlightPreview:HookScript("OnHide", RefreshMenusAfterPreview)
 
     spotlightPreviewAnchor = CreateFrame("Frame", "CellSpotlightPreviewAnchorFrame", spotlightPreview)
     P.Size(spotlightPreviewAnchor, 20, 10)
