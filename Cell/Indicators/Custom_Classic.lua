@@ -131,13 +131,16 @@ function I.RemoveAllCustomIndicators(parent, indicatorTables)
 
     for indicatorName, indicator in pairs(parent.indicators) do
         local indicatorType = indicator.configs and indicator.configs["type"]
-        if string.find(indicatorName, "^indicator")
-        and (not reusableIndicators or reusableIndicators[indicatorName] ~= indicatorType)
-        then
-            indicator:ClearAllPoints()
-            indicator:Hide()
-            indicator:SetParent(nil)
-            parent.indicators[indicatorName] = nil
+        if string.find(indicatorName, "^indicator") then
+            local wantedType = reusableIndicators and reusableIndicators[indicatorName]
+            if wantedType and wantedType == indicatorType then
+                indicator:Hide(true)
+            else
+                indicator:ClearAllPoints()
+                indicator:Hide()
+                indicator:SetParent(nil)
+                parent.indicators[indicatorName] = nil
+            end
         end
     end
 end
@@ -154,7 +157,7 @@ function I.ResetCustomIndicatorTables()
     end
 end
 
-local function UpdateCustomIndicators(layout, indicatorName, setting, value, value2)
+function I.UpdateCustomIndicatorSettings(layout, indicatorName, setting, value, value2)
     if layout and layout ~= Cell.vars.currentLayout then return end
 
     if not indicatorName or not string.find(indicatorName, "^indicator") then return end
@@ -193,7 +196,6 @@ local function UpdateCustomIndicators(layout, indicatorName, setting, value, val
         end
     end
 end
-Cell.RegisterCallback("UpdateIndicators", "UpdateCustomIndicators", UpdateCustomIndicators)
 
 -------------------------------------------------
 -- reset

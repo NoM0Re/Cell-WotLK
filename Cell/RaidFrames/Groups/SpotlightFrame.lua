@@ -1059,6 +1059,7 @@ local function UpdateLayout(layout, which)
 
         if layout["spotlight"]["enabled"] then
             for i = 1, 15 do
+                B.QueueIndicatorInit(Cell.unitButtons.spotlight[i])
                 local unit = layout["spotlight"]["units"][i]
                 Cell.unitButtons.spotlight[i]:SetAttribute("hidePlaceholder", layout["spotlight"]["hidePlaceholder"])
 

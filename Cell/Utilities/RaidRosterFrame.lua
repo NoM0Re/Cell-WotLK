@@ -384,7 +384,7 @@ local function CreateRaidRosterGrid(parent, index)
         grid.isMoving = true
         movingGrid = grid
     end)
-    grid:SetScript("OnDragStop", function()
+    grid:SetScript("OnDragStop", function(self, noDrop)
         grid:SetFrameLevel(7)
         grid:StopMovingOrSizing()
         grid:ClearAllPoints()
@@ -399,10 +399,12 @@ local function CreateRaidRosterGrid(parent, index)
         grid:SetBackdropColor(0.1, 0.1, 0.1, 0.5)
         grid.isMoving = nil
 
-        for groupIndex = 1, 8 do
-            for gridIndex = 1, 5 do
-                if HandleGridDrop(groups[groupIndex][gridIndex]) then
-                    return
+        if noDrop ~= true then
+            for groupIndex = 1, 8 do
+                for gridIndex = 1, 5 do
+                    if HandleGridDrop(groups[groupIndex][gridIndex]) then
+                        return
+                    end
                 end
             end
         end
@@ -579,7 +581,7 @@ LoadRoster = function(allowRetry)
     end
 
     if movingGrid then
-        movingGrid:GetScript("OnDragStop")()
+        movingGrid:GetScript("OnDragStop")(movingGrid, true)
     end
 
     -- reset
@@ -631,6 +633,9 @@ raidRosterFrame:SetScript("OnShow", function()
 end)
 
 raidRosterFrame:SetScript("OnHide", function()
+    if movingGrid then
+        movingGrid:GetScript("OnDragStop")(movingGrid, true)
+    end
     raidRosterFrame:UnregisterEvent("RAID_ROSTER_UPDATE")
     raidRosterFrame:UnregisterEvent("PARTY_MEMBERS_CHANGED")
     Reset()
