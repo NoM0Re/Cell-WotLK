@@ -2099,7 +2099,7 @@ local function UnitButton_UpdateHealPrediction(self, skipStateUpdates, incomingH
             local casted = HealComm:GetHealAmount(self.__displayedGuid, HealComm.CASTED_HEALS) or 0
             -- local hot = select(3, HealComm:GetNextHealAmount(self.__displayedGuid, HealComm.HOT_HEALS)) or 0
             -- NOTE: hots within 3 seconds
-            local hotType = HealComm.OVERTIME_AND_BOMB_HEALS or bit.bor(HealComm.HOT_HEALS or 0x04, HealComm.BOMB_HEALS or 0x10)
+            local hotType = bit.bor(HealComm.HOT_HEALS, HealComm.BOMB_HEALS)
             local hot = HealComm:GetHealAmount(self.__displayedGuid, hotType, GetTime()+3) or 0
             value = (casted + hot) * modifier
         end
