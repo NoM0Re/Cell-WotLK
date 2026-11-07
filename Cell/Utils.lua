@@ -897,23 +897,6 @@ do
             settings.roster = nil
             return
         end
-        if header:GetAttribute("cell-role-sort") ~= (settings.sort ~= nil) then
-            header:SetAttribute("cell-role-sort", settings.sort ~= nil)
-        end
-        if header:GetAttribute("cell-group-filter") ~= settings.groupFilter then
-            header:SetAttribute("cell-group-filter", settings.groupFilter)
-        end
-        if settings.sort and not settings.combatDriver then
-            -- A nameList is a whitelist. Restore native membership filtering in combat.
-            SecureHandlerWrapScript(header, "OnAttributeChanged", header, [[
-                if name == "state-cellrolesort" and value == "combat" and self:GetAttribute("cell-role-sort") then
-                    self:SetAttribute("groupFilter", self:GetAttribute("cell-group-filter"))
-                    self:SetAttribute("nameList", nil)
-                end
-            ]])
-            RegisterStateDriver(header, "cellrolesort", "[combat] combat; peace")
-            settings.combatDriver = true
-        end
         local rosterChanged = settings.roster ~= roster
         settings.roster = roster
 
@@ -1016,7 +999,6 @@ do
     end
 
     roleSortFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
-    roleSortFrame:RegisterEvent("PLAYER_REGEN_DISABLED")
     roleSortFrame:RegisterEvent("PARTY_MEMBERS_CHANGED")
     roleSortFrame:RegisterEvent("RAID_ROSTER_UPDATE")
     roleSortFrame:RegisterEvent("UNIT_NAME_UPDATE")
