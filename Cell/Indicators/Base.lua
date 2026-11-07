@@ -1622,7 +1622,7 @@ local function Text_SetCooldown(frame, start, duration, debuffType, texture, cou
         if frame.durationTbl[1] then
             if frame.showStack and count ~= 0 then
                 if frame.circledStackNums then
-                    frame._count = circled[count].." "
+                    frame._count = (circled[count] or count).." "
                 else
                     frame._count = count.." "
                 end
@@ -1636,7 +1636,7 @@ local function Text_SetCooldown(frame, start, duration, debuffType, texture, cou
             -- always show stack
             count = count == 0 and 1 or count
             if frame.circledStackNums then
-                frame.text:SetText(circled[count])
+                frame.text:SetText(circled[count] or count)
             else
                 frame.text:SetText(count)
             end
@@ -2115,6 +2115,7 @@ local function Color_SetAnchor(color, anchorTo)
 end
 
 local function Color_SetColors(self, colors)
+    self.solidTex:SetTexture(Cell.vars.texture)
     self.state = nil
     self.type = colors[1]
     self.colors = colors
@@ -2162,7 +2163,7 @@ function I.CreateAura_Color(name, parent)
     solidTex:SetAllPoints(color)
     solidTex:Hide()
 
-    solidTex:SetScript("OnShow", function()
+    color:SetScript("OnShow", function()
         -- update texture
         solidTex:SetTexture(Cell.vars.texture)
     end)

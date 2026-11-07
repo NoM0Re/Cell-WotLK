@@ -184,6 +184,9 @@ local function ShowSpellRequest(button, spellId)
     if button then
         local unit = button.states.unit
 
+        HideGlow(button.widgets.srGlowFrame)
+        HideIcon(button.widgets.srIcon)
+
         --! save requesterUnit and buffId
         srUnits[unit] = srSpells[spellId][2]
 

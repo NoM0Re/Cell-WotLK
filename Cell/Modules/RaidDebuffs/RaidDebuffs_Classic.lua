@@ -745,7 +745,7 @@ local function CreateDebuffsFrame()
             local order = CellDB["raidDebuffs"][loadedInstance][index][selectedSpellId]["order"]
             CellDB["raidDebuffs"][loadedInstance][index][selectedSpellId] = nil
             for sId, sTable in pairs(CellDB["raidDebuffs"][loadedInstance][index]) do
-                if sTable["order"] > order then
+                if order > 0 and sTable["order"] > order then
                     sTable["order"] = sTable["order"] - 1 -- update orders
                 end
             end
@@ -860,7 +860,7 @@ local function RegisterForDrag(b)
                         if not CellDB["raidDebuffs"][loadedInstance][isGeneral and "general" or loadedBoss][debuffButtons[j].spellId] then
                             CellDB["raidDebuffs"][loadedInstance][isGeneral and "general" or loadedBoss][debuffButtons[j].spellId] = {
                                 ["order"] = j,
-                                ["trackByID"] = false,
+                                ["trackByID"] = moved["trackByID"],
                                 ["condition"] = {"None"},
                             }
                         else
@@ -914,7 +914,7 @@ local function RegisterForDrag(b)
                         if not CellDB["raidDebuffs"][loadedInstance][isGeneral and "general" or loadedBoss][debuffButtons[j].spellId] then
                             CellDB["raidDebuffs"][loadedInstance][isGeneral and "general" or loadedBoss][debuffButtons[j].spellId] = {
                                 ["order"] = j,
-                                ["trackByID"] = false,
+                                ["trackByID"] = moved["trackByID"],
                                 ["condition"] = {"None"},
                             }
                         else
@@ -1235,6 +1235,7 @@ local function CreateDetailsFrame()
 
     -- enable
     enabledCB = Cell.CreateCheckButton(detailsContentFrame, L["Enabled"], function(checked)
+        local t = selectedButtonIndex <= #currentBossTable["enabled"] and currentBossTable["enabled"][selectedButtonIndex] or currentBossTable["disabled"][selectedButtonIndex-#currentBossTable["enabled"]]
         local newOrder = checked and #currentBossTable["enabled"]+1 or 0
         -- update db, on re-enabled set its order to the last
         if not CellDB["raidDebuffs"][loadedInstance] then CellDB["raidDebuffs"][loadedInstance] = {} end
@@ -1243,7 +1244,7 @@ local function CreateDetailsFrame()
         if not CellDB["raidDebuffs"][loadedInstance][tIndex][selectedSpellId] then
             CellDB["raidDebuffs"][loadedInstance][tIndex][selectedSpellId] = {
                 ["order"] = newOrder,
-                ["trackByID"] = false,
+                ["trackByID"] = t["trackByID"],
                 ["condition"] = {"None"},
             }
         else
@@ -1320,6 +1321,7 @@ local function CreateDetailsFrame()
 
     -- use elapsed time
     useElapsedTimeCB = Cell.CreateCheckButton(detailsContentFrame, L["Use Elapsed Time"], function(checked)
+        local t = selectedButtonIndex <= #currentBossTable["enabled"] and currentBossTable["enabled"][selectedButtonIndex] or currentBossTable["disabled"][selectedButtonIndex-#currentBossTable["enabled"]]
         -- update db
         if not CellDB["raidDebuffs"][loadedInstance] then CellDB["raidDebuffs"][loadedInstance] = {} end
         local tIndex = isGeneral and "general" or loadedBoss
@@ -1327,7 +1329,7 @@ local function CreateDetailsFrame()
         if not CellDB["raidDebuffs"][loadedInstance][tIndex][selectedSpellId] then
             CellDB["raidDebuffs"][loadedInstance][tIndex][selectedSpellId] = {
                 ["order"] = selectedButtonIndex <= #currentBossTable["enabled"] and selectedButtonIndex or 0,
-                ["trackByID"] = false,
+                ["trackByID"] = t["trackByID"],
                 ["condition"] = {"None"},
                 ["useElapsedTime"] = checked
             }
@@ -1336,7 +1338,6 @@ local function CreateDetailsFrame()
         end
 
         -- update loadedDebuffs
-        local t = selectedButtonIndex <= #currentBossTable["enabled"] and currentBossTable["enabled"][selectedButtonIndex] or currentBossTable["disabled"][selectedButtonIndex-#currentBossTable["enabled"]]
         t["useElapsedTime"] = checked
 
         -- notify debuff list changed
@@ -1678,7 +1679,7 @@ UpdateCondition = function(condition)
     if not CellDB["raidDebuffs"][loadedInstance][tIndex][selectedSpellId] then
         CellDB["raidDebuffs"][loadedInstance][tIndex][selectedSpellId] = {
             ["order"] = t["order"],
-            ["trackByID"] = false,
+            ["trackByID"] = t["trackByID"],
             ["condition"] = condition,
         }
     else
@@ -1725,7 +1726,7 @@ UpdateGlowType = function(newType)
         if not CellDB["raidDebuffs"][loadedInstance][tIndex][selectedSpellId] then
             CellDB["raidDebuffs"][loadedInstance][tIndex][selectedSpellId] = {
                 ["order"] = t["order"],
-                ["trackByID"] = false,
+                ["trackByID"] = t["trackByID"],
                 ["condition"] = {"None"},
                 ["glowType"] = newType,
                 ["glowTarget"] = "button",
@@ -1735,7 +1736,7 @@ UpdateGlowType = function(newType)
             elseif newType == "Pixel" then
                 CellDB["raidDebuffs"][loadedInstance][tIndex][selectedSpellId]["glowOptions"] = {{0.95,0.95,0.32,1}, 9, 0.25, 8, 2}
             elseif newType == "Shine" then
-                CellDB["raidDebuffs"][loadedInstance][tIndex][selectedSpellId]["glowOptions"] = {{0.95,0.95,0.32,1}, 9, 0.5, 1}
+                CellDB["raidDebuffs"][loadedInstance][tIndex][selectedSpellId]["glowOptions"] = {{0.95,0.95,0.32,1}, 9, 0.5, 2}
             elseif newType == "Proc" then
                 CellDB["raidDebuffs"][loadedInstance][tIndex][selectedSpellId]["glowOptions"] = {{0.95,0.95,0.32,1}, 1}
             end
@@ -1763,10 +1764,10 @@ UpdateGlowType = function(newType)
                 if CellDB["raidDebuffs"][loadedInstance][tIndex][selectedSpellId]["glowOptions"] then
                     CellDB["raidDebuffs"][loadedInstance][tIndex][selectedSpellId]["glowOptions"][2] = 9
                     CellDB["raidDebuffs"][loadedInstance][tIndex][selectedSpellId]["glowOptions"][3] = 0.5
-                    CellDB["raidDebuffs"][loadedInstance][tIndex][selectedSpellId]["glowOptions"][4] = 1
+                    CellDB["raidDebuffs"][loadedInstance][tIndex][selectedSpellId]["glowOptions"][4] = 2
                     CellDB["raidDebuffs"][loadedInstance][tIndex][selectedSpellId]["glowOptions"][5] = nil
                 else
-                    CellDB["raidDebuffs"][loadedInstance][tIndex][selectedSpellId]["glowOptions"] = {{0.95,0.95,0.32,1}, 9, 0.5, 1}
+                    CellDB["raidDebuffs"][loadedInstance][tIndex][selectedSpellId]["glowOptions"] = {{0.95,0.95,0.32,1}, 9, 0.5, 2}
                 end
             elseif newType == "Proc" then
                 if CellDB["raidDebuffs"][loadedInstance][tIndex][selectedSpellId]["glowOptions"] then
@@ -2164,7 +2165,7 @@ function F.CalcRaidDebuffs(instanceId, bossId, data)
             -- calc all bosses
             for bId, bTable in pairs(unsortedDebuffs[instanceId]) do
                 for _, spellId in pairs(bTable) do
-                    if not customs[spellId] then
+                    if not customs[abs(tonumber(spellId))] then
                         builtIn = builtIn + 1
                     end
                 end
@@ -2172,7 +2173,7 @@ function F.CalcRaidDebuffs(instanceId, bossId, data)
         elseif unsortedDebuffs[instanceId][bossId] then
             -- calc by bossId
             for _, spellId in pairs(unsortedDebuffs[instanceId][bossId]) do
-                if not customs[spellId] then
+                if not customs[abs(tonumber(spellId))] then
                     builtIn = builtIn + 1
                 end
             end

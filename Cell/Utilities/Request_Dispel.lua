@@ -196,6 +196,7 @@ local function CreateDRPane()
             if spellId and spellName then
                 -- update db
                 tinsert(CellDB["dispelRequest"]["debuffs"], spellId)
+                Cell.Fire("UpdateRequests", "dispelRequest")
                 LoadList(true)
             else
                 F.Print(L["Invalid spell id."])

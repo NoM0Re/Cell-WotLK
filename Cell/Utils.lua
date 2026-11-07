@@ -102,7 +102,7 @@ function F.GetActiveTalentInfo()
     local specName, specIcon
 
     for i = 1, GetNumTalentTabs() do
-        local _, name, _, icon, pointsSpent = GetTalentTabInfo(i)
+        local name, icon, pointsSpent = GetTalentTabInfo(i)
         if pointsSpent > maxPoints then
             maxPoints = pointsSpent
             specIcon = icon
@@ -897,6 +897,23 @@ do
             settings.roster = nil
             return
         end
+        if header:GetAttribute("cell-role-sort") ~= (settings.sort ~= nil) then
+            header:SetAttribute("cell-role-sort", settings.sort ~= nil)
+        end
+        if header:GetAttribute("cell-group-filter") ~= settings.groupFilter then
+            header:SetAttribute("cell-group-filter", settings.groupFilter)
+        end
+        if settings.sort and not settings.combatDriver then
+            -- A nameList is a whitelist. Restore native membership filtering in combat.
+            SecureHandlerWrapScript(header, "OnAttributeChanged", header, [[
+                if name == "state-cellrolesort" and value == "combat" and self:GetAttribute("cell-role-sort") then
+                    self:SetAttribute("groupFilter", self:GetAttribute("cell-group-filter"))
+                    self:SetAttribute("nameList", nil)
+                end
+            ]])
+            RegisterStateDriver(header, "cellrolesort", "[combat] combat; peace")
+            settings.combatDriver = true
+        end
         local rosterChanged = settings.roster ~= roster
         settings.roster = roster
 
@@ -999,6 +1016,7 @@ do
     end
 
     roleSortFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
+    roleSortFrame:RegisterEvent("PLAYER_REGEN_DISABLED")
     roleSortFrame:RegisterEvent("PARTY_MEMBERS_CHANGED")
     roleSortFrame:RegisterEvent("RAID_ROSTER_UPDATE")
     roleSortFrame:RegisterEvent("UNIT_NAME_UPDATE")
@@ -1242,7 +1260,8 @@ function F.GetUnitButtonByUnit(unit, getSpotlights, getQuickAssist)
     if Cell.vars.groupType == "raid" then
         normal = Cell.unitButtons.raid.units[unit] or Cell.unitButtons.npc.units[unit] or Cell.unitButtons.pet.units[unit]
     elseif Cell.vars.groupType == "party" then
-        normal = Cell.unitButtons.party.units[unit] or Cell.unitButtons.npc.units[unit]
+        normal = Cell.vars.currentLayoutTable.pet.partyDetached and Cell.unitButtons.pet.units[unit]
+            or Cell.unitButtons.party.units[unit] or Cell.unitButtons.npc.units[unit]
     else -- solo
         normal = Cell.unitButtons.solo[unit] or Cell.unitButtons.npc.units[unit]
     end
@@ -1274,6 +1293,24 @@ end
 function F.HandleUnitButton(type, unit, func, ...)
     if not unit then return end
 
+    local displayedGUID
+    if type == "displayedGUID" then
+        if not F.IsPlayer(unit) then
+            local handled
+            local args = {...}
+            local numArgs = select("#", ...)
+            F.IterateAllUnitButtons(function(b)
+                if b.states.displayedUnit and UnitGUID(b.states.displayedUnit) == unit then
+                    func(b, unpack(args, 1, numArgs))
+                    handled = true
+                end
+            end, true)
+            return handled
+        end
+        displayedGUID = unit
+        type = "guid"
+    end
+
     if type == "guid" then
         unit = Cell.vars.guids[unit]
     elseif type == "name" then
@@ -1287,18 +1324,20 @@ function F.HandleUnitButton(type, unit, func, ...)
     if Cell.vars.groupType == "raid" then
         normal = Cell.unitButtons.raid.units[unit] or Cell.unitButtons.npc.units[unit] or Cell.unitButtons.pet.units[unit]
     elseif Cell.vars.groupType == "party" then
-        normal = Cell.unitButtons.party.units[unit] or Cell.unitButtons.npc.units[unit]
+        normal = Cell.vars.currentLayoutTable.pet.partyDetached and Cell.unitButtons.pet.units[unit]
+            or Cell.unitButtons.party.units[unit] or Cell.unitButtons.npc.units[unit]
     else -- solo
         normal = Cell.unitButtons.solo[unit] or Cell.unitButtons.npc.units[unit]
     end
 
-    if normal then
+    if normal and (not displayedGUID or (normal.states.displayedUnit and UnitGUID(normal.states.displayedUnit) == displayedGUID)) then
         func(normal, ...)
         handled = true
     end
 
     for _, b in pairs(Cell.unitButtons.spotlight) do
-        if b.states.unit and UnitIsUnit(b.states.unit, unit) then
+        if b.states.unit and UnitIsUnit(b.states.unit, unit)
+            and (not displayedGUID or (b.states.displayedUnit and UnitGUID(b.states.displayedUnit) == displayedGUID)) then
             func(b, ...)
             handled = true
         end
@@ -2540,7 +2579,7 @@ end
 
 rc:SetScript("OnEvent", DELAYED_SPELLS_CHANGED)
 
-function F.IsInRange(unit, check)
+function F.IsInRange(unit)
     if not UnitIsVisible(unit) then
         return false
     end
@@ -2548,14 +2587,9 @@ function F.IsInRange(unit, check)
     if UnitIsUnit("player", unit) then
         return true
 
-    elseif not check and F.UnitInGroup(unit) then
-        -- NOTE: UnitInRange only works with group players/pets
-        --! but not available for PLAYER PET when SOLO
-        local inRange = UnitInRange(unit)
-        if inRange ~= nil then
-            return inRange
-        end
-        return F.IsInRange(unit, true)
+    elseif F.UnitInGroup(unit) and (F.IsInGroup() or not UnitIsUnit(unit, "pet")) then
+        -- Wrath returns 1/nil; nil also means an out-of-range group member.
+        return UnitInRange(unit) == 1
 
     else
         if UnitCanAssist("player", unit) then -- or UnitCanCooperate("player", unit)
@@ -2587,7 +2621,7 @@ function F.IsInRange(unit, check)
             elseif spell_harm then
                 return UnitInSpellRange(spell_harm, unit)
             end
-            return IsItemInRange(harmItems[playerClass], unit)
+            return IsItemInRange(harmItems[playerClass], unit) == 1
         end
 
         if not InCombatLockdown() then

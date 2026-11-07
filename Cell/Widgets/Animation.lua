@@ -18,11 +18,12 @@ local function Fading(_, elapsed)
     FADEMANAGER.timer = (FADEMANAGER.timer or 0) + elapsed
 
     if FADEMANAGER.timer > FADEMANAGER.interval then
+        elapsed = FADEMANAGER.timer
         FADEMANAGER.timer = 0
 
         for frame, info in next, FADEFRAMES do
             if frame:IsVisible() then
-                info.fadeTimer = (info.fadeTimer or 0) + (elapsed + FADEMANAGER.interval)
+                info.fadeTimer = (info.fadeTimer or 0) + elapsed
             else -- faster for hidden frames
                 info.fadeTimer = info.timeToFade + 1
             end

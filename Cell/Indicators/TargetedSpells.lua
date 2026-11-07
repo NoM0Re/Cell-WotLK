@@ -87,6 +87,7 @@ local function GetCastsOnUnit(guid)
                     castsOnUnit[guid][spellId]["startTime"] = castInfo["startTime"]
                     castsOnUnit[guid][spellId]["endTime"] = castInfo["endTime"]
                     castsOnUnit[guid][spellId]["icon"] = castInfo["icon"]
+                    castsOnUnit[guid][spellId]["isChanneling"] = castInfo["isChanneling"]
                 end
                 castsOnUnit[guid][spellId]["count"] = castsOnUnit[guid][spellId]["count"] + 1
 
@@ -182,6 +183,7 @@ local function CheckUnitCast(sourceUnit, isRecheck)
             casts[sourceGUID]["endTime"] = endTimeMS/1000
             casts[sourceGUID]["spellId"] = spellId
             casts[sourceGUID]["icon"] = texture
+            casts[sourceGUID]["isChanneling"] = isChanneling
         else
             casts[sourceGUID] = {
                 ["startTime"] = startTimeMS/1000,

@@ -477,13 +477,13 @@ local function Debuffs_EnableBlacklistShortcut(debuffs, enabled)
 
     for i = 1, 10 do
         if enabled then
-            debuffs[i]:SetScript("OnMouseUp", function(self, button, isInside)
-                if button == "RightButton" and isInside and IsLeftAltKeyDown() and IsLeftControlKeyDown()
+            debuffs[i]:SetScript("OnMouseUp", function(self, button)
+                if button == "RightButton" and self:IsMouseOver() and IsLeftAltKeyDown() and IsLeftControlKeyDown()
                     and self.spellId and not F.TContains(CellDB["debuffBlacklist"], self.spellId) then
                     -- print msg
                     local name, icon = F.GetSpellInfo(self.spellId)
                     if name and icon then
-                        F.Print(L["Added |T%d:0|t|cFFFF3030%s(%d)|r into debuff blacklist."]:format(icon, name, self.spellId))
+                        F.Print(L["Added |T%s:0|t|cFFFF3030%s(%d)|r into debuff blacklist."]:format(icon, name, self.spellId))
                     end
                     -- update db
                     tinsert(CellDB["debuffBlacklist"], self.spellId)
@@ -1331,8 +1331,10 @@ local function StatusText_ShowTimer(self)
 
     self.timer:Show()
 
-    if not startTimeCache[self.parent.states.guid] then startTimeCache[self.parent.states.guid] = GetTime() end
+    local guid = self.parent.states.guid
+    if guid and not startTimeCache[guid] then startTimeCache[guid] = GetTime() end
 
+    if self.ticker then return end
     self.ticker = F.C_Timer.NewTicker(1, function()
         if not self.parent.states.guid and self.parent.states.unit then -- ElvUI AFK mode
             self.parent.states.guid = UnitGUID(self.parent.states.unit)
@@ -1348,8 +1350,11 @@ end
 local function StatusText_HideTimer(self, reset)
     self.timer:Hide()
     self.timer:SetText("")
-    if reset then
-        if self.ticker then self.ticker:Cancel() end
+    if self.ticker then
+        self.ticker:Cancel()
+        self.ticker = nil
+    end
+    if reset and self.parent.states.guid then
         startTimeCache[self.parent.states.guid] = nil
     end
 end
@@ -1381,6 +1386,9 @@ function I.CreateStatusText(parent)
     statusText.ShowBackground = StatusText_ShowBackground
     statusText.ShowTimer = StatusText_ShowTimer
     statusText.HideTimer = StatusText_HideTimer
+    statusText:SetScript("OnHide", function(self)
+        self:HideTimer()
+    end)
 end
 
 -------------------------------------------------

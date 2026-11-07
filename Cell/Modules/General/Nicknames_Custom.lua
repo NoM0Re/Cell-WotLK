@@ -134,7 +134,20 @@ local function CreateCustomNicknamesFrame()
     newItem.add:SetPoint("TOPLEFT", newItem.nickname, "BOTTOMLEFT", 0, -5)
     newItem.add:SetScript("OnClick", function()
         if newItem.updateIndex then
+            local oldPlayer = strsplit(":", CellDB["nicknames"]["list"][newItem.updateIndex], 2)
             CellDB["nicknames"]["list"][newItem.updateIndex] = newItem.playerName.text..":"..newItem.nickname.text
+            if oldPlayer ~= newItem.playerName.text then
+                local oldNickname
+                for _, entry in ipairs(CellDB["nicknames"]["list"]) do
+                    local player, nickname = strsplit(":", entry, 2)
+                    if player == oldPlayer then oldNickname = nickname end
+                end
+                if oldNickname then
+                    Cell.Fire("UpdateNicknames", "list-update", oldPlayer, oldNickname)
+                else
+                    Cell.Fire("UpdateNicknames", "list-delete", oldPlayer)
+                end
+            end
             Cell.Fire("UpdateNicknames", "list-update", newItem.playerName.text, newItem.nickname.text)
         else
             tinsert(CellDB["nicknames"]["list"], newItem.playerName.text..":"..newItem.nickname.text)

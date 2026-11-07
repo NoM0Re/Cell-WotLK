@@ -21,7 +21,7 @@ local function CreateNicknameBlacklistFrame()
     nicknameBlacklistFrame:SetScript("OnHide", function()
         nicknameBlacklistFrame:Hide()
         Cell.frames.generalTab.mask:Hide()
-        Cell.frames.generalTab.customNicknamesBtn:SetFrameLevel(Cell.frames.generalTab:GetFrameLevel() + 2)
+        Cell.frames.generalTab.nicknameBlacklistBtn:SetFrameLevel(Cell.frames.generalTab:GetFrameLevel() + 2)
     end)
 
     -- button

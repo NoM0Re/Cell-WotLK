@@ -229,7 +229,7 @@ local function PetFrame_UpdateLayout(layout, which)
     -- update
     layout = CellDB["layouts"][layout]
 
-    if not which or strfind(which, "size$") or strfind(which, "power$") or which == "barOrientation" then
+    if not which or strfind(which, "size$") or strfind(which, "power$") or which == "barOrientation" or which == "powerFilter" then
         local width, height, powerSize
 
         if layout["pet"]["sameSizeAsMain"] then

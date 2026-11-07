@@ -448,17 +448,19 @@ local function parseLocaleAssignments(text, filename)
         lastTokenIndex = lastTokenIndex + 1
       end
       local nextToken = tokens[lastTokenIndex + 1]
-      if nextToken and nextToken.line == tokens[lastTokenIndex].endLine then
-        if isToken(nextToken, "symbol", ".") and isToken(tokens[lastTokenIndex + 2], "symbol", ".") then
-          -- Composite strings such as changelog HTML cannot be removed as one
-          -- assignment without parsing the complete expression. Keep them.
-          index = index + 1
-        else
-          return nil, string.format("%s:%d: locale assignment must end on its own line", filename, tokens[index].line)
-        end
+      local trailing = text:sub(tokens[lastTokenIndex].finish + 1, lineFinish(text, tokens[lastTokenIndex].finish))
+      if (isToken(nextToken, "symbol", ".") and isToken(tokens[lastTokenIndex + 2], "symbol", "."))
+        or trailing:find("%-%-%[=*%[")
+      then
+        -- A continued expression or long comment can extend beyond this line.
+        index = index + 1
+      elseif nextToken and nextToken.line == tokens[lastTokenIndex].endLine then
+        return nil, string.format("%s:%d: locale assignment must end on its own line", filename, tokens[index].line)
       else
         assignments[#assignments + 1] = {
           key = tokens[index + 2].value,
+          keyToken = tokens[index + 2],
+          valueToken = valueToken,
           line = tokens[index].line,
           start = startPosition,
           finish = lineFinish(text, tokens[lastTokenIndex].finish),
@@ -498,6 +500,63 @@ local function parseLocaleDefinitions(text, filename)
 end
 
 M.parseLocaleDefinitions = parseLocaleDefinitions
+
+local blacklistKey = "Added |T%d:0|t|cFFFF3030%s(%d)|r into debuff blacklist."
+local fixedBlacklistKey = "Added |T%s:0|t|cFFFF3030%s(%d)|r into debuff blacklist."
+
+local function fixLocaleContent(text, filename)
+  local assignments, err = parseLocaleAssignments(text, filename)
+  if not assignments then
+    return nil, nil, err
+  end
+
+  local locale = normalizePath(filename):match("([^/]+)%.lua$")
+  local corrections = {}
+  local output = {}
+  local cursor = 1
+  local function replaceLiteralPart(token, old, new)
+    local function replace(value)
+      local first, last = value:find(old, 1, true)
+      if first then
+        return value:sub(1, first - 1) .. new .. value:sub(last + 1)
+      end
+    end
+    local value = replace(token.value)
+    if not value then
+      return false
+    end
+    output[#output + 1] = text:sub(cursor, token.start - 1)
+    output[#output + 1] = replace(text:sub(token.start, token.finish)) or string.format("%q", value)
+    cursor = token.finish + 1
+    return true
+  end
+
+  for _, assignment in ipairs(assignments) do
+    local key = assignment.key
+    local value = assignment.valueToken
+    local corrected = false
+    if key == blacklistKey or key == fixedBlacklistKey then
+      -- Wrath supplies an icon path, while the final %d remains the spell ID.
+      if key == blacklistKey then
+        corrected = replaceLiteralPart(assignment.keyToken, "|T%d:0|t", "|T%s:0|t")
+      end
+      if value.type == "string" and replaceLiteralPart(value, "|T%d:0|t", "|T%s:0|t") then
+        corrected = true
+      end
+    elseif locale == "ruRU" and key == "first %d" and value.value == "первый(я)" then
+      corrected = replaceLiteralPart(value, "первый(я)", "первые %d")
+    elseif locale == "ptBR" and key == "Layout renamed: %s to %s." and value.value == "Layout renomeado: %s." then
+      corrected = replaceLiteralPart(value, "Layout renomeado: %s.", "Layout renomeado: %s para %s.")
+    end
+    if corrected then
+      corrections[#corrections + 1] = assignment
+    end
+  end
+  output[#output + 1] = text:sub(cursor)
+  return table.concat(output), corrections
+end
+
+M.fixLocaleContent = fixLocaleContent
 
 local function cleanLocaleContent(text, filename, usedKeys)
   local assignments, err = parseLocaleAssignments(text, filename)
@@ -704,24 +763,35 @@ function M.run(options)
 
   local changes = {}
   local removedCount = 0
+  local correctedCount = 0
   for _, locale in ipairs(parsedLocales) do
     if locale.target and not locale.protected then
-      local cleaned, removed, cleanErr = cleanLocaleContent(locale.content, locale.path, keysToKeep)
+      -- Correct imported keys before deciding whether the loaded source uses them.
+      local fixed, corrected, fixErr = fixLocaleContent(locale.content, locale.path)
+      if not fixed then
+        return nil, fixErr
+      end
+      local cleaned, removed, cleanErr = cleanLocaleContent(fixed, locale.path, keysToKeep)
       if not cleaned then
         return nil, cleanErr
       end
-      if #removed > 0 then
+      if cleaned ~= locale.content then
         changes[#changes + 1] = {
           path = locale.path,
           content = cleaned,
           removed = removed,
+          corrected = corrected,
         }
         removedCount = removedCount + #removed
+        correctedCount = correctedCount + #corrected
       end
     end
   end
 
   for _, change in ipairs(changes) do
+    for _, assignment in ipairs(change.corrected) do
+      output(string.format("CORRECTED %s:%d %s", change.path, assignment.line, keyDisplay(assignment.key)))
+    end
     for _, assignment in ipairs(change.removed) do
       output(string.format("REMOVED %s:%d %s", change.path, assignment.line, keyDisplay(assignment.key)))
     end
@@ -753,20 +823,22 @@ function M.run(options)
     usedKeyCount = usedCount,
     changedFileCount = #changes,
     removedCount = removedCount,
+    correctedCount = correctedCount,
     dynamicCount = #dynamicReferences,
     dryRun = dryRun and true or false,
-    checkFailed = options.check and removedCount > 0 or false,
+    checkFailed = options.check and #changes > 0 or false,
   }
 
   output("")
   output(string.format(
-    "Summary: %d source files, %d used strings, %d target locale files (%d protected), %d definition locale files, %d removable entries in %d changed files, %d dynamic references.",
+    "Summary: %d source files, %d used strings, %d target locale files (%d protected), %d definition locale files, %d removable entries, %d corrected entries in %d changed files, %d dynamic references.",
     result.sourceFileCount,
     result.usedKeyCount,
     result.localeFileCount,
     result.protectedFileCount,
     result.definitionLocaleFileCount,
     result.removedCount,
+    result.correctedCount,
     result.changedFileCount,
     result.dynamicCount
   ))

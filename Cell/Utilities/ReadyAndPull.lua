@@ -130,7 +130,7 @@ function pullBtn:CHAT_MSG_ADDON(prefix, text)
     if prefix == "D4" then -- DBM
         local pre, sec = strsplit("\t", text)
         sec = tonumber(sec)
-        if pre == "PT" and sec > 0 then -- start
+        if pre == "PT" and sec and sec > 0 then -- start
             Start(sec)
         elseif pre == "PT" and sec  == 0 then -- cancel
             Stop()
@@ -179,17 +179,17 @@ readyBtn:SetScript("OnEvent", function(self, event, arg1, arg2)
         readyBtn:SetMaxValue(arg2)
         readyBtn:Start()
         wipe(ready)
-        tinsert(ready, "player")
-        readyBtn:SetText("1 / "..F.GetNumGroupMembers())
+        local guid = UnitGUID(arg1)
+        if guid then tinsert(ready, guid) end
+        readyBtn:SetText(#ready.." / "..F.GetNumGroupMembers())
     elseif event == "READY_CHECK_FINISHED" then
         readyBtn:Stop()
         readyBtn:SetText(L["Ready"])
     else
         if arg2 then -- isReady
-            if F.IsInRaid() then
-                if string.find(arg1, "raid") then tinsert(ready, arg1) end
-            else
-                tinsert(ready, arg1)
+            local guid = UnitGUID(arg1)
+            if guid and not tContains(ready, guid) then
+                tinsert(ready, guid)
             end
             readyBtn:SetText(#ready.." / "..F.GetNumGroupMembers())
         end

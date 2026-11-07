@@ -86,7 +86,8 @@ local function CreateIndicatorsCopyFrame()
     allBtn = Cell.CreateButton(copyFrame, L["ALL"], "accent-hover", {64, 20})
     allBtn:SetPoint("BOTTOMLEFT", copyBtn, "TOPLEFT", 0, P.Scale(-1))
     allBtn:SetScript("OnClick", function()
-        for i = 1, #indicatorButtons do
+        if not from then return end
+        for i = 1, #CellDB["layouts"][from]["indicators"] do
             Toggle(i, true)
         end
         Validate()
@@ -95,7 +96,8 @@ local function CreateIndicatorsCopyFrame()
     invertBtn = Cell.CreateButton(copyFrame, L["INVERT"], "accent-hover", {63, 20})
     invertBtn:SetPoint("BOTTOMLEFT", closeBtn, "TOPLEFT", 0, P.Scale(-1))
     invertBtn:SetScript("OnClick", function()
-        for i = 1, #indicatorButtons do
+        if not from then return end
+        for i = 1, #CellDB["layouts"][from]["indicators"] do
             if selectedIndicators[i] then
                 Toggle(i, false, true)
             else

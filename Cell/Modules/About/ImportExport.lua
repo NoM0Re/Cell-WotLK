@@ -31,18 +31,27 @@ local function DoImport(noReload)
     imported["appearance"]["healAbsorb"][1] = false
 
     -- layouts
-    local builtInFound = {}
     for _, layout in pairs(imported["layouts"]) do
+        local builtInFound = {}
         -- indicators
         for i =  #layout["indicators"], 1, -1 do
             if layout["indicators"][i]["type"] == "built-in" then -- remove unsupported built-in
                 local indicatorName = layout["indicators"][i]["indicatorName"]
-                builtInFound[indicatorName] = true
                 if not Cell.defaults.indicatorIndices[indicatorName] then
                     tremove(layout["indicators"], i)
+                else
+                    builtInFound[indicatorName] = true
                 end
             else -- remove invalid spells from custom indicators
                 F.FilterInvalidSpells(layout["indicators"][i]["auras"])
+            end
+        end
+
+        -- add missing indicators in their default order
+        for index = 1, Cell.defaults.builtIns do
+            local indicator = Cell.defaults.layout.indicators[index]
+            if not builtInFound[indicator.indicatorName] then
+                tinsert(layout["indicators"], index, F.Copy(indicator))
             end
         end
 
@@ -53,17 +62,6 @@ local function DoImport(noReload)
                     layout["powerFilters"][class] = F.Copy(t)
                 else
                     layout["powerFilters"][class] = true
-                end
-            end
-        end
-    end
-
-    -- add missing indicators
-    if F.Getn(builtInFound) ~= Cell.defaults.builtIns then
-        for indicatorName, index in pairs(Cell.defaults.indicatorIndices) do
-            if not builtInFound[indicatorName] then
-                for _, layout in pairs(imported["layouts"]) do
-                    tinsert(layout["indicators"], index, Cell.defaults.layout.indicators[index])
                 end
             end
         end
@@ -134,10 +132,10 @@ local function DoImport(noReload)
     end
 
     --! overwrite
-    if not ignoredIndices["clickCastings"] then
+    if not ignoredIndices["clickCastings"] and clickCastings then
         CellCharacterDB["clickCastings"] = clickCastings
     end
-    if not ignoredIndices["layouts"] then
+    if not ignoredIndices["layouts"] and layoutAutoSwitch then
         CellCharacterDB["layoutAutoSwitch"] = layoutAutoSwitch
     end
     CellCharacterDB["revise"] = imported["revise"]
@@ -540,8 +538,8 @@ function Cell.ImportProfile(profileString, profileName, ignoredIndicesExternal)
         end
     end
 
+    wipe(ignoredIndices)
     if ignoredIndicesExternal then
-      wipe(ignoredIndices)
       for index, value in pairs(ignoredIndicesExternal) do
         ignoredIndices[index] = value
       end

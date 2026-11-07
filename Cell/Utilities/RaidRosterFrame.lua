@@ -136,7 +136,6 @@ local function CreateProcessingFrame()
     processingFrame:Hide()
 
     processingFrame:SetScript("OnShow", function()
-        processingFrame:RegisterEvent("RAID_ROSTER_UPDATE")
         processingFrame:RegisterEvent("PARTY_MEMBERS_CHANGED")
         ProcessNext()
     end)
@@ -651,12 +650,12 @@ Cell.RegisterCallback("GroupTypeChanged", "RaidRosterFrame_GroupTypeChanged", Gr
 
 local roleUpdatePending
 Cell.RegisterCallback("GroupRoleChanged", "RaidRosterFrame_GroupRoleChanged", function()
-    if not raidRosterFrame:IsShown() or roleUpdatePending then return end
+    if not raidRosterFrame:IsShown() or not isInstantMode or isProcessing or roleUpdatePending then return end
 
     roleUpdatePending = true
     F.C_Timer.After(0, function()
         roleUpdatePending = nil
-        if raidRosterFrame:IsShown() then
+        if raidRosterFrame:IsShown() and isInstantMode and not isProcessing then
             LoadRoster()
         end
     end)

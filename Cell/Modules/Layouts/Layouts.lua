@@ -2004,7 +2004,9 @@ local function CreateRoleOrderWidget(parent)
                     local newIndex = roleToIndex[b._role]
                     tinsert(selectedLayoutTable["main"]["roleOrder"], newIndex, self._role)
 
-                    Cell.Fire("UpdateLayout", selectedLayout, "sort")
+                    if selectedLayout == Cell.vars.currentLayout then
+                        Cell.Fire("UpdateLayout", selectedLayout, "sort")
+                    end
                 end
                 f:Load(selectedLayoutTable["main"]["roleOrder"])
             end)
@@ -2214,8 +2216,10 @@ local function CreateLayoutSetupPane()
     -- combine groups
     combineGroupsCB = Cell.CreateCheckButton(pages.main, L["Combine Groups"].." ("..L["Raid"]..")", function(checked, self)
         selectedLayoutTable["main"]["combineGroups"] = checked
-        Cell.Fire("UpdateLayout", selectedLayout, "header")
-        Cell.Fire("UpdateIndicators", selectedLayout)
+        if selectedLayout == Cell.vars.currentLayout then
+            Cell.Fire("UpdateLayout", selectedLayout, "header")
+            Cell.Fire("UpdateIndicators", selectedLayout)
+        end
         UpdateSliderStatus()
         -- preview
         UpdateLayoutPreview()
@@ -2231,7 +2235,9 @@ local function CreateLayoutSetupPane()
         else
             roleOrderWidget:Hide()
         end
-        Cell.Fire("UpdateLayout", selectedLayout, "sort")
+        if selectedLayout == Cell.vars.currentLayout then
+            Cell.Fire("UpdateLayout", selectedLayout, "sort")
+        end
     end, L["Sort By Role"], "|cffffb5c5"..L["Left-Drag"]..":|r "..L["change the order"]) -- L["%s is required"]:format("|cffffb5c5"..L["Combine Groups"].."|r").." ("..L["Raid"]..")"
     sortByRoleCB:SetPoint("TOPLEFT", combineGroupsCB, "BOTTOMLEFT", 0, -10)
     Cell.RegisterForCloseDropdown(sortByRoleCB)
@@ -2243,7 +2249,9 @@ local function CreateLayoutSetupPane()
     -- hide self
     hideSelfCB = Cell.CreateCheckButton(pages.main, L["Hide Self"].." ("..L["Party"]..")", function(checked, self)
         selectedLayoutTable["main"]["hideSelf"] = checked
-        Cell.Fire("UpdateLayout", selectedLayout, "hideSelf")
+        if selectedLayout == Cell.vars.currentLayout then
+            Cell.Fire("UpdateLayout", selectedLayout, "hideSelf")
+        end
     end)
     hideSelfCB:SetPoint("TOPLEFT", sortByRoleCB, "BOTTOMLEFT", 0, -10)
 
@@ -2771,7 +2779,7 @@ local function UpdateLayoutAutoSwitch(layout, which)
         elseif Cell.vars.groupType == "party" then
             partyText:SetText(Cell.GetAccentColorString()..partyText.text.."*")
         else
-            if Cell.vars.inInstance then
+            if Cell.vars.raidType == "raid10" or Cell.vars.raidType == "raid25" then
                 if Cell.vars.raidType == "raid10" then
                     raid10Text:SetText(Cell.GetAccentColorString()..raid10Text.text.."*")
                 else

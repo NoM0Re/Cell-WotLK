@@ -113,6 +113,8 @@ local function CreateIndicatorsExportFrame()
             if name == "debuffs" then
                 data["related"]["debuffBlacklist"] = CellDB["debuffBlacklist"]
                 data["related"]["bigDebuffs"] = CellDB["bigDebuffs"]
+            elseif name == "dispels" then
+                data["related"]["dispelBlacklist"] = CellDB["dispelBlacklist"]
             elseif name == "targetedSpells" then
                 data["related"]["targetedSpellsList"] = CellDB["targetedSpellsList"]
                 data["related"]["targetedSpellsGlow"] = CellDB["targetedSpellsGlow"]
@@ -144,7 +146,7 @@ local function CreateIndicatorsExportFrame()
     local allBtn = Cell.CreateButton(listParent, L["ALL"], "accent-hover", {64, 20})
     allBtn:SetPoint("BOTTOMLEFT", exportBtn, "TOPLEFT", 0, P.Scale(-1))
     allBtn:SetScript("OnClick", function()
-        for i = 1, #indicatorButtons do
+        for i = 1, #CellDB["layouts"][fromLayout]["indicators"] do
             Toggle(i, true)
         end
         Validate()
@@ -153,7 +155,7 @@ local function CreateIndicatorsExportFrame()
     local invertBtn = Cell.CreateButton(listParent, L["INVERT"], "accent-hover", {63, 20})
     invertBtn:SetPoint("BOTTOMLEFT", closeBtn, "TOPLEFT", 0, P.Scale(-1))
     invertBtn:SetScript("OnClick", function()
-        for i = 1, #indicatorButtons do
+        for i = 1, #CellDB["layouts"][fromLayout]["indicators"] do
             if selectedIndicators[i] then
                 Toggle(i, false, true)
             else

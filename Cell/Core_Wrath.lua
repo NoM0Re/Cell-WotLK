@@ -837,7 +837,7 @@ function SlashCmdList.CELL(msg, editbox)
         if rest == "position" then
             Cell.frames.anchorFrame:ClearAllPoints()
             Cell.frames.anchorFrame:SetPoint("TOPLEFT", CellParent, "CENTER")
-            Cell.vars.currentLayoutTable["position"] = {}
+            Cell.vars.currentLayoutTable["main"]["position"] = {}
             P.ClearPoints(Cell.frames.readyAndPullFrame)
             Cell.frames.readyAndPullFrame:SetPoint("TOPRIGHT", CellParent, "CENTER")
             CellDB["tools"]["readyAndPull"][4] = {}
@@ -880,8 +880,8 @@ function SlashCmdList.CELL(msg, editbox)
         end
 
     elseif command == "report" then
-        rest = tonumber(rest:format("%d"))
-        if rest and rest >= 0 and rest <= 40 then
+        rest = tonumber(rest)
+        if rest and rest >= 0 and rest <= 40 and rest % 1 == 0 then
             if rest == 0 then
                 F.Print(L["Cell will report all deaths during a raid encounter."])
             else

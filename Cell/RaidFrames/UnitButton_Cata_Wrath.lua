@@ -70,7 +70,7 @@ local UnitButton_UpdateAll
 local UnitButton_UpdateAuras, UnitButton_UpdateRole, UnitButton_UpdateLeader, UnitButton_UpdateStatusText
 local UnitButton_UpdateHealthColor, UnitButton_UpdateNameTextColor, UnitButton_UpdateHealthTextColor
 local UnitButton_UpdatePowerMax, UnitButton_UpdatePower, UnitButton_UpdatePowerType, UnitButton_UpdatePowerText, UnitButton_UpdatePowerTextColor
-local UnitButton_UpdateShieldAbsorbs
+local UnitButton_UpdateShieldAbsorbs, UnitButton_UpdatePowerWordShield
 local CheckPowerEventRegistration, ShouldShowPowerText, ShouldShowPowerBar
 
 -------------------------------------------------
@@ -1166,7 +1166,7 @@ local function UnitButton_UpdateDebuffs(self, hasUnit)
                         if indicatorBooleans["dispels"][debuffType] then
                             if Cell.vars.dispelBlacklist[spellId] then
                                 -- no highlight
-                                self._debuffs_dispel[debuffType] = false
+                                self._debuffs_dispel[debuffType] = self._debuffs_dispel[debuffType] or false
                             else
                                 self._debuffs_dispel[debuffType] = true
                             end
@@ -1415,7 +1415,7 @@ local function UnitButton_UpdateBuffs(self, hasUnit)
                 end
 
                 if enabledIndicators["powerWordShield"] and POWER_WORD_SHIELD[spellId] and (not indicatorBooleans["powerWordShield"] or source == "player") then
-                    pwsFound = true
+                    pwsFound = spellId
                     self.indicators.powerWordShield:SetShieldCooldown(expirationTime - duration, duration)
                 end
 
@@ -1443,9 +1443,11 @@ local function UnitButton_UpdateBuffs(self, hasUnit)
 
     -- hide pws
     if enabledIndicators["powerWordShield"] then
+        self.states.pwsSpellId = pwsFound or nil
         if not pwsFound then
             self.indicators.powerWordShield:SetShieldCooldown()
         end
+        UnitButton_UpdatePowerWordShield(self)
     end
 
     -- update buffs_cache
@@ -1517,7 +1519,7 @@ local pwsInfo = {} -- Power Word: Shield
 
 local function UnitButton_UpdateHealthStates(self, diff)
     local unit = self.states.displayedUnit
-    local guid = self.states.guid
+    local guid = unit and UnitGUID(unit)
 
     local health = UnitHealth(unit) + (diff or 0)
     local healthMax = UnitHealthMax(unit)
@@ -1827,7 +1829,7 @@ UnitButton_UpdateRole = function(self)
         roleIcon:SetRole(role)
 
         --! check vehicle root
-        if self.states.guid and strfind(self.states.guid, "^Vehicle") then
+        if F.IsVehicle(self.states.guid) then
             CheckVehicleRoot(self, unit)
         end
     else
@@ -2470,14 +2472,14 @@ local healCommCallbacks = {
 
 local function HealComm_UpdateHealPrediction(_, event, casterGUID, spellID, healType, endTime, ...)
     if event == "HealComm_ModifierChanged" or event == "HealComm_GUIDDisappeared" then
-        F.HandleUnitButton("guid", casterGUID, UnitButton_UpdateHealPrediction)
+        F.HandleUnitButton("displayedGUID", casterGUID, UnitButton_UpdateHealPrediction)
         return
     end
 
     -- update incomingHeal
     for i = 1, select("#", ...) do
         local guid = select(i, ...)
-        F.HandleUnitButton("guid", guid, UnitButton_UpdateHealPrediction)
+        F.HandleUnitButton("displayedGUID", guid, UnitButton_UpdateHealPrediction)
     end
 end
 
@@ -2538,14 +2540,22 @@ UnitButton_UpdateShieldAbsorbs = function(self, skipStateUpdates)
     end
 end
 
-local specializedAbsorbsCallbacks = {}
-function specializedAbsorbsCallbacks:UnitUpdated(_, guid)
-    F.HandleUnitButton("guid", guid, UnitButton_UpdateShieldAbsorbs)
-end
-SpecializedAbsorbs.RegisterUnitCallbacks(specializedAbsorbsCallbacks, "UnitUpdated")
-
-local function UnitButton_UpdatePowerWordShield(self, current, max, resetMax)
+UnitButton_UpdatePowerWordShield = function(self, current, max, resetMax)
     if not enabledIndicators["powerWordShield"] then return end
+
+    if current == nil then
+        local guid = self.states.displayedUnit and UnitGUID(self.states.displayedUnit)
+        local effects = guid and SpecializedAbsorbs.UnitEffectsMap(guid)
+        local effect = effects and self.states.pwsSpellId and effects[self.states.pwsSpellId]
+        if effect then
+            current, max = effect[3], effect[4]
+        elseif self.states.pwsSpellId and guid then
+            current = pwsInfo[guid] or 0
+            resetMax = current == 0
+        else
+            current, resetMax = 0, true
+        end
+    end
 
     self.indicators.powerWordShield:UpdateShield(current, max, resetMax)
 end
@@ -2555,8 +2565,26 @@ local function _UpdateShield(b, current, max, resetMax)
     UnitButton_UpdatePowerWordShield(b, current, max, resetMax)
 end
 
+local specializedAbsorbsCallbacks = {}
+function specializedAbsorbsCallbacks:UnitUpdated(_, guid)
+    if pwsInfo[guid] then
+        pwsInfo[guid] = 0
+        local effects = SpecializedAbsorbs.UnitEffectsMap(guid)
+        if effects then
+            for spellId, effect in pairs(effects) do
+                if POWER_WORD_SHIELD[spellId] then
+                    pwsInfo[guid] = effect[3]
+                    break
+                end
+            end
+        end
+    end
+    F.HandleUnitButton("displayedGUID", guid, _UpdateShield)
+end
+SpecializedAbsorbs.RegisterUnitCallbacks(specializedAbsorbsCallbacks, "UnitUpdated")
+
 local function UpdateShield(guid, max, resetMax)
-    F.HandleUnitButton("guid", guid, _UpdateShield, pwsInfo[guid] or 0, max, resetMax)
+    F.HandleUnitButton("displayedGUID", guid, _UpdateShield, pwsInfo[guid] or 0, max, resetMax)
 end
 
 POWER_WORD_SHIELD = {
@@ -2595,7 +2623,7 @@ local healAbsorbSpells = {
 
 local function UpdateHealAbsorbs(guid)
     F.C_Timer.After(0, function()
-        F.HandleUnitButton("guid", guid, UnitButton_UpdateShieldAbsorbs)
+        F.HandleUnitButton("displayedGUID", guid, UnitButton_UpdateShieldAbsorbs)
     end)
 end
 
@@ -2991,6 +3019,13 @@ local function UnitButton_OnAttributeChanged(self, name, value)
                 if not self.isSpotlight then Cell.vars.names[self.__unitName] = nil end
                 self.__unitName = nil
             end
+            if self.unit then
+                local oldIndex = string.match(self.unit, "^raid(%d+)$")
+                if oldIndex and _G["CellRaidFrameMember"..oldIndex] == self then
+                    _G["CellRaidFrameMember"..oldIndex] = nil
+                end
+                self.unit = nil
+            end
             wipe(self.states)
         end
 
@@ -2999,8 +3034,8 @@ local function UnitButton_OnAttributeChanged(self, name, value)
             self.states.displayedUnit = value
             if string.find(value, "raid") then Cell.unitButtons.raid.units[value] = self end
             -- for omnicd
-            if string.match(value, "raid%d") then
-                local i = string.match(value, "%d")
+            local i = string.match(value, "^raid(%d+)$")
+            if i then
                 _G["CellRaidFrameMember"..i] = self
                 self.unit = value
             end

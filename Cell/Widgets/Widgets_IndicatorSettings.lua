@@ -4359,6 +4359,12 @@ local function CreateAuraButtons(parent, auraButtons, auraTable, noUpDownButtons
                 local spellId = tonumber(text)
                 if spellId == 0 then
                     if isZeroValid then
+                        if hasColorPicker then
+                            auraTable[i][1] = 0
+                        else
+                            auraTable[i] = 0
+                        end
+                        parent.func(auraTable)
                         auraButtons[i].spellIdText:SetText("0")
                         auraButtons[i].spellId = nil
                         auraButtons[i].spellNameText:SetText("|cff22ff22"..L["all"])
@@ -5340,6 +5346,7 @@ end
 
 local actionButtons = {}
 local function CreateActionButtons(parent, spellTable, updateHeightFunc)
+    parent.spellTable = spellTable
     local n = #spellTable
 
     -- tooltip
@@ -5456,8 +5463,8 @@ local function CreateActionButtons(parent, spellTable, updateHeightFunc)
                         CellIndicatorsPreviewButton.indicators.actions:Display(style, actionButtons[i].animationColor)
                         actionButtons[i].animationType = style
                         -- update db
-                        spellTable[i][2][1] = style
-                        parent.func(spellTable)
+                        parent.spellTable[i][2][1] = style
+                        parent.func(parent.spellTable)
                     end,
                 })
             end
@@ -5465,6 +5472,7 @@ local function CreateActionButtons(parent, spellTable, updateHeightFunc)
 
             -- color
             actionButtons[i].colorPicker = Cell.CreateColorPicker(actionButtons[i], "", false, nil, function(r, g, b, a)
+                local spellTable = parent.spellTable
                 spellTable[i][2][2][1] = r
                 spellTable[i][2][2][2] = g
                 spellTable[i][2][2][3] = b
@@ -5667,6 +5675,7 @@ end
 
 local thresholdButtons = {}
 local function CreateThresholdButtons(parent, thresholdTable, updateHeightFunc)
+    parent.thresholdTable = thresholdTable
     local n = #thresholdTable
 
     -- new
@@ -5714,6 +5723,7 @@ local function CreateThresholdButtons(parent, thresholdTable, updateHeightFunc)
                 thresholdButtons[i]:GetScript("OnLeave")(thresholdButtons[i])
             end)
             thresholdButtons[i].confirmBtn:SetScript("OnClick", function()
+                local thresholdTable = parent.thresholdTable
                 local newThreshold = tonumber(thresholdButtons[i].eb:GetText())
                 thresholdTable[i][1] = newThreshold / 100
                 parent.func(thresholdTable)
@@ -5725,7 +5735,7 @@ local function CreateThresholdButtons(parent, thresholdTable, updateHeightFunc)
             thresholdButtons[i].eb:SetScript("OnTextChanged", function(self, userChanged)
                 if userChanged then
                     local newThreshold = tonumber(self:GetText())
-                    if newThreshold and newThreshold ~= thresholdTable[i][1] * 100 then
+                    if newThreshold and newThreshold ~= parent.thresholdTable[i][1] * 100 then
                         thresholdButtons[i].confirmBtn:Show()
                     else
                         thresholdButtons[i].confirmBtn:Hide()
@@ -5740,6 +5750,7 @@ local function CreateThresholdButtons(parent, thresholdTable, updateHeightFunc)
 
             -- color
             thresholdButtons[i].colorPicker = Cell.CreateColorPicker(thresholdButtons[i], "", true, nil, function(r, g, b, a)
+                local thresholdTable = parent.thresholdTable
                 thresholdTable[i][2][1] = r
                 thresholdTable[i][2][2] = g
                 thresholdTable[i][2][3] = b

@@ -88,7 +88,7 @@ local function GetAssignedPartyLayout()
     local layouts = CellCharacterDB["layoutAutoSwitch"]
     local talent = Cell.vars.activeTalentGroup or GetActiveTalentGroup()
     if layouts and layouts[talent] then
-        return layouts[talent]["party"]
+        return layouts[talent][Cell.vars.inBattleground == 5 and "arena" or "party"]
     end
 end
 
@@ -113,7 +113,6 @@ local function PartyFrame_UpdateLayout(layout, which)
         return
     end
     UpdatePartyVisibility()
-    if not which and configuredPartyLayout == layout then return end
     if configuredPartyLayout ~= layout then
         which = nil
     end

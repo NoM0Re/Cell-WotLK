@@ -1,6 +1,6 @@
 #!/usr/bin/env lua
 
--- Remove unused Cell locale entries without
+-- Fix imported Cell locale placeholders and remove unused entries without
 -- reformatting the remaining content.
 
 local function normalizePath(path)
@@ -17,15 +17,17 @@ Usage:
   lua .github/scripts/fix_locales/fix_locales.lua [--dry-run | --check] [--root PATH]
 
 Modes:
-  (default)  Remove unused entries and print removed keys and dynamic lookups.
-  --dry-run  Print what would be removed without changing files.
-  --check    Like --dry-run, but exit with status 1 when cleanup is needed.
+  (default)  Fix known placeholders, remove unused entries, and report changes.
+  --dry-run  Print corrections and removals without changing files.
+  --check    Like --dry-run, but exit with status 1 when any change is needed.
 
 Notes:
   * Cell Lua sources are scanned while bundled libraries, tools, and snippets
     are ignored.
   * A translation is retained when its key occurs as any string literal in
     loaded Cell source. This also covers data translated through dynamic L[key].
+  * Known imported placeholder errors are corrected before unused keys are
+    removed: the blacklist icon path, ruRU "first %d", and ptBR layout rename.
   * Cell/Locales/enUS.lua supplies the fallback table and is never modified.
   * Locale files named zLocales*.lua are detected but never modified.
   * Dynamic L[...] lookups are reported for review even though their literal
